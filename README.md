@@ -207,7 +207,9 @@ data/input/
 ### Step 2 — Check what your machine can run
 
 ```bash
-benchmark doctor          # after pip install -e .
+memtuner doctor           # recommended (avoids benchmark name conflicts)
+# or
+memtuner doctor          
 # or
 python study_runner.py --doctor
 ```
@@ -221,23 +223,23 @@ Example on a 16 GB NVIDIA GPU:
   ✓  GPU: NVIDIA CUDA — RTX A4000 (16384 MB VRAM, 48 SMs)
   ✓  Phases 1–5 — all phases including CrossEncoder reranker
 
-  benchmark study --gold-dataset data/input/locomo10.json --mode full --workers 23
+  memtuner study --gold-dataset data/input/locomo10.json --mode full --workers 23
 ```
 
 ### Step 3 — Run
 
 ```bash
 # Sanity check — BM25 + Recency only, ~45s, no GPU needed
-benchmark study --gold-dataset data/input/locomo10.json --mode quick
+memtuner study --gold-dataset data/input/locomo10.json --mode quick
 
 # Default run — Phases 1–3 (baseline + embeddings + hybrid)
-benchmark study --gold-dataset data/input/locomo10.json --mode default
+memtuner study --gold-dataset data/input/locomo10.json --mode default
 
 # Full 5-phase study on one dataset
-benchmark study --gold-dataset data/input/locomo10.json --mode full
+memtuner study --gold-dataset data/input/locomo10.json --mode full
 
 # Full study — all datasets, results merged into one report
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
                  data/input/longmemeval_oracle_gold.json \
                  data/input/squad_gold.json \
@@ -245,14 +247,14 @@ benchmark study \
   --mode full
 
 # With LLM judge for answer-quality scoring
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode full \
   --ollama-url http://localhost:11434/v1 \
   --judge-model nemotron-3-nano:4b
 
 # Statistical run — 3 seeds for 95% bootstrap CIs (~3× longer)
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode full --seeds 42 123 456
 ```
@@ -301,12 +303,12 @@ Batch sizes are auto-computed from GPU VRAM at startup (`benchmark/resources/hw_
 
 ### CLI entry point
 
-All benchmark runs go through `benchmark study` (or `python study_runner.py` directly).
-The `benchmark` command requires `pip install -e .` with the venv active.
+All benchmark runs go through `memtuner study` (or `python study_runner.py` directly).
+The `memtuner` command requires `pip install -e .` with the venv active.
 
 ```bash
 # Both of these are equivalent:
-benchmark study --gold-dataset data/input/locomo10.json --mode quick
+memtuner study --gold-dataset data/input/locomo10.json --mode quick
 python study_runner.py --gold-dataset data/input/locomo10.json --mode quick
 ```
 
@@ -339,33 +341,33 @@ Pass `--skip-models` to exclude models that don't fit your VRAM.
 
 ```bash
 # Phase 1 — BM25 + Recency baselines (~1 min, no GPU)
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode custom --phases 1
 
 # Phase 2 — Embedding model sweep (~30–90 min depending on GPU)
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode custom --phases 2
 
 # Phase 3 — Hybrid BM25/semantic weight sweep (~60–120 min)
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode custom --phases 3
 
 # Phase 4 — Temporal decay sweep (~90–180 min)
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode custom --phases 4
 
 # Phase 5 — Reranker comparison (~30–60 min, CUDA required)
 # On Apple Silicon / CPU: CrossEncoder cells are automatically skipped
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode custom --phases 5
 
 # Phases 1+2 only (baseline + embedding, skip hybrid/decay/reranker)
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode custom --phases 1 2
 ```
@@ -378,7 +380,7 @@ Each dataset is run sequentially; a merged report is produced at the end.
 
 ```bash
 # All four datasets — full 5-phase study (recommended for publication)
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
                  data/input/longmemeval_oracle_gold.json \
                  data/input/squad_gold.json \
@@ -393,12 +395,12 @@ benchmark study \
 #   Total                  ~12–18 h
 
 # LoCoMo only — fastest to iterate
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode full
 
 # LoCoMo + LongMemEval (recommended for first publication run)
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
                  data/input/longmemeval_oracle_gold.json \
   --mode full
@@ -409,13 +411,13 @@ benchmark study \
 ### Running on a CUDA machine
 
 On a machine with an NVIDIA GPU, all 5 phases run including CrossEncoder rerankers.
-Run `benchmark doctor` first to get the hardware-tuned command:
+Run `memtuner doctor` first to get the hardware-tuned command:
 
 ```bash
-benchmark doctor   # prints recommended workers + any models to skip
+memtuner doctor   # prints recommended workers + any models to skip
 
 # Typical CUDA full run (A4000 16 GB, 24 cores):
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
                  data/input/longmemeval_oracle_gold.json \
                  data/input/squad_gold.json \
@@ -425,7 +427,7 @@ benchmark study \
   --seeds 42 123 456
 
 # With LLM judge for answer-quality scoring
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode full \
   --workers 23 \
@@ -440,7 +442,7 @@ benchmark study \
 If you ran phases separately or across machines, merge the grid CSVs into one report:
 
 ```bash
-benchmark study --merge \
+memtuner study --merge \
   data/output/study_abc/study_*_grid.csv \
   data/output/study_def/study_*_grid.csv
 ```
@@ -466,14 +468,14 @@ without needing a GPU for the entire run.
 
 **Step 1 — Configure each machine once:**
 ```bash
-benchmark doctor --apply
+memtuner doctor --apply
 # Writes BENCHMARK_WORKERS and BENCHMARK_SKIP_MODELS to .env
 ```
 
 **Step 2 — Run full study on CUDA machine (recommended):**
 ```bash
 # All datasets, all phases, statistical run
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
                  data/input/longmemeval_oracle_gold.json \
                  data/input/squad_gold.json \
@@ -485,17 +487,17 @@ benchmark study \
 **Step 3 — Or run phases on separate machines and merge:**
 ```bash
 # On Mac: run Phases 1–4 only
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode custom --phases 1 2 3 4
 
 # On CUDA machine: run Phase 5 only (reranker needs CUDA)
-benchmark study \
+memtuner study \
   --gold-dataset data/input/locomo10.json \
   --mode custom --phases 5
 
 # Merge both grid CSVs into one report
-benchmark study --merge \
+memtuner study --merge \
   data/output/mac_run/study_*_grid.csv \
   data/output/cuda_run/study_*_grid.csv
 ```
@@ -777,7 +779,7 @@ python -m benchmark.reporting.simulation_plots --output docs/figures/
 
 ```mermaid
 graph TD
-    CLI["benchmark CLI\nbenchmark study / doctor / analyze"]
+    CLI["benchmark CLI\nmemtuner study / doctor / analyze"]
     SR["study_runner.py\nmain entry point"]
 
     CLI --> SR
@@ -827,7 +829,7 @@ graph TD
 
 ```mermaid
 flowchart TD
-    START([benchmark study]) --> PRE
+    START([memtuner study]) --> PRE
 
     subgraph PRE["Startup"]
         DL["scripts/prepare_datasets.py\ndownload + convert"]
