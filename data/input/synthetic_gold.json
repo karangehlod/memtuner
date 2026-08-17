@@ -1,0 +1,6809 @@
+{
+  "schema_version": "1.0",
+  "scenario": "Synthetic",
+  "description": "Synthetic benchmark dataset (seed=42)",
+  "user_ids": [
+    "user_0",
+    "user_1",
+    "user_2",
+    "user_3",
+    "user_4"
+  ],
+  "total_conversation_turns": 0,
+  "events": [
+    {
+      "day": 0,
+      "memory_events": [
+        {
+          "id": "mem_121",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Tested implementation involving team.",
+          "importance": 0.3898449316284205,
+          "entities": [],
+          "task_id": "implementation",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_128",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Discovered review involving Charlie, Henry, Ivy.",
+          "importance": 0.49304480219031105,
+          "entities": [
+            "Charlie",
+            "Henry",
+            "Ivy"
+          ],
+          "task_id": "review",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_188",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Reviewed design involving Grace.",
+          "importance": 0.4937854192316957,
+          "entities": [
+            "Grace"
+          ],
+          "task_id": "design",
+          "conversation_turn": 8
+        }
+      ]
+    },
+    {
+      "day": 1,
+      "memory_events": [
+        {
+          "id": "mem_200",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Discovered deployment involving Henry, Ivy, Alice.",
+          "importance": 0.3402241221547728,
+          "entities": [
+            "Henry",
+            "Ivy",
+            "Alice"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 0
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "memory_events": [
+        {
+          "id": "mem_6",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Decided testing involving Bob, Ivy, Eve.",
+          "importance": 0.6996398849419342,
+          "entities": [
+            "Bob",
+            "Ivy",
+            "Eve"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 6
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "memory_events": [
+        {
+          "id": "mem_164",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Improved design involving team.",
+          "importance": 0.5953542426334067,
+          "entities": [],
+          "task_id": "design",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_168",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Tested design involving team.",
+          "importance": 0.2716645138396197,
+          "entities": [],
+          "task_id": "design",
+          "conversation_turn": 8
+        }
+      ]
+    },
+    {
+      "day": 4,
+      "memory_events": [
+        {
+          "id": "mem_52",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Discussed testing involving Jack, Ivy.",
+          "importance": 0.6467941045036305,
+          "entities": [
+            "Jack",
+            "Ivy"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_153",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Tested review involving team.",
+          "importance": 0.546131644492005,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_169",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Discovered planning involving Bob.",
+          "importance": 0.620100336943304,
+          "entities": [
+            "Bob"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 9
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "memory_events": [
+        {
+          "id": "mem_5",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Implemented report involving Jack, Eve.",
+          "importance": 0.5639055491017296,
+          "entities": [
+            "Jack",
+            "Eve"
+          ],
+          "task_id": "report",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_23",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Decided implementation involving Charlie.",
+          "importance": 0.7938530562805297,
+          "entities": [
+            "Charlie"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_174",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Tested report involving team.",
+          "importance": 0.5950763194312179,
+          "entities": [],
+          "task_id": "report",
+          "conversation_turn": 4
+        }
+      ]
+    },
+    {
+      "day": 6,
+      "memory_events": [
+        {
+          "id": "mem_48",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Proposed meeting involving Jack, Diana.",
+          "importance": 0.5795449632710176,
+          "entities": [
+            "Jack",
+            "Diana"
+          ],
+          "task_id": "meeting",
+          "conversation_turn": 8
+        }
+      ]
+    },
+    {
+      "day": 7,
+      "memory_events": [
+        {
+          "id": "mem_22",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Analyzed review involving team.",
+          "importance": 0.6111307424540762,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_125",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Reviewed report involving Eve, Ivy, Jack.",
+          "importance": 0.5786046092592635,
+          "entities": [
+            "Eve",
+            "Ivy",
+            "Jack"
+          ],
+          "task_id": "report",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_178",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Analyzed deployment involving Ivy, Jack, Alice.",
+          "importance": 0.42985096450625776,
+          "entities": [
+            "Ivy",
+            "Jack",
+            "Alice"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 8
+        }
+      ]
+    },
+    {
+      "day": 8,
+      "memory_events": [
+        {
+          "id": "mem_14",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Improved testing involving Jack, Grace.",
+          "importance": 0.7213099856964684,
+          "entities": [
+            "Jack",
+            "Grace"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_45",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Analyzed report involving Eve, Charlie.",
+          "importance": 0.5582740066678206,
+          "entities": [
+            "Eve",
+            "Charlie"
+          ],
+          "task_id": "report",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_132",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Implemented deployment involving team.",
+          "importance": 0.7136897960910915,
+          "entities": [],
+          "task_id": "deployment",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_154",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Proposed analysis involving Bob, Jack, Diana.",
+          "importance": 0.6615119395738351,
+          "entities": [
+            "Bob",
+            "Jack",
+            "Diana"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_170",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Discovered deployment involving Grace, Ivy.",
+          "importance": 0.5504415844419983,
+          "entities": [
+            "Grace",
+            "Ivy"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_175",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discovered analysis involving Bob, Grace.",
+          "importance": 0.4552353195379837,
+          "entities": [
+            "Bob",
+            "Grace"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 5
+        }
+      ]
+    },
+    {
+      "day": 9,
+      "memory_events": [
+        {
+          "id": "mem_70",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Analyzed analysis involving Jack, Bob, Henry.",
+          "importance": 0.41837176386636277,
+          "entities": [
+            "Jack",
+            "Bob",
+            "Henry"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_196",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Reviewed decision involving Bob.",
+          "importance": 0.714132285877352,
+          "entities": [
+            "Bob"
+          ],
+          "task_id": "decision",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_198",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Deployed report involving Eve, Jack, Alice.",
+          "importance": 0.5648020443615391,
+          "entities": [
+            "Eve",
+            "Jack",
+            "Alice"
+          ],
+          "task_id": "report",
+          "conversation_turn": 8
+        }
+      ]
+    },
+    {
+      "day": 10,
+      "memory_events": [
+        {
+          "id": "mem_36",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Tested analysis involving Henry, Eve.",
+          "importance": 0.26649487900474855,
+          "entities": [
+            "Henry",
+            "Eve"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_113",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Discovered deployment involving Henry, Bob.",
+          "importance": 0.548824306659598,
+          "entities": [
+            "Henry",
+            "Bob"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 3
+        }
+      ]
+    },
+    {
+      "day": 11,
+      "memory_events": [
+        {
+          "id": "mem_33",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Analyzed implementation involving team.",
+          "importance": 0.5813666058833249,
+          "entities": [],
+          "task_id": "implementation",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_40",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Decided deployment involving Grace.",
+          "importance": 0.830033343259464,
+          "entities": [
+            "Grace"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_55",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Reviewed analysis involving Grace, Diana.",
+          "importance": 0.29166950930542807,
+          "entities": [
+            "Grace",
+            "Diana"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_148",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Improved meeting involving Ivy, Jack.",
+          "importance": 0.8418680241557868,
+          "entities": [
+            "Ivy",
+            "Jack"
+          ],
+          "task_id": "meeting",
+          "conversation_turn": 8
+        }
+      ]
+    },
+    {
+      "day": 12,
+      "memory_events": [
+        {
+          "id": "mem_66",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Reviewed design involving Grace, Ivy.",
+          "importance": 0.6641080769076166,
+          "entities": [
+            "Grace",
+            "Ivy"
+          ],
+          "task_id": "design",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_71",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Tested implementation involving Charlie.",
+          "importance": 0.7082774695286596,
+          "entities": [
+            "Charlie"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_122",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discovered planning involving Henry, Alice, Diana.",
+          "importance": 0.591497166983714,
+          "entities": [
+            "Henry",
+            "Alice",
+            "Diana"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 2
+        }
+      ]
+    },
+    {
+      "day": 13,
+      "memory_events": [
+        {
+          "id": "mem_2",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Discovered testing involving team.",
+          "importance": 0.37939707423783925,
+          "entities": [],
+          "task_id": "testing",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_67",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Discovered deployment involving Henry, Jack.",
+          "importance": 0.4895902048548835,
+          "entities": [
+            "Henry",
+            "Jack"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_109",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Reviewed report involving Charlie.",
+          "importance": 0.5668922172332546,
+          "entities": [
+            "Charlie"
+          ],
+          "task_id": "report",
+          "conversation_turn": 9
+        }
+      ]
+    },
+    {
+      "day": 14,
+      "memory_events": [
+        {
+          "id": "mem_12",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Tested planning involving Bob, Diana.",
+          "importance": 0.765922831257533,
+          "entities": [
+            "Bob",
+            "Diana"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_15",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Deployed testing involving team.",
+          "importance": 0.5093021457117012,
+          "entities": [],
+          "task_id": "testing",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_27",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discussed decision involving team.",
+          "importance": 0.7700076596380332,
+          "entities": [],
+          "task_id": "decision",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_78",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Analyzed meeting involving team.",
+          "importance": 0.48431752583688664,
+          "entities": [],
+          "task_id": "meeting",
+          "conversation_turn": 8
+        }
+      ]
+    },
+    {
+      "day": 15,
+      "memory_events": [
+        {
+          "id": "mem_29",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Analyzed implementation involving Jack.",
+          "importance": 0.5556053650841878,
+          "entities": [
+            "Jack"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_35",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Deployed design involving Diana, Grace, Alice.",
+          "importance": 0.5336778051879679,
+          "entities": [
+            "Diana",
+            "Grace",
+            "Alice"
+          ],
+          "task_id": "design",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_41",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discussed deployment involving team.",
+          "importance": 0.8157074951168827,
+          "entities": [],
+          "task_id": "deployment",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_86",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Discovered analysis involving Diana.",
+          "importance": 0.7566074317083201,
+          "entities": [
+            "Diana"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_97",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Improved implementation involving Henry.",
+          "importance": 0.5898138288525833,
+          "entities": [
+            "Henry"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_99",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Implemented deployment involving Ivy, Jack, Frank.",
+          "importance": 0.7468434361198251,
+          "entities": [
+            "Ivy",
+            "Jack",
+            "Frank"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_157",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Implemented report involving Alice, Grace.",
+          "importance": 0.7592700722914348,
+          "entities": [
+            "Alice",
+            "Grace"
+          ],
+          "task_id": "report",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_163",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discussed planning involving Eve.",
+          "importance": 0.7040764070927462,
+          "entities": [
+            "Eve"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 3
+        }
+      ]
+    },
+    {
+      "day": 16,
+      "memory_events": [
+        {
+          "id": "mem_43",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Proposed meeting involving Frank, Bob, Alice.",
+          "importance": 0.4859474372573289,
+          "entities": [
+            "Frank",
+            "Bob",
+            "Alice"
+          ],
+          "task_id": "meeting",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_51",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Improved implementation involving Ivy, Alice, Bob.",
+          "importance": 0.6687330917847712,
+          "entities": [
+            "Ivy",
+            "Alice",
+            "Bob"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_60",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Proposed deployment involving team.",
+          "importance": 0.7244380945677782,
+          "entities": [],
+          "task_id": "deployment",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_106",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Decided report involving Henry, Bob, Alice.",
+          "importance": 0.7585624900165309,
+          "entities": [
+            "Henry",
+            "Bob",
+            "Alice"
+          ],
+          "task_id": "report",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_134",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Tested deployment involving team.",
+          "importance": 0.7750730005950802,
+          "entities": [],
+          "task_id": "deployment",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_141",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Proposed implementation involving Bob.",
+          "importance": 0.6277517157331711,
+          "entities": [
+            "Bob"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_149",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Implemented review involving team.",
+          "importance": 0.4538384586017826,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_173",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Deployed meeting involving team.",
+          "importance": 0.7199567937325362,
+          "entities": [],
+          "task_id": "meeting",
+          "conversation_turn": 3
+        }
+      ]
+    },
+    {
+      "day": 17,
+      "memory_events": [
+        {
+          "id": "mem_56",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Tested report involving team.",
+          "importance": 0.6670959062938979,
+          "entities": [],
+          "task_id": "report",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_96",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Improved review involving team.",
+          "importance": 0.5028536319336817,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_158",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Deployed report involving team.",
+          "importance": 0.4880175072748465,
+          "entities": [],
+          "task_id": "report",
+          "conversation_turn": 8
+        }
+      ]
+    },
+    {
+      "day": 18,
+      "memory_events": [
+        {
+          "id": "mem_111",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Analyzed report involving Jack, Diana.",
+          "importance": 0.625183334094569,
+          "entities": [
+            "Jack",
+            "Diana"
+          ],
+          "task_id": "report",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_123",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Decided implementation involving team.",
+          "importance": 0.6790375467523434,
+          "entities": [],
+          "task_id": "implementation",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_145",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Implemented deployment involving Diana.",
+          "importance": 0.4679077692129938,
+          "entities": [
+            "Diana"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_185",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Improved implementation involving Alice, Diana.",
+          "importance": 0.7042750886643132,
+          "entities": [
+            "Alice",
+            "Diana"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 5
+        }
+      ]
+    },
+    {
+      "day": 19,
+      "memory_events": [
+        {
+          "id": "mem_53",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Implemented analysis involving Diana.",
+          "importance": 0.6628105890628287,
+          "entities": [
+            "Diana"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_65",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Tested planning involving Ivy, Charlie.",
+          "importance": 0.47551048279746533,
+          "entities": [
+            "Ivy",
+            "Charlie"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_103",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Reviewed testing involving Alice, Jack.",
+          "importance": 0.7359828484565321,
+          "entities": [
+            "Alice",
+            "Jack"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_107",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Decided decision involving Jack, Diana, Grace.",
+          "importance": 0.8232983408844787,
+          "entities": [
+            "Jack",
+            "Diana",
+            "Grace"
+          ],
+          "task_id": "decision",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_182",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Discovered deployment involving team.",
+          "importance": 0.664830578247373,
+          "entities": [],
+          "task_id": "deployment",
+          "conversation_turn": 2
+        }
+      ]
+    },
+    {
+      "day": 20,
+      "memory_events": [
+        {
+          "id": "mem_84",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Proposed design involving Eve, Bob, Henry.",
+          "importance": 0.7853971164470929,
+          "entities": [
+            "Eve",
+            "Bob",
+            "Henry"
+          ],
+          "task_id": "design",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_94",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Proposed report involving Diana, Henry, Grace.",
+          "importance": 0.509515146655756,
+          "entities": [
+            "Diana",
+            "Henry",
+            "Grace"
+          ],
+          "task_id": "report",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_95",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Analyzed implementation involving Eve, Frank.",
+          "importance": 0.7499819830421495,
+          "entities": [
+            "Eve",
+            "Frank"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_101",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Reviewed testing involving Diana.",
+          "importance": 0.8379809972144483,
+          "entities": [
+            "Diana"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_138",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Implemented review involving Grace, Charlie.",
+          "importance": 0.6056351433167013,
+          "entities": [
+            "Grace",
+            "Charlie"
+          ],
+          "task_id": "review",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_192",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Deployed deployment involving Bob, Grace.",
+          "importance": 0.6626590282381158,
+          "entities": [
+            "Bob",
+            "Grace"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 2
+        }
+      ]
+    },
+    {
+      "day": 21,
+      "memory_events": [
+        {
+          "id": "mem_77",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Decided testing involving Charlie.",
+          "importance": 0.4932064605732669,
+          "entities": [
+            "Charlie"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_161",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Discussed deployment involving Charlie, Jack.",
+          "importance": 0.8959242451628995,
+          "entities": [
+            "Charlie",
+            "Jack"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_194",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Improved report involving team.",
+          "importance": 0.5033275373248353,
+          "entities": [],
+          "task_id": "report",
+          "conversation_turn": 4
+        }
+      ]
+    },
+    {
+      "day": 22,
+      "memory_events": [
+        {
+          "id": "mem_85",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Discussed report involving team.",
+          "importance": 0.6226915916095638,
+          "entities": [],
+          "task_id": "report",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_118",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Implemented planning involving team.",
+          "importance": 0.6840577507957826,
+          "entities": [],
+          "task_id": "planning",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_176",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Proposed analysis involving Frank, Bob.",
+          "importance": 0.5084384798145171,
+          "entities": [
+            "Frank",
+            "Bob"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_180",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Reviewed meeting involving Bob, Charlie, Alice.",
+          "importance": 0.7546363395248464,
+          "entities": [
+            "Bob",
+            "Charlie",
+            "Alice"
+          ],
+          "task_id": "meeting",
+          "conversation_turn": 0
+        }
+      ]
+    },
+    {
+      "day": 23,
+      "memory_events": [
+        {
+          "id": "mem_7",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Decided decision involving team.",
+          "importance": 0.4171387888056457,
+          "entities": [],
+          "task_id": "decision",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_9",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Implemented planning involving Eve.",
+          "importance": 0.712766843488822,
+          "entities": [
+            "Eve"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_91",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Implemented testing involving team.",
+          "importance": 0.7299629797804472,
+          "entities": [],
+          "task_id": "testing",
+          "conversation_turn": 1
+        }
+      ]
+    },
+    {
+      "day": 24,
+      "memory_events": [
+        {
+          "id": "mem_62",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Proposed decision involving team.",
+          "importance": 0.5977650652216041,
+          "entities": [],
+          "task_id": "decision",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_89",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Decided decision involving Bob.",
+          "importance": 0.5151183465725822,
+          "entities": [
+            "Bob"
+          ],
+          "task_id": "decision",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_131",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Deployed meeting involving team.",
+          "importance": 0.7544335557549554,
+          "entities": [],
+          "task_id": "meeting",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_181",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Implemented implementation involving Frank.",
+          "importance": 0.700547786698657,
+          "entities": [
+            "Frank"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 1
+        }
+      ]
+    },
+    {
+      "day": 25,
+      "memory_events": [
+        {
+          "id": "mem_32",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Analyzed report involving Diana.",
+          "importance": 0.5196920522342371,
+          "entities": [
+            "Diana"
+          ],
+          "task_id": "report",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_186",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discussed analysis involving Eve.",
+          "importance": 0.8411956421438518,
+          "entities": [
+            "Eve"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 6
+        }
+      ]
+    },
+    {
+      "day": 26,
+      "memory_events": [
+        {
+          "id": "mem_31",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Decided analysis involving team.",
+          "importance": 0.48202474446593524,
+          "entities": [],
+          "task_id": "analysis",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_42",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Improved deployment involving Eve, Diana.",
+          "importance": 0.5370431113736973,
+          "entities": [
+            "Eve",
+            "Diana"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_92",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Tested report involving Henry, Charlie.",
+          "importance": 0.375732700932343,
+          "entities": [
+            "Henry",
+            "Charlie"
+          ],
+          "task_id": "report",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_126",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Analyzed implementation involving Ivy, Charlie, Grace.",
+          "importance": 0.6739636762327664,
+          "entities": [
+            "Ivy",
+            "Charlie",
+            "Grace"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_191",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Tested report involving team.",
+          "importance": 0.4950433743838246,
+          "entities": [],
+          "task_id": "report",
+          "conversation_turn": 1
+        }
+      ]
+    },
+    {
+      "day": 27,
+      "memory_events": [
+        {
+          "id": "mem_100",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Implemented planning involving Eve, Jack, Ivy.",
+          "importance": 0.6292469761231578,
+          "entities": [
+            "Eve",
+            "Jack",
+            "Ivy"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_112",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Analyzed testing involving Eve.",
+          "importance": 0.6267394700954801,
+          "entities": [
+            "Eve"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_171",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Improved report involving Grace.",
+          "importance": 0.7709911613903885,
+          "entities": [
+            "Grace"
+          ],
+          "task_id": "report",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_190",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Decided implementation involving Jack, Grace.",
+          "importance": 0.3887873760825399,
+          "entities": [
+            "Jack",
+            "Grace"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 0
+        }
+      ]
+    },
+    {
+      "day": 28,
+      "memory_events": [
+        {
+          "id": "mem_26",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Analyzed decision involving team.",
+          "importance": 0.49495684512379,
+          "entities": [],
+          "task_id": "decision",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_34",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discussed report involving team.",
+          "importance": 0.936141555566335,
+          "entities": [],
+          "task_id": "report",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_46",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discovered review involving team.",
+          "importance": 0.5058568440794984,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_68",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Deployed testing involving Bob.",
+          "importance": 0.5533323243714344,
+          "entities": [
+            "Bob"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_75",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Deployed implementation involving Diana, Eve.",
+          "importance": 0.7451796914717775,
+          "entities": [
+            "Diana",
+            "Eve"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_108",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Discovered review involving Eve, Alice, Bob.",
+          "importance": 0.6968790506282228,
+          "entities": [
+            "Eve",
+            "Alice",
+            "Bob"
+          ],
+          "task_id": "review",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_142",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Proposed deployment involving Eve, Henry, Jack.",
+          "importance": 0.6463729429609205,
+          "entities": [
+            "Eve",
+            "Henry",
+            "Jack"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_166",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discovered decision involving team.",
+          "importance": 0.5532267147702818,
+          "entities": [],
+          "task_id": "decision",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_172",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Implemented design involving Grace, Jack, Bob.",
+          "importance": 0.550269569405655,
+          "entities": [
+            "Grace",
+            "Jack",
+            "Bob"
+          ],
+          "task_id": "design",
+          "conversation_turn": 2
+        }
+      ]
+    },
+    {
+      "day": 29,
+      "memory_events": [
+        {
+          "id": "mem_44",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Decided deployment involving team.",
+          "importance": 0.4268430526710717,
+          "entities": [],
+          "task_id": "deployment",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_57",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Analyzed review involving Alice.",
+          "importance": 0.5174195736849393,
+          "entities": [
+            "Alice"
+          ],
+          "task_id": "review",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_73",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Analyzed testing involving team.",
+          "importance": 0.3817968796787916,
+          "entities": [],
+          "task_id": "testing",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_74",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Improved implementation involving Henry, Ivy.",
+          "importance": 0.3071952345440037,
+          "entities": [
+            "Henry",
+            "Ivy"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_79",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Analyzed analysis involving Grace, Alice, Jack.",
+          "importance": 0.668544091983085,
+          "entities": [
+            "Grace",
+            "Alice",
+            "Jack"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_83",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Proposed analysis involving Frank, Diana, Henry.",
+          "importance": 0.6798801767987871,
+          "entities": [
+            "Frank",
+            "Diana",
+            "Henry"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_114",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Proposed design involving Henry, Bob, Alice.",
+          "importance": 0.7876698232713597,
+          "entities": [
+            "Henry",
+            "Bob",
+            "Alice"
+          ],
+          "task_id": "design",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_120",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Proposed planning involving Bob, Grace.",
+          "importance": 0.7850668816893742,
+          "entities": [
+            "Bob",
+            "Grace"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_150",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Analyzed meeting involving Ivy, Frank, Bob.",
+          "importance": 0.6063499033846991,
+          "entities": [
+            "Ivy",
+            "Frank",
+            "Bob"
+          ],
+          "task_id": "meeting",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_155",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Tested testing involving Grace.",
+          "importance": 0.5473027497341975,
+          "entities": [
+            "Grace"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_199",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Discussed analysis involving Eve, Bob.",
+          "importance": 0.6472230559869093,
+          "entities": [
+            "Eve",
+            "Bob"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 9
+        }
+      ]
+    },
+    {
+      "day": 30,
+      "memory_events": [
+        {
+          "id": "mem_80",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Proposed planning involving Grace, Ivy, Diana.",
+          "importance": 0.4805638923990574,
+          "entities": [
+            "Grace",
+            "Ivy",
+            "Diana"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_105",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Implemented implementation involving Alice.",
+          "importance": 0.4594539908609302,
+          "entities": [
+            "Alice"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_143",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Tested decision involving Jack, Eve.",
+          "importance": 0.7403677173081697,
+          "entities": [
+            "Jack",
+            "Eve"
+          ],
+          "task_id": "decision",
+          "conversation_turn": 3
+        }
+      ]
+    },
+    {
+      "day": 31,
+      "memory_events": [
+        {
+          "id": "mem_81",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Implemented design involving Charlie, Henry, Jack.",
+          "importance": 0.6088492009963415,
+          "entities": [
+            "Charlie",
+            "Henry",
+            "Jack"
+          ],
+          "task_id": "design",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_184",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Tested implementation involving Diana, Ivy.",
+          "importance": 0.7200634802990283,
+          "entities": [
+            "Diana",
+            "Ivy"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_197",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Discovered deployment involving Jack, Frank, Ivy.",
+          "importance": 0.8316677657628785,
+          "entities": [
+            "Jack",
+            "Frank",
+            "Ivy"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 7
+        }
+      ]
+    },
+    {
+      "day": 32,
+      "memory_events": [
+        {
+          "id": "mem_201",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Discovered planning involving Ivy, Charlie, Alice.",
+          "importance": 0.6848871030451401,
+          "entities": [
+            "Ivy",
+            "Charlie",
+            "Alice"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 1
+        }
+      ]
+    },
+    {
+      "day": 33,
+      "memory_events": [
+        {
+          "id": "mem_39",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Improved analysis involving team.",
+          "importance": 0.6529044795072242,
+          "entities": [],
+          "task_id": "analysis",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_117",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Reviewed review involving Henry, Bob, Jack.",
+          "importance": 0.5072181435470411,
+          "entities": [
+            "Henry",
+            "Bob",
+            "Jack"
+          ],
+          "task_id": "review",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_133",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Reviewed analysis involving Charlie, Bob, Henry.",
+          "importance": 0.4851475928713439,
+          "entities": [
+            "Charlie",
+            "Bob",
+            "Henry"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 3
+        }
+      ]
+    },
+    {
+      "day": 34,
+      "memory_events": [
+        {
+          "id": "mem_63",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Tested planning involving team.",
+          "importance": 0.591563352648792,
+          "entities": [],
+          "task_id": "planning",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_129",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Implemented implementation involving Diana.",
+          "importance": 0.7571164643224008,
+          "entities": [
+            "Diana"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_135",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Deployed planning involving team.",
+          "importance": 0.36456893932766327,
+          "entities": [],
+          "task_id": "planning",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_151",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Implemented implementation involving Jack, Grace.",
+          "importance": 0.5757014819007535,
+          "entities": [
+            "Jack",
+            "Grace"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_162",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Decided meeting involving team.",
+          "importance": 0.6955384779451698,
+          "entities": [],
+          "task_id": "meeting",
+          "conversation_turn": 2
+        }
+      ]
+    },
+    {
+      "day": 35,
+      "memory_events": [
+        {
+          "id": "mem_37",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Analyzed meeting involving Diana, Alice.",
+          "importance": 0.7752226164764806,
+          "entities": [
+            "Diana",
+            "Alice"
+          ],
+          "task_id": "meeting",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_104",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Deployed meeting involving team.",
+          "importance": 0.7365753292578074,
+          "entities": [],
+          "task_id": "meeting",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_110",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Discussed meeting involving Henry, Jack, Eve.",
+          "importance": 0.7210698598781519,
+          "entities": [
+            "Henry",
+            "Jack",
+            "Eve"
+          ],
+          "task_id": "meeting",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_189",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Tested report involving team.",
+          "importance": 0.5779466985792978,
+          "entities": [],
+          "task_id": "report",
+          "conversation_turn": 9
+        }
+      ]
+    },
+    {
+      "day": 36,
+      "memory_events": [
+        {
+          "id": "mem_30",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Deployed decision involving Diana, Bob, Ivy.",
+          "importance": 0.5240685699860927,
+          "entities": [
+            "Diana",
+            "Bob",
+            "Ivy"
+          ],
+          "task_id": "decision",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_87",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Proposed implementation involving Charlie, Bob.",
+          "importance": 0.7590289186333254,
+          "entities": [
+            "Charlie",
+            "Bob"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_130",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Tested decision involving team.",
+          "importance": 0.5294789974239967,
+          "entities": [],
+          "task_id": "decision",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_160",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Improved report involving Jack.",
+          "importance": 0.6642920875710544,
+          "entities": [
+            "Jack"
+          ],
+          "task_id": "report",
+          "conversation_turn": 0
+        }
+      ]
+    },
+    {
+      "day": 37,
+      "memory_events": [
+        {
+          "id": "mem_38",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Implemented analysis involving team.",
+          "importance": 0.7623291254602512,
+          "entities": [],
+          "task_id": "analysis",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_116",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Discovered review involving team.",
+          "importance": 0.6076594273340078,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_147",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Decided meeting involving Frank, Grace.",
+          "importance": 0.750772697689769,
+          "entities": [
+            "Frank",
+            "Grace"
+          ],
+          "task_id": "meeting",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_193",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Decided testing involving Eve, Frank, Diana.",
+          "importance": 0.5071544068593361,
+          "entities": [
+            "Eve",
+            "Frank",
+            "Diana"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 3
+        }
+      ]
+    },
+    {
+      "day": 38,
+      "memory_events": [
+        {
+          "id": "mem_17",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Proposed testing involving team.",
+          "importance": 0.5158179102685674,
+          "entities": [],
+          "task_id": "testing",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_115",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Decided analysis involving Jack.",
+          "importance": 0.443596332416453,
+          "entities": [
+            "Jack"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_159",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Implemented analysis involving Charlie.",
+          "importance": 0.41656665559300377,
+          "entities": [
+            "Charlie"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 9
+        }
+      ]
+    },
+    {
+      "day": 39,
+      "memory_events": [
+        {
+          "id": "mem_69",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Analyzed report involving Diana, Jack.",
+          "importance": 0.816521458911019,
+          "entities": [
+            "Diana",
+            "Jack"
+          ],
+          "task_id": "report",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_82",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Tested analysis involving team.",
+          "importance": 0.7371317743641936,
+          "entities": [],
+          "task_id": "analysis",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_136",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Proposed decision involving Bob.",
+          "importance": 0.5375036313422014,
+          "entities": [
+            "Bob"
+          ],
+          "task_id": "decision",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_140",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Analyzed deployment involving Jack, Charlie, Diana.",
+          "importance": 0.4885782296218726,
+          "entities": [
+            "Jack",
+            "Charlie",
+            "Diana"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_146",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Decided meeting involving team.",
+          "importance": 0.5414711712569755,
+          "entities": [],
+          "task_id": "meeting",
+          "conversation_turn": 6
+        }
+      ]
+    },
+    {
+      "day": 40,
+      "memory_events": [
+        {
+          "id": "mem_0",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Proposed analysis involving Diana.",
+          "importance": 0.6446211780602578,
+          "entities": [
+            "Diana"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_11",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Implemented decision involving team.",
+          "importance": 0.6279520986683184,
+          "entities": [],
+          "task_id": "decision",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_20",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Discovered testing involving Charlie.",
+          "importance": 0.5374670303762294,
+          "entities": [
+            "Charlie"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_49",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Deployed testing involving Alice, Bob.",
+          "importance": 0.5008745420522891,
+          "entities": [
+            "Alice",
+            "Bob"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_50",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Discussed review involving team.",
+          "importance": 0.5601883013295095,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_124",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Reviewed decision involving Ivy, Alice.",
+          "importance": 0.537189212016047,
+          "entities": [
+            "Ivy",
+            "Alice"
+          ],
+          "task_id": "decision",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_137",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Reviewed implementation involving Alice, Jack.",
+          "importance": 0.6275254551301639,
+          "entities": [
+            "Alice",
+            "Jack"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_152",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Analyzed report involving Alice, Ivy, Frank.",
+          "importance": 0.691421592526495,
+          "entities": [
+            "Alice",
+            "Ivy",
+            "Frank"
+          ],
+          "task_id": "report",
+          "conversation_turn": 2
+        }
+      ]
+    },
+    {
+      "day": 41,
+      "memory_events": [
+        {
+          "id": "mem_72",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Tested report involving Charlie.",
+          "importance": 0.6771821336473962,
+          "entities": [
+            "Charlie"
+          ],
+          "task_id": "report",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_93",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Improved deployment involving Henry, Grace, Eve.",
+          "importance": 0.6962352145781152,
+          "entities": [
+            "Henry",
+            "Grace",
+            "Eve"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_98",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Discussed implementation involving team.",
+          "importance": 0.5581017952346427,
+          "entities": [],
+          "task_id": "implementation",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_156",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Discovered implementation involving Eve, Alice, Frank.",
+          "importance": 0.6332236849906492,
+          "entities": [
+            "Eve",
+            "Alice",
+            "Frank"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 6
+        }
+      ]
+    },
+    {
+      "day": 42,
+      "memory_events": [
+        {
+          "id": "mem_8",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Decided review involving Bob.",
+          "importance": 0.4797244936457161,
+          "entities": [
+            "Bob"
+          ],
+          "task_id": "review",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_24",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Reviewed testing involving Ivy, Grace.",
+          "importance": 0.9363146805668303,
+          "entities": [
+            "Ivy",
+            "Grace"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_47",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Proposed meeting involving team.",
+          "importance": 0.4340707669295596,
+          "entities": [],
+          "task_id": "meeting",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_54",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Improved planning involving Jack, Charlie, Diana.",
+          "importance": 0.8704752357979657,
+          "entities": [
+            "Jack",
+            "Charlie",
+            "Diana"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_58",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Implemented design involving Bob, Eve.",
+          "importance": 0.49373770454720317,
+          "entities": [
+            "Bob",
+            "Eve"
+          ],
+          "task_id": "design",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_64",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Implemented deployment involving team.",
+          "importance": 0.5760530879553465,
+          "entities": [],
+          "task_id": "deployment",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_167",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Deployed review involving team.",
+          "importance": 0.27511548962413784,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 7
+        },
+        {
+          "id": "mem_177",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Decided decision involving Ivy, Frank.",
+          "importance": 0.5512119686613988,
+          "entities": [
+            "Ivy",
+            "Frank"
+          ],
+          "task_id": "decision",
+          "conversation_turn": 7
+        }
+      ]
+    },
+    {
+      "day": 43,
+      "memory_events": [
+        {
+          "id": "mem_18",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Proposed testing involving Bob, Eve.",
+          "importance": 0.4487135380459729,
+          "entities": [
+            "Bob",
+            "Eve"
+          ],
+          "task_id": "testing",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_59",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discussed planning involving team.",
+          "importance": 0.7440642973631031,
+          "entities": [],
+          "task_id": "planning",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_139",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Reviewed meeting involving team.",
+          "importance": 0.7544942737243868,
+          "entities": [],
+          "task_id": "meeting",
+          "conversation_turn": 9
+        }
+      ]
+    },
+    {
+      "day": 44,
+      "memory_events": [
+        {
+          "id": "mem_3",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Analyzed design involving Jack, Eve, Alice.",
+          "importance": 0.5106545817022732,
+          "entities": [
+            "Jack",
+            "Eve",
+            "Alice"
+          ],
+          "task_id": "design",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_10",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Reviewed deployment involving Charlie.",
+          "importance": 0.484339083283878,
+          "entities": [
+            "Charlie"
+          ],
+          "task_id": "deployment",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_90",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Decided deployment involving team.",
+          "importance": 0.5090214010710018,
+          "entities": [],
+          "task_id": "deployment",
+          "conversation_turn": 0
+        },
+        {
+          "id": "mem_119",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Tested review involving team.",
+          "importance": 0.4953931159759418,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_144",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Tested analysis involving Alice, Jack.",
+          "importance": 0.8099384695302868,
+          "entities": [
+            "Alice",
+            "Jack"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_179",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Reviewed analysis involving Eve, Frank.",
+          "importance": 0.46104098178869174,
+          "entities": [
+            "Eve",
+            "Frank"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 9
+        }
+      ]
+    },
+    {
+      "day": 45,
+      "memory_events": [
+        {
+          "id": "mem_13",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Deployed decision involving Henry, Charlie, Eve.",
+          "importance": 0.4992323474495957,
+          "entities": [
+            "Henry",
+            "Charlie",
+            "Eve"
+          ],
+          "task_id": "decision",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_28",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Decided decision involving team.",
+          "importance": 0.6365554561458225,
+          "entities": [],
+          "task_id": "decision",
+          "conversation_turn": 8
+        }
+      ]
+    },
+    {
+      "day": 46,
+      "memory_events": [
+        {
+          "id": "mem_19",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Reviewed testing involving team.",
+          "importance": 0.665732597532184,
+          "entities": [],
+          "task_id": "testing",
+          "conversation_turn": 9
+        },
+        {
+          "id": "mem_61",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Discovered design involving team.",
+          "importance": 0.7008576164024457,
+          "entities": [],
+          "task_id": "design",
+          "conversation_turn": 1
+        }
+      ]
+    },
+    {
+      "day": 47,
+      "memory_events": [
+        {
+          "id": "mem_1",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discovered report involving Alice, Jack, Bob.",
+          "importance": 0.6536200125306247,
+          "entities": [
+            "Alice",
+            "Jack",
+            "Bob"
+          ],
+          "task_id": "report",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_102",
+          "user_id": "user_3",
+          "type": "episodic",
+          "content": "Discovered review involving Bob, Diana.",
+          "importance": 0.5593357970671972,
+          "entities": [
+            "Bob",
+            "Diana"
+          ],
+          "task_id": "review",
+          "conversation_turn": 2
+        },
+        {
+          "id": "mem_127",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Proposed report involving Frank, Ivy, Eve.",
+          "importance": 0.7889245664352464,
+          "entities": [
+            "Frank",
+            "Ivy",
+            "Eve"
+          ],
+          "task_id": "report",
+          "conversation_turn": 7
+        }
+      ]
+    },
+    {
+      "day": 48,
+      "memory_events": [
+        {
+          "id": "mem_4",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Implemented design involving Charlie, Diana.",
+          "importance": 0.731010657806917,
+          "entities": [
+            "Charlie",
+            "Diana"
+          ],
+          "task_id": "design",
+          "conversation_turn": 4
+        },
+        {
+          "id": "mem_16",
+          "user_id": "user_0",
+          "type": "episodic",
+          "content": "Reviewed report involving Grace.",
+          "importance": 0.47845849056213546,
+          "entities": [
+            "Grace"
+          ],
+          "task_id": "report",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_25",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Tested review involving Henry, Ivy.",
+          "importance": 0.523409963322645,
+          "entities": [
+            "Henry",
+            "Ivy"
+          ],
+          "task_id": "review",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_183",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Decided analysis involving Henry, Grace.",
+          "importance": 0.541632813337897,
+          "entities": [
+            "Henry",
+            "Grace"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 3
+        },
+        {
+          "id": "mem_187",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Implemented review involving team.",
+          "importance": 0.513718627083512,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 7
+        }
+      ]
+    },
+    {
+      "day": 49,
+      "memory_events": [
+        {
+          "id": "mem_21",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Discovered analysis involving Henry, Alice.",
+          "importance": 0.663392355998126,
+          "entities": [
+            "Henry",
+            "Alice"
+          ],
+          "task_id": "analysis",
+          "conversation_turn": 1
+        },
+        {
+          "id": "mem_76",
+          "user_id": "user_4",
+          "type": "episodic",
+          "content": "Analyzed implementation involving Henry, Bob.",
+          "importance": 0.5751015001257003,
+          "entities": [
+            "Henry",
+            "Bob"
+          ],
+          "task_id": "implementation",
+          "conversation_turn": 6
+        },
+        {
+          "id": "mem_88",
+          "user_id": "user_1",
+          "type": "episodic",
+          "content": "Decided review involving team.",
+          "importance": 0.7771567625421378,
+          "entities": [],
+          "task_id": "review",
+          "conversation_turn": 8
+        },
+        {
+          "id": "mem_165",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Discovered testing involving team.",
+          "importance": 0.4294672857127583,
+          "entities": [],
+          "task_id": "testing",
+          "conversation_turn": 5
+        },
+        {
+          "id": "mem_195",
+          "user_id": "user_2",
+          "type": "episodic",
+          "content": "Reviewed planning involving Bob.",
+          "importance": 0.581177720067375,
+          "entities": [
+            "Bob"
+          ],
+          "task_id": "planning",
+          "conversation_turn": 5
+        }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "day": 49,
+      "query": "What happened in Diana's analysis?",
+      "task_id": "task_0",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_87",
+          "mem_182",
+          "mem_21"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "Who was involved in the deployment?",
+      "task_id": "task_1",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_156",
+          "mem_40",
+          "mem_93",
+          "mem_95",
+          "mem_72",
+          "mem_99",
+          "mem_104"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "When did we review the review?",
+      "task_id": "task_2",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_142",
+          "mem_173",
+          "mem_98"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 44,
+      "query": "Who was involved in the deployment?",
+      "task_id": "task_3",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_169",
+          "mem_36",
+          "mem_89",
+          "mem_79",
+          "mem_167",
+          "mem_178",
+          "mem_100"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the design?",
+      "task_id": "task_4",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_84",
+          "mem_32",
+          "mem_171",
+          "mem_179",
+          "mem_189",
+          "mem_175",
+          "mem_134",
+          "mem_23"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "When did we review the decision?",
+      "task_id": "task_5",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_46",
+          "mem_54",
+          "mem_87",
+          "mem_196",
+          "mem_124"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 35,
+      "query": "When did we review the planning?",
+      "task_id": "task_6",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_129",
+          "mem_197",
+          "mem_138"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 44,
+      "query": "What happened in Alice's implementation?",
+      "task_id": "task_7",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_41",
+          "mem_46",
+          "mem_177",
+          "mem_197"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 44,
+      "query": "Who was involved in the testing?",
+      "task_id": "task_8",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_60",
+          "mem_113",
+          "mem_156",
+          "mem_72",
+          "mem_192",
+          "mem_191",
+          "mem_200",
+          "mem_114"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 43,
+      "query": "What was the outcome of the design?",
+      "task_id": "task_9",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_173",
+          "mem_146",
+          "mem_112",
+          "mem_118",
+          "mem_196"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about planning with Ivy?",
+      "task_id": "task_10",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_154",
+          "mem_35",
+          "mem_64",
+          "mem_13"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the design?",
+      "task_id": "task_11",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_21",
+          "mem_195",
+          "mem_41",
+          "mem_69",
+          "mem_115"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Diana's planning?",
+      "task_id": "task_12",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_106",
+          "mem_13",
+          "mem_101"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about meeting with Charlie?",
+      "task_id": "task_13",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_7",
+          "mem_81",
+          "mem_25",
+          "mem_182"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "When did we review the review?",
+      "task_id": "task_14",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_35",
+          "mem_194",
+          "mem_180",
+          "mem_120",
+          "mem_114",
+          "mem_157",
+          "mem_1",
+          "mem_20"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What happened in Diana's analysis?",
+      "task_id": "task_15",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_135",
+          "mem_108",
+          "mem_28",
+          "mem_198",
+          "mem_73",
+          "mem_60",
+          "mem_77"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the analysis?",
+      "task_id": "task_16",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_28",
+          "mem_127",
+          "mem_152"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What happened in Jack's decision?",
+      "task_id": "task_17",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_74",
+          "mem_109",
+          "mem_0",
+          "mem_157"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about design with Henry?",
+      "task_id": "task_18",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_21",
+          "mem_134",
+          "mem_92",
+          "mem_17",
+          "mem_139",
+          "mem_129",
+          "mem_201",
+          "mem_141"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the decision?",
+      "task_id": "task_19",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_191",
+          "mem_4",
+          "mem_91",
+          "mem_201",
+          "mem_17"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Henry's meeting?",
+      "task_id": "task_20",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_90",
+          "mem_139",
+          "mem_86"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about review with Diana?",
+      "task_id": "task_21",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_183",
+          "mem_198",
+          "mem_117"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "Who was involved in the analysis?",
+      "task_id": "task_22",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_79",
+          "mem_131",
+          "mem_101",
+          "mem_139",
+          "mem_121"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What happened in Charlie's planning?",
+      "task_id": "task_23",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_84",
+          "mem_69",
+          "mem_31",
+          "mem_94",
+          "mem_111",
+          "mem_102",
+          "mem_190",
+          "mem_112"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the testing?",
+      "task_id": "task_24",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_68",
+          "mem_21",
+          "mem_186",
+          "mem_108",
+          "mem_20",
+          "mem_110",
+          "mem_154"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 42,
+      "query": "Who was involved in the meeting?",
+      "task_id": "task_25",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_169",
+          "mem_75",
+          "mem_78",
+          "mem_114",
+          "mem_154"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the planning?",
+      "task_id": "task_26",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_90",
+          "mem_157",
+          "mem_111",
+          "mem_70",
+          "mem_163",
+          "mem_14",
+          "mem_19",
+          "mem_171"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "What was the outcome of the planning?",
+      "task_id": "task_27",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_173",
+          "mem_200",
+          "mem_112",
+          "mem_8",
+          "mem_32",
+          "mem_17",
+          "mem_60"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "When did we review the report?",
+      "task_id": "task_28",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_173",
+          "mem_115",
+          "mem_94",
+          "mem_95"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 39,
+      "query": "What happened in Ivy's implementation?",
+      "task_id": "task_29",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_80",
+          "mem_166",
+          "mem_71",
+          "mem_63",
+          "mem_29",
+          "mem_6"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What was decided about implementation with Diana?",
+      "task_id": "task_30",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_198",
+          "mem_66",
+          "mem_180",
+          "mem_114",
+          "mem_54"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 42,
+      "query": "What was the outcome of the report?",
+      "task_id": "task_31",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_44",
+          "mem_182",
+          "mem_113",
+          "mem_22",
+          "mem_174",
+          "mem_81"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "When did we review the planning?",
+      "task_id": "task_32",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_182",
+          "mem_181",
+          "mem_179",
+          "mem_163"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 43,
+      "query": "What happened in Frank's deployment?",
+      "task_id": "task_33",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_60",
+          "mem_126",
+          "mem_6",
+          "mem_92"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about design with Jack?",
+      "task_id": "task_34",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_22",
+          "mem_16",
+          "mem_79",
+          "mem_101",
+          "mem_183",
+          "mem_184",
+          "mem_122"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the meeting?",
+      "task_id": "task_35",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_18",
+          "mem_115",
+          "mem_119",
+          "mem_174",
+          "mem_132",
+          "mem_88",
+          "mem_32",
+          "mem_199"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 44,
+      "query": "What was decided about testing with Eve?",
+      "task_id": "task_36",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_39",
+          "mem_77",
+          "mem_42",
+          "mem_41",
+          "mem_82",
+          "mem_181",
+          "mem_57"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "What was the outcome of the meeting?",
+      "task_id": "task_37",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_141",
+          "mem_70",
+          "mem_32",
+          "mem_160",
+          "mem_77",
+          "mem_157",
+          "mem_136",
+          "mem_23"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 44,
+      "query": "When did we review the deployment?",
+      "task_id": "task_38",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_159",
+          "mem_184",
+          "mem_154",
+          "mem_86",
+          "mem_144",
+          "mem_10",
+          "mem_7",
+          "mem_20"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What happened in Diana's implementation?",
+      "task_id": "task_39",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_163",
+          "mem_7",
+          "mem_127",
+          "mem_160",
+          "mem_139",
+          "mem_74",
+          "mem_164"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 36,
+      "query": "What happened in Henry's design?",
+      "task_id": "task_40",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_176",
+          "mem_15",
+          "mem_40"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the planning?",
+      "task_id": "task_41",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_36",
+          "mem_80",
+          "mem_183",
+          "mem_81",
+          "mem_187",
+          "mem_88",
+          "mem_102"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What was decided about meeting with Bob?",
+      "task_id": "task_42",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_119",
+          "mem_31",
+          "mem_68",
+          "mem_115"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 40,
+      "query": "What was the outcome of the meeting?",
+      "task_id": "task_43",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_107",
+          "mem_63",
+          "mem_40",
+          "mem_83",
+          "mem_147",
+          "mem_184",
+          "mem_80"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was the outcome of the decision?",
+      "task_id": "task_44",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_127",
+          "mem_5",
+          "mem_23",
+          "mem_100",
+          "mem_129"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about review with Ivy?",
+      "task_id": "task_45",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_72",
+          "mem_126",
+          "mem_152"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Alice's planning?",
+      "task_id": "task_46",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_67",
+          "mem_186",
+          "mem_93",
+          "mem_195"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What was the outcome of the testing?",
+      "task_id": "task_47",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_49",
+          "mem_92",
+          "mem_141",
+          "mem_73",
+          "mem_18",
+          "mem_98",
+          "mem_129"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "What was the outcome of the meeting?",
+      "task_id": "task_48",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_24",
+          "mem_100",
+          "mem_95",
+          "mem_86"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was the outcome of the implementation?",
+      "task_id": "task_49",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_10",
+          "mem_11",
+          "mem_9",
+          "mem_35",
+          "mem_182",
+          "mem_85",
+          "mem_121"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What was the outcome of the deployment?",
+      "task_id": "task_50",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_156",
+          "mem_81",
+          "mem_41",
+          "mem_100",
+          "mem_157"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the report?",
+      "task_id": "task_51",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_181",
+          "mem_144",
+          "mem_76",
+          "mem_121",
+          "mem_4",
+          "mem_94"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What happened in Jack's analysis?",
+      "task_id": "task_52",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_161",
+          "mem_6",
+          "mem_152",
+          "mem_121",
+          "mem_67",
+          "mem_167",
+          "mem_200",
+          "mem_198"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 43,
+      "query": "What happened in Alice's decision?",
+      "task_id": "task_53",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_184",
+          "mem_158",
+          "mem_198",
+          "mem_97",
+          "mem_37",
+          "mem_174",
+          "mem_62",
+          "mem_8"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the implementation?",
+      "task_id": "task_54",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_105",
+          "mem_176",
+          "mem_52",
+          "mem_128"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 44,
+      "query": "What was the outcome of the testing?",
+      "task_id": "task_55",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_83",
+          "mem_169",
+          "mem_122",
+          "mem_134",
+          "mem_96",
+          "mem_80",
+          "mem_44"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "When did we review the testing?",
+      "task_id": "task_56",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_174",
+          "mem_164",
+          "mem_177",
+          "mem_67",
+          "mem_156",
+          "mem_123",
+          "mem_49",
+          "mem_63"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 39,
+      "query": "What was the outcome of the review?",
+      "task_id": "task_57",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_53",
+          "mem_176",
+          "mem_180",
+          "mem_125",
+          "mem_81",
+          "mem_122",
+          "mem_89",
+          "mem_143"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the planning?",
+      "task_id": "task_58",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_88",
+          "mem_197",
+          "mem_37",
+          "mem_74",
+          "mem_10",
+          "mem_73"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 44,
+      "query": "What was the outcome of the meeting?",
+      "task_id": "task_59",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_137",
+          "mem_69",
+          "mem_143",
+          "mem_178"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 41,
+      "query": "What happened in Bob's analysis?",
+      "task_id": "task_60",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_12",
+          "mem_171",
+          "mem_135",
+          "mem_57"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What happened in Henry's design?",
+      "task_id": "task_61",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_25",
+          "mem_174",
+          "mem_197",
+          "mem_35",
+          "mem_1",
+          "mem_140"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the testing?",
+      "task_id": "task_62",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_73",
+          "mem_165",
+          "mem_15",
+          "mem_196",
+          "mem_22"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 37,
+      "query": "What was decided about review with Alice?",
+      "task_id": "task_63",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_101",
+          "mem_201",
+          "mem_126"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What happened in Ivy's meeting?",
+      "task_id": "task_64",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_27",
+          "mem_85",
+          "mem_72",
+          "mem_116",
+          "mem_164",
+          "mem_139",
+          "mem_134"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about review with Charlie?",
+      "task_id": "task_65",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_84",
+          "mem_41",
+          "mem_187"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "What was decided about testing with Frank?",
+      "task_id": "task_66",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_172",
+          "mem_193",
+          "mem_49",
+          "mem_44",
+          "mem_156",
+          "mem_163",
+          "mem_103"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "Who was involved in the decision?",
+      "task_id": "task_67",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_47",
+          "mem_35",
+          "mem_122"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "Who was involved in the analysis?",
+      "task_id": "task_68",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_192",
+          "mem_68",
+          "mem_84",
+          "mem_77",
+          "mem_149",
+          "mem_185"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "Who was involved in the report?",
+      "task_id": "task_69",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_30",
+          "mem_119",
+          "mem_78",
+          "mem_40",
+          "mem_103",
+          "mem_175",
+          "mem_128",
+          "mem_180"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What happened in Frank's deployment?",
+      "task_id": "task_70",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_34",
+          "mem_122",
+          "mem_39",
+          "mem_116"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the testing?",
+      "task_id": "task_71",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_170",
+          "mem_55",
+          "mem_195",
+          "mem_63",
+          "mem_174",
+          "mem_193",
+          "mem_152"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What was the outcome of the meeting?",
+      "task_id": "task_72",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_28",
+          "mem_15",
+          "mem_140",
+          "mem_129",
+          "mem_51",
+          "mem_146",
+          "mem_137"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Ivy's meeting?",
+      "task_id": "task_73",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_52",
+          "mem_183",
+          "mem_149",
+          "mem_125",
+          "mem_23",
+          "mem_130",
+          "mem_114",
+          "mem_14"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 39,
+      "query": "Who was involved in the analysis?",
+      "task_id": "task_74",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_143",
+          "mem_118",
+          "mem_172"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What was decided about report with Ivy?",
+      "task_id": "task_75",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_148",
+          "mem_18",
+          "mem_11",
+          "mem_108"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "Who was involved in the meeting?",
+      "task_id": "task_76",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_73",
+          "mem_104",
+          "mem_46"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What was the outcome of the report?",
+      "task_id": "task_77",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_96",
+          "mem_20",
+          "mem_174",
+          "mem_169",
+          "mem_138",
+          "mem_34"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 40,
+      "query": "What was the outcome of the review?",
+      "task_id": "task_78",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_186",
+          "mem_57",
+          "mem_0",
+          "mem_193"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Alice's report?",
+      "task_id": "task_79",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_58",
+          "mem_63",
+          "mem_117",
+          "mem_88",
+          "mem_39",
+          "mem_70"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about implementation with Jack?",
+      "task_id": "task_80",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_52",
+          "mem_17",
+          "mem_25",
+          "mem_152"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the decision?",
+      "task_id": "task_81",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_102",
+          "mem_112",
+          "mem_59"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the decision?",
+      "task_id": "task_82",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_187",
+          "mem_147",
+          "mem_81",
+          "mem_153"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Ivy's design?",
+      "task_id": "task_83",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_76",
+          "mem_70",
+          "mem_15",
+          "mem_142",
+          "mem_151",
+          "mem_188"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 37,
+      "query": "When did we review the review?",
+      "task_id": "task_84",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_171",
+          "mem_97",
+          "mem_201",
+          "mem_134",
+          "mem_81",
+          "mem_178",
+          "mem_106",
+          "mem_104"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Ivy's analysis?",
+      "task_id": "task_85",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_57",
+          "mem_76",
+          "mem_181",
+          "mem_36"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about implementation with Frank?",
+      "task_id": "task_86",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_34",
+          "mem_99",
+          "mem_62",
+          "mem_65",
+          "mem_52",
+          "mem_84",
+          "mem_165"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about deployment with Alice?",
+      "task_id": "task_87",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_13",
+          "mem_68",
+          "mem_96",
+          "mem_172"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What happened in Bob's decision?",
+      "task_id": "task_88",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_171",
+          "mem_143",
+          "mem_55",
+          "mem_122",
+          "mem_53",
+          "mem_85",
+          "mem_77",
+          "mem_3"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was the outcome of the design?",
+      "task_id": "task_89",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_180",
+          "mem_52",
+          "mem_101",
+          "mem_61",
+          "mem_141",
+          "mem_82",
+          "mem_198"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the planning?",
+      "task_id": "task_90",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_92",
+          "mem_131",
+          "mem_127",
+          "mem_119",
+          "mem_25"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What was the outcome of the analysis?",
+      "task_id": "task_91",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_144",
+          "mem_56",
+          "mem_189"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "Who was involved in the implementation?",
+      "task_id": "task_92",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_106",
+          "mem_75",
+          "mem_39",
+          "mem_50",
+          "mem_84",
+          "mem_58",
+          "mem_97",
+          "mem_145"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about meeting with Ivy?",
+      "task_id": "task_93",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_164",
+          "mem_189",
+          "mem_125",
+          "mem_117",
+          "mem_43",
+          "mem_187",
+          "mem_90",
+          "mem_35"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the design?",
+      "task_id": "task_94",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_171",
+          "mem_12",
+          "mem_195"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 42,
+      "query": "What was the outcome of the analysis?",
+      "task_id": "task_95",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_2",
+          "mem_55",
+          "mem_129",
+          "mem_116"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was the outcome of the testing?",
+      "task_id": "task_96",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_4",
+          "mem_1",
+          "mem_136",
+          "mem_141",
+          "mem_105",
+          "mem_3"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 44,
+      "query": "What was the outcome of the decision?",
+      "task_id": "task_97",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_178",
+          "mem_172",
+          "mem_110",
+          "mem_45",
+          "mem_27",
+          "mem_24",
+          "mem_134"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "When did we review the deployment?",
+      "task_id": "task_98",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_68",
+          "mem_101",
+          "mem_20",
+          "mem_95",
+          "mem_103"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 42,
+      "query": "What happened in Grace's report?",
+      "task_id": "task_99",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_167",
+          "mem_166",
+          "mem_194"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the design?",
+      "task_id": "task_100",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_14",
+          "mem_163",
+          "mem_2",
+          "mem_179",
+          "mem_43",
+          "mem_21"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about review with Alice?",
+      "task_id": "task_101",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_58",
+          "mem_54",
+          "mem_177"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "Who was involved in the design?",
+      "task_id": "task_102",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_168",
+          "mem_8",
+          "mem_45",
+          "mem_80",
+          "mem_4",
+          "mem_53",
+          "mem_150"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 30,
+      "query": "What was decided about design with Charlie?",
+      "task_id": "task_103",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_145",
+          "mem_99",
+          "mem_173",
+          "mem_138"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the deployment?",
+      "task_id": "task_104",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_13",
+          "mem_25",
+          "mem_111",
+          "mem_59",
+          "mem_19"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "Who was involved in the implementation?",
+      "task_id": "task_105",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_162",
+          "mem_69",
+          "mem_200"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about decision with Bob?",
+      "task_id": "task_106",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_47",
+          "mem_174",
+          "mem_149",
+          "mem_169",
+          "mem_97",
+          "mem_21"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 40,
+      "query": "What was decided about planning with Bob?",
+      "task_id": "task_107",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_182",
+          "mem_200",
+          "mem_162",
+          "mem_39",
+          "mem_189",
+          "mem_99"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 41,
+      "query": "What was the outcome of the design?",
+      "task_id": "task_108",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_92",
+          "mem_194",
+          "mem_69",
+          "mem_26",
+          "mem_33",
+          "mem_22"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What happened in Frank's deployment?",
+      "task_id": "task_109",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_26",
+          "mem_6",
+          "mem_22",
+          "mem_90",
+          "mem_141",
+          "mem_23"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the design?",
+      "task_id": "task_110",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_99",
+          "mem_199",
+          "mem_21",
+          "mem_185",
+          "mem_143",
+          "mem_62"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Eve's design?",
+      "task_id": "task_111",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_126",
+          "mem_37",
+          "mem_16",
+          "mem_42",
+          "mem_111"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about decision with Henry?",
+      "task_id": "task_112",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_63",
+          "mem_184",
+          "mem_160",
+          "mem_126",
+          "mem_152"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 34,
+      "query": "Who was involved in the planning?",
+      "task_id": "task_113",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_101",
+          "mem_85",
+          "mem_158"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the meeting?",
+      "task_id": "task_114",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_34",
+          "mem_76",
+          "mem_82",
+          "mem_154",
+          "mem_177",
+          "mem_51",
+          "mem_122"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about design with Frank?",
+      "task_id": "task_115",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_162",
+          "mem_125",
+          "mem_147",
+          "mem_200",
+          "mem_62",
+          "mem_83",
+          "mem_96",
+          "mem_71"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "Who was involved in the decision?",
+      "task_id": "task_116",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_139",
+          "mem_46",
+          "mem_174",
+          "mem_196",
+          "mem_140",
+          "mem_6",
+          "mem_186"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about design with Grace?",
+      "task_id": "task_117",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_127",
+          "mem_35",
+          "mem_162",
+          "mem_77",
+          "mem_61",
+          "mem_64",
+          "mem_168",
+          "mem_39"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the analysis?",
+      "task_id": "task_118",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_149",
+          "mem_102",
+          "mem_136",
+          "mem_129",
+          "mem_177",
+          "mem_107"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What was decided about meeting with Jack?",
+      "task_id": "task_119",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_27",
+          "mem_196",
+          "mem_63"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the decision?",
+      "task_id": "task_120",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_165",
+          "mem_102",
+          "mem_192",
+          "mem_84",
+          "mem_110",
+          "mem_27",
+          "mem_2",
+          "mem_25"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "Who was involved in the testing?",
+      "task_id": "task_121",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_147",
+          "mem_56",
+          "mem_114",
+          "mem_95",
+          "mem_100",
+          "mem_118",
+          "mem_197",
+          "mem_173"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the meeting?",
+      "task_id": "task_122",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_75",
+          "mem_106",
+          "mem_21"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 36,
+      "query": "Who was involved in the implementation?",
+      "task_id": "task_123",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_133",
+          "mem_123",
+          "mem_89",
+          "mem_121"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 34,
+      "query": "When did we review the report?",
+      "task_id": "task_124",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_181",
+          "mem_29",
+          "mem_5"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What happened in Charlie's meeting?",
+      "task_id": "task_125",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_40",
+          "mem_84",
+          "mem_143",
+          "mem_109",
+          "mem_118",
+          "mem_59",
+          "mem_103"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "What was decided about decision with Eve?",
+      "task_id": "task_126",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_157",
+          "mem_50",
+          "mem_115",
+          "mem_151",
+          "mem_109",
+          "mem_99",
+          "mem_1",
+          "mem_180"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the testing?",
+      "task_id": "task_127",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_47",
+          "mem_93",
+          "mem_83",
+          "mem_50",
+          "mem_117",
+          "mem_29",
+          "mem_67"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What was the outcome of the review?",
+      "task_id": "task_128",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_150",
+          "mem_29",
+          "mem_89",
+          "mem_90",
+          "mem_117",
+          "mem_158"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "When did we review the meeting?",
+      "task_id": "task_129",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_80",
+          "mem_30",
+          "mem_61",
+          "mem_78"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the testing?",
+      "task_id": "task_130",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_152",
+          "mem_35",
+          "mem_147",
+          "mem_98",
+          "mem_108",
+          "mem_47"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 42,
+      "query": "What happened in Alice's planning?",
+      "task_id": "task_131",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_35",
+          "mem_47",
+          "mem_80",
+          "mem_115",
+          "mem_158"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Henry's design?",
+      "task_id": "task_132",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_143",
+          "mem_129",
+          "mem_167",
+          "mem_126",
+          "mem_104",
+          "mem_175"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What was the outcome of the meeting?",
+      "task_id": "task_133",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_7",
+          "mem_194",
+          "mem_56",
+          "mem_74",
+          "mem_8",
+          "mem_70",
+          "mem_57"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the analysis?",
+      "task_id": "task_134",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_28",
+          "mem_146",
+          "mem_29",
+          "mem_68",
+          "mem_198",
+          "mem_139",
+          "mem_93"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What happened in Alice's review?",
+      "task_id": "task_135",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_188",
+          "mem_167",
+          "mem_192"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was the outcome of the decision?",
+      "task_id": "task_136",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_112",
+          "mem_30",
+          "mem_198"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 32,
+      "query": "Who was involved in the analysis?",
+      "task_id": "task_137",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_161",
+          "mem_109",
+          "mem_42",
+          "mem_157",
+          "mem_35",
+          "mem_200",
+          "mem_52"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What happened in Charlie's report?",
+      "task_id": "task_138",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_137",
+          "mem_43",
+          "mem_82",
+          "mem_180",
+          "mem_74",
+          "mem_146",
+          "mem_68"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the design?",
+      "task_id": "task_139",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_32",
+          "mem_179",
+          "mem_33",
+          "mem_63",
+          "mem_37",
+          "mem_182",
+          "mem_82",
+          "mem_194"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "Who was involved in the design?",
+      "task_id": "task_140",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_160",
+          "mem_106",
+          "mem_96",
+          "mem_115",
+          "mem_19"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the planning?",
+      "task_id": "task_141",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_83",
+          "mem_148",
+          "mem_0",
+          "mem_198",
+          "mem_187",
+          "mem_23"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 44,
+      "query": "Who was involved in the deployment?",
+      "task_id": "task_142",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_54",
+          "mem_126",
+          "mem_68",
+          "mem_82",
+          "mem_72",
+          "mem_86"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 36,
+      "query": "What happened in Charlie's report?",
+      "task_id": "task_143",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_160",
+          "mem_200",
+          "mem_117"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 36,
+      "query": "Who was involved in the report?",
+      "task_id": "task_144",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_51",
+          "mem_176",
+          "mem_33",
+          "mem_166",
+          "mem_77",
+          "mem_40"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What was decided about design with Bob?",
+      "task_id": "task_145",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_166",
+          "mem_42",
+          "mem_13",
+          "mem_101",
+          "mem_160",
+          "mem_78",
+          "mem_185",
+          "mem_179"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the analysis?",
+      "task_id": "task_146",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_19",
+          "mem_33",
+          "mem_151",
+          "mem_57",
+          "mem_132",
+          "mem_174"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "Who was involved in the planning?",
+      "task_id": "task_147",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_33",
+          "mem_122",
+          "mem_18",
+          "mem_58",
+          "mem_98",
+          "mem_22",
+          "mem_187",
+          "mem_26"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What was the outcome of the deployment?",
+      "task_id": "task_148",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_164",
+          "mem_173",
+          "mem_36",
+          "mem_17"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "When did we review the deployment?",
+      "task_id": "task_149",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_184",
+          "mem_54",
+          "mem_160",
+          "mem_191",
+          "mem_38"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 41,
+      "query": "Who was involved in the planning?",
+      "task_id": "task_150",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_192",
+          "mem_31",
+          "mem_150",
+          "mem_186"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "When did we review the analysis?",
+      "task_id": "task_151",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_165",
+          "mem_21",
+          "mem_63",
+          "mem_141",
+          "mem_153"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about implementation with Grace?",
+      "task_id": "task_152",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_48",
+          "mem_191",
+          "mem_100",
+          "mem_75",
+          "mem_165",
+          "mem_13",
+          "mem_200"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was the outcome of the design?",
+      "task_id": "task_153",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_152",
+          "mem_18",
+          "mem_135",
+          "mem_3",
+          "mem_92",
+          "mem_81",
+          "mem_33",
+          "mem_99"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about review with Diana?",
+      "task_id": "task_154",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_4",
+          "mem_150",
+          "mem_17"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "What was the outcome of the design?",
+      "task_id": "task_155",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_73",
+          "mem_160",
+          "mem_182",
+          "mem_128",
+          "mem_196",
+          "mem_106",
+          "mem_108"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the meeting?",
+      "task_id": "task_156",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_71",
+          "mem_21",
+          "mem_79",
+          "mem_20"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about analysis with Diana?",
+      "task_id": "task_157",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_195",
+          "mem_166",
+          "mem_174",
+          "mem_164",
+          "mem_16",
+          "mem_79",
+          "mem_178",
+          "mem_111"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 43,
+      "query": "When did we review the report?",
+      "task_id": "task_158",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_156",
+          "mem_155",
+          "mem_14",
+          "mem_79",
+          "mem_170",
+          "mem_189"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the planning?",
+      "task_id": "task_159",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_88",
+          "mem_133",
+          "mem_132",
+          "mem_200",
+          "mem_184",
+          "mem_66"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was the outcome of the implementation?",
+      "task_id": "task_160",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_109",
+          "mem_69",
+          "mem_134",
+          "mem_16",
+          "mem_67"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 34,
+      "query": "When did we review the deployment?",
+      "task_id": "task_161",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_145",
+          "mem_42",
+          "mem_94",
+          "mem_40",
+          "mem_65",
+          "mem_197"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "When did we review the planning?",
+      "task_id": "task_162",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_3",
+          "mem_62",
+          "mem_11"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about planning with Eve?",
+      "task_id": "task_163",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_182",
+          "mem_189",
+          "mem_167",
+          "mem_107",
+          "mem_57",
+          "mem_82",
+          "mem_63"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What was decided about decision with Ivy?",
+      "task_id": "task_164",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_128",
+          "mem_172",
+          "mem_13"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "When did we review the analysis?",
+      "task_id": "task_165",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_72",
+          "mem_198",
+          "mem_79",
+          "mem_83",
+          "mem_22",
+          "mem_141"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "What was the outcome of the implementation?",
+      "task_id": "task_166",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_189",
+          "mem_159",
+          "mem_62",
+          "mem_118",
+          "mem_94"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "Who was involved in the planning?",
+      "task_id": "task_167",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_104",
+          "mem_6",
+          "mem_59"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 41,
+      "query": "What was decided about design with Henry?",
+      "task_id": "task_168",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_188",
+          "mem_186",
+          "mem_78",
+          "mem_26",
+          "mem_52",
+          "mem_135"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about planning with Henry?",
+      "task_id": "task_169",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_23",
+          "mem_11",
+          "mem_59",
+          "mem_133",
+          "mem_105"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the meeting?",
+      "task_id": "task_170",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_34",
+          "mem_163",
+          "mem_100",
+          "mem_19",
+          "mem_151",
+          "mem_145",
+          "mem_15"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "When did we review the report?",
+      "task_id": "task_171",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_179",
+          "mem_188",
+          "mem_83",
+          "mem_81",
+          "mem_115",
+          "mem_69"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What was the outcome of the design?",
+      "task_id": "task_172",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_27",
+          "mem_42",
+          "mem_115",
+          "mem_119"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about review with Jack?",
+      "task_id": "task_173",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_78",
+          "mem_118",
+          "mem_67",
+          "mem_30",
+          "mem_23",
+          "mem_40"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "Who was involved in the testing?",
+      "task_id": "task_174",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_23",
+          "mem_182",
+          "mem_63",
+          "mem_91"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about testing with Diana?",
+      "task_id": "task_175",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_103",
+          "mem_115",
+          "mem_142"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What happened in Diana's meeting?",
+      "task_id": "task_176",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_31",
+          "mem_3",
+          "mem_15",
+          "mem_199"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was decided about implementation with Charlie?",
+      "task_id": "task_177",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_165",
+          "mem_21",
+          "mem_149",
+          "mem_150",
+          "mem_66",
+          "mem_19",
+          "mem_5",
+          "mem_16"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 40,
+      "query": "What happened in Grace's design?",
+      "task_id": "task_178",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_118",
+          "mem_12",
+          "mem_43"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What was the outcome of the analysis?",
+      "task_id": "task_179",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_109",
+          "mem_44",
+          "mem_90",
+          "mem_54",
+          "mem_47",
+          "mem_70",
+          "mem_71",
+          "mem_114"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "When did we review the meeting?",
+      "task_id": "task_180",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_75",
+          "mem_127",
+          "mem_105",
+          "mem_140",
+          "mem_122",
+          "mem_15",
+          "mem_22",
+          "mem_71"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the deployment?",
+      "task_id": "task_181",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_139",
+          "mem_4",
+          "mem_97",
+          "mem_200",
+          "mem_182",
+          "mem_91",
+          "mem_122",
+          "mem_124"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 40,
+      "query": "What happened in Alice's review?",
+      "task_id": "task_182",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_6",
+          "mem_81",
+          "mem_152",
+          "mem_56"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What happened in Jack's decision?",
+      "task_id": "task_183",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_59",
+          "mem_40",
+          "mem_25",
+          "mem_63",
+          "mem_168",
+          "mem_61",
+          "mem_68"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "Who was involved in the deployment?",
+      "task_id": "task_184",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_60",
+          "mem_151",
+          "mem_81",
+          "mem_188"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "What was decided about meeting with Henry?",
+      "task_id": "task_185",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_144",
+          "mem_48",
+          "mem_126",
+          "mem_138"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "What was the outcome of the analysis?",
+      "task_id": "task_186",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_154",
+          "mem_56",
+          "mem_5",
+          "mem_134"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about deployment with Charlie?",
+      "task_id": "task_187",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_183",
+          "mem_45",
+          "mem_82",
+          "mem_15",
+          "mem_5"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 34,
+      "query": "Who was involved in the deployment?",
+      "task_id": "task_188",
+      "user_id": "user_2",
+      "expected": {
+        "memory_ids": [
+          "mem_95",
+          "mem_180",
+          "mem_169"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What was the outcome of the planning?",
+      "task_id": "task_189",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_40",
+          "mem_187",
+          "mem_111",
+          "mem_163"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 38,
+      "query": "When did we review the review?",
+      "task_id": "task_190",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_170",
+          "mem_150",
+          "mem_44",
+          "mem_96"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "What happened in Bob's deployment?",
+      "task_id": "task_191",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_100",
+          "mem_197",
+          "mem_145",
+          "mem_8",
+          "mem_46",
+          "mem_154",
+          "mem_81"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "Who was involved in the implementation?",
+      "task_id": "task_192",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_19",
+          "mem_60",
+          "mem_88",
+          "mem_81",
+          "mem_42",
+          "mem_162",
+          "mem_22",
+          "mem_181"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 46,
+      "query": "When did we review the implementation?",
+      "task_id": "task_193",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_17",
+          "mem_89",
+          "mem_65",
+          "mem_201",
+          "mem_27",
+          "mem_184",
+          "mem_0",
+          "mem_12"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about meeting with Henry?",
+      "task_id": "task_194",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_89",
+          "mem_139",
+          "mem_96",
+          "mem_25",
+          "mem_122",
+          "mem_201"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 33,
+      "query": "What happened in Charlie's planning?",
+      "task_id": "task_195",
+      "user_id": "user_1",
+      "expected": {
+        "memory_ids": [
+          "mem_81",
+          "mem_66",
+          "mem_26"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 48,
+      "query": "What was decided about deployment with Henry?",
+      "task_id": "task_196",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_140",
+          "mem_23",
+          "mem_86"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 45,
+      "query": "When did we review the planning?",
+      "task_id": "task_197",
+      "user_id": "user_3",
+      "expected": {
+        "memory_ids": [
+          "mem_155",
+          "mem_111",
+          "mem_40",
+          "mem_13"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 49,
+      "query": "What happened in Alice's report?",
+      "task_id": "task_198",
+      "user_id": "user_4",
+      "expected": {
+        "memory_ids": [
+          "mem_184",
+          "mem_186",
+          "mem_138",
+          "mem_67",
+          "mem_169",
+          "mem_72",
+          "mem_76"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    },
+    {
+      "day": 47,
+      "query": "When did we review the deployment?",
+      "task_id": "task_199",
+      "user_id": "user_0",
+      "expected": {
+        "memory_ids": [
+          "mem_39",
+          "mem_13",
+          "mem_92",
+          "mem_0",
+          "mem_109",
+          "mem_22"
+        ],
+        "acceptable_modules": [],
+        "temporal_window": null
+      },
+      "gold_answer": null,
+      "is_followup": false,
+      "references_turn": null
+    }
+  ],
+  "evaluation_criteria": {
+    "recall_k": 5,
+    "temporal_tolerance_days": 1
+  }
+}

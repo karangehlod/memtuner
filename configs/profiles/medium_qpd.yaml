@@ -1,0 +1,9 @@
+# Medium queries-per-day workload profile
+# Simulates moderate usage: ~10 queries per simulated day
+# Good for: standard benchmark runs, strategy comparison
+benchmark:
+  evaluation_horizon: 50
+  seed: 42
+  scenarios:
+    - delayed_recall
+  retrieval_strategy: bm25

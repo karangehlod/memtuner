@@ -1,0 +1,59 @@
+# Default model configuration for study_runner.py
+# Pass with: python study_runner.py --study-config configs/study_defaults.yaml
+#
+# This file controls which models are benchmarked. Edit here instead of touching code.
+# Secrets and endpoint URLs belong in .env, not here.
+
+embedding:
+  # sentence-transformers models run in-process via torch MPS (macOS) or CUDA.
+  # On Apple Silicon the VRAM is set to 75% of unified memory (e.g. 24 GB on a
+  # 32 GB machine), giving batch sizes up to 4096 for fast MPS inference.
+  #
+  # MLX (Apple Neural Engine) is available as an explicit opt-in only:
+  #   BENCHMARK_EMBEDDING_BACKEND=mlx python study_runner.py ...
+  # MLX uses 4-bit quantized models from mlx-community which slightly alters
+  # embedding quality — do NOT mix MLX and non-MLX runs in the same benchmark.
+  local_models:
+    - all-MiniLM-L6-v2           #   90 MB,  384-dim, fast baseline
+    - BAAI/bge-base-en-v1.5      #  440 MB,  768-dim, balanced English
+    - BAAI/bge-m3                # 1100 MB, 1024-dim, multilingual (best recall)
+    - Qwen/Qwen3-Embedding-0.6B  # 1200 MB, 1024-dim, strong reasoning
+    - google/embeddinggemma-300m #  300 MB,  768-dim, replaces embeddinggemma:latest (was Ollama)
+  # MLX-only models (Apple Silicon): uncomment to benchmark quantized inference.
+  # These require mlx + mlx-embeddings: pip install mlx mlx-embeddings
+  # mlx_models:
+  #   - mlx-community/all-MiniLM-L6-v2-4bit       # fastest, 4-bit quantized
+  #   - mlx-community/bge-base-en-v1.5-4bit        # balanced quality
+  #   - mlx-community/bge-m3-4bit                  # multilingual, high recall
+
+  # API models — run via any OpenAI-compatible endpoint (no local download needed)
+  # Set BENCHMARK_OPENAI_BASE_URL in .env to point at your provider.
+  # Ollama: BENCHMARK_OPENAI_BASE_URL=http://localhost:11434/v1
+  # OpenAI: BENCHMARK_OPENAI_BASE_URL=https://api.openai.com/v1
+  api_models: []
+  # Uncomment to benchmark against an API endpoint:
+  # api_models:
+  #   - text-embedding-3-small     # OpenAI
+  #   - text-embedding-3-large     # OpenAI
+  #   - BAAI/bge-m3                # Ollama or vLLM served
+
+  # Models skipped by default (too slow or large for most hardware)
+  skip:
+    - Qwen/Qwen3-Embedding-4B    # 7600 MB — skip unless you have >16 GB RAM free
+
+rerankers:
+  - none                                   # no reranker — pure retrieval baseline
+  - cross-encoder/ms-marco-MiniLM-L6-v2   #  90 MB, fast cross-encoder
+  - BAAI/bge-reranker-base                 # 1200 MB, stronger reranker
+
+judge:
+  # LLM judge for answer-quality scoring (optional — leave blank to disable)
+  # Set model to an OpenAI-compatible model name.
+  # The endpoint is read from BENCHMARK_OPENAI_BASE_URL in .env.
+  model: ""
+  # To use a local Ollama model: set BENCHMARK_OPENAI_BASE_URL=http://localhost:11434/v1 in .env
+
+benchmark:
+  seed: 42
+  workers: null      # null = auto-detect from CPU count (uses hw_probe)
+  recall_k: 10       # @K for recall / MRR metrics
