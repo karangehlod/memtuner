@@ -1,2 +1,2 @@
 [console_scripts]
-benchmark = benchmark.cli.main:cli
+memtuner = benchmark.cli.main:cli

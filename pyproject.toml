@@ -54,6 +54,7 @@ Documentation = "https://agenticmemory-benchmark.readthedocs.io"
 
 [project.scripts]
 benchmark = "benchmark.cli.main:cli"
+memtuner = "benchmark.cli.main:cli"
 
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]

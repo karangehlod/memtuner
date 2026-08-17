@@ -263,7 +263,7 @@ data/input/
 ### Step 2 — Check what your machine can run
 
 ```bash
-benchmark doctor          # after pip install -e .
+memtuner doctor           # after pip install -e .
 # or
 python study_runner.py --doctor
 ```
@@ -357,12 +357,13 @@ Batch sizes are auto-computed from GPU VRAM at startup (`benchmark/resources/hw_
 
 ### CLI entry point
 
-All benchmark runs go through `benchmark study` (or `python study_runner.py` directly).
-The `benchmark` command requires `pip install -e .` with the venv active.
+All benchmark runs go through `memtuner study` (or `python study_runner.py` directly).
+The `memtuner` command requires `pip install -e .` with the venv active.
+`benchmark` remains available as a legacy alias.
 
 ```bash
 # Both of these are equivalent:
-benchmark study --gold-dataset data/input/locomo10.json --mode quick
+memtuner study --gold-dataset data/input/locomo10.json --mode quick
 python study_runner.py --gold-dataset data/input/locomo10.json --mode quick
 ```
 
