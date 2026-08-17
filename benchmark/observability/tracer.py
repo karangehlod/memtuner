@@ -18,7 +18,7 @@ from benchmark.observability.schemas import SCHEMA_VERSION
 _tracer: Tracer | None = None
 
 
-def initialize_tracer(service_name: str = "agentic-memory-benchmark") -> Tracer:
+def initialize_tracer(service_name: str = "memtuner") -> Tracer:
     """Initialize the global OTel tracer.
 
     Args:

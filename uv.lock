@@ -5,7 +5,7 @@ version = 1
 requires-python = ">=3.11"
 
 [[package]]
-name = "agentic-memory-benchmark"
+name = "memtuner"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [

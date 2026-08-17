@@ -6,11 +6,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/karangehlod/agentic-memory-benchmark/actions/workflows/ci.yml">
-    <img src="https://github.com/karangehlod/agentic-memory-benchmark/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <a href="https://github.com/karangehlod/memtuner/actions/workflows/ci.yml">
+    <img src="https://github.com/karangehlod/memtuner/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
-  <a href="https://github.com/karangehlod/agentic-memory-benchmark/actions/workflows/math_tests.yml">
-    <img src="https://github.com/karangehlod/agentic-memory-benchmark/actions/workflows/math_tests.yml/badge.svg" alt="Math Tests">
+  <a href="https://github.com/karangehlod/memtuner/actions/workflows/math_tests.yml">
+    <img src="https://github.com/karangehlod/memtuner/actions/workflows/math_tests.yml/badge.svg" alt="Math Tests">
   </a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
@@ -133,8 +133,8 @@ flowchart LR
 **Requirements:** Python 3.11+
 
 ```bash
-git clone https://github.com/karangehlod/agentic-memory-benchmark.git
-cd agentic-memory-benchmark
+git clone https://github.com/karangehlod/memtuner.git
+cd memtuner
 
 python -m venv .venv
 source .venv/bin/activate          # Linux/macOS
@@ -1053,8 +1053,8 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full g
 
 Quick start:
 ```bash
-git clone https://github.com/karangehlod/agentic-memory-benchmark.git
-cd agentic-memory-benchmark
+git clone https://github.com/karangehlod/memtuner.git
+cd memtuner
 pip install -e ".[dev]"
 python -m pytest tests/unit/test_math_correctness.py -v   # math tests must pass
 ```
@@ -1073,7 +1073,7 @@ If you use this benchmark in your research, please cite:
              Evaluating AI Agent Memory Retrieval},
   author  = {Gehlod, Karan},
   year    = {2026},
-  url     = {https://github.com/karangehlod/agentic-memory-benchmark},
+  url     = {https://github.com/karangehlod/memtuner},
   note    = {Five-phase adaptive sweep: BM25 baseline, embedding model
              comparison, hybrid weight sweep, reranker comparison,
              decay policy sweep with early stopping}

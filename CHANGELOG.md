@@ -112,5 +112,5 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-[Unreleased]: https://github.com/karangehlod/agentic-memory-benchmark/compare/v0.0.1...HEAD
-[0.0.1]: https://github.com/karangehlod/agentic-memory-benchmark/releases/tag/v0.0.1
+[Unreleased]: https://github.com/karangehlod/memtuner/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/karangehlod/memtuner/releases/tag/v0.0.1

@@ -1,4 +1,4 @@
-# Core Dependencies (agentic-memory-benchmark v0.0.1)
+# Core Dependencies (memtuner v0.0.1)
 # Production-grade benchmarking tool for agent memory systems
 
 # CLI Framework

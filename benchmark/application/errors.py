@@ -35,7 +35,7 @@ class StrategyResolutionError(CompositionError):
         self.strategy_name = strategy_name
         self.reason = reason
         extra = self.STRATEGY_TO_EXTRA.get(strategy_name, strategy_name)
-        install_hint = f"pip install agentic-memory-benchmark[{extra}]"
+        install_hint = f"pip install memtuner[{extra}]"
         super().__init__(
             f"Cannot resolve retrieval strategy '{strategy_name}': {reason}. "
             f"No implicit fallback is allowed. Fix the strategy name, install "
@@ -52,7 +52,7 @@ class StrategyDependencyError(StrategyResolutionError):
         super().__init__(
             strategy_name,
             f"Required package '{package}' is not installed. "
-            f"Install with: pip install agentic-memory-benchmark[{strategy_name}]",
+            f"Install with: pip install memtuner[{strategy_name}]",
         )
 
 
