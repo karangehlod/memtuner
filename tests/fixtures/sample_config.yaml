@@ -1,0 +1,15 @@
+# Minimal benchmark configuration — runs the fastest possible benchmark
+memory:
+  enabled:
+    short_term:
+      - episodic_buffer
+    long_term: []
+
+benchmark:
+  evaluation_horizon: 7
+  seed: 42
+  scenarios:
+    - delayed_recall
+
+observability:
+  log_level: WARNING

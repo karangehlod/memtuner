@@ -1,0 +1,45 @@
+# Core Dependencies (agentic-memory-benchmark v0.0.1)
+# Production-grade benchmarking tool for agent memory systems
+
+# CLI Framework
+click>=8.1,<9.0
+
+# Configuration Management
+python-dotenv>=1.0,<2.0
+pyyaml>=6.0,<7.0
+
+# Data Validation & Serialization
+pydantic>=2.0,<3.0
+
+# Observability & Telemetry
+opentelemetry-api>=1.20,<2.0
+opentelemetry-sdk>=1.20,<2.0
+opentelemetry-exporter-otlp>=1.20,<2.0
+
+# System Monitoring
+psutil>=5.9,<6.0
+
+# Retrieval Strategies
+rank-bm25>=0.2.2,<0.3.0
+sentence-transformers>=2.2.0,<3.0.0
+
+# HTTP Client
+httpx[socks]==0.28.1
+
+# LLM Integration
+openai>=1.0,<2.0
+
+# Development (optional)
+# pytest>=7.4,<8.0
+# pytest-cov>=4.1,<5.0
+# mypy>=1.5,<2.0
+# ruff>=0.1,<0.2
+# hypothesis>=6.75,<7.0
+
+# Database Support (optional)
+# psycopg[binary]>=3.1,<4.0
+# pgvector>=0.2,<0.3
+
+# Web Interface (optional)
+# fastapi>=0.100,<1.0
+# uvicorn>=0.23,<1.0

@@ -1,0 +1,66 @@
+================================================================================
+MEMORY ADAPTER BENCHMARKING LEADERBOARDS
+================================================================================
+
+📊 ACCURACY LEADERBOARD
+--------------------------------------------------------------------------------
+  1. preference_store     Accuracy: 1.000 (14 datasets)
+  2. context_buffer       Accuracy: 0.684 (14 datasets)
+  3. episodic_buffer      Accuracy: 0.684 (14 datasets)
+  4. episodic_store       Accuracy: 0.684 (14 datasets)
+  5. scratchpad           Accuracy: 0.684 (14 datasets)
+  6. entity_store         Accuracy: 0.414 (14 datasets)
+  7. semantic_store       Accuracy: 0.179 (14 datasets)
+
+⚡ EFFICIENCY LEADERBOARD
+--------------------------------------------------------------------------------
+  1. scratchpad           Efficiency: 1.000 Latency: 0.00ms Storage: 0.0MB
+  2. preference_store     Efficiency: 0.999 Latency: 0.01ms Storage: 0.0MB
+  3. episodic_buffer      Efficiency: 0.999 Latency: 0.01ms Storage: 0.0MB
+  4. episodic_store       Efficiency: 0.999 Latency: 0.01ms Storage: 0.0MB
+  5. context_buffer       Efficiency: 0.999 Latency: 0.02ms Storage: 0.0MB
+  6. entity_store         Efficiency: 0.997 Latency: 0.04ms Storage: 0.0MB
+  7. semantic_store       Efficiency: 0.994 Latency: 0.08ms Storage: 0.0MB
+
+⚖️  BALANCED LEADERBOARD
+--------------------------------------------------------------------------------
+  1. preference_store     Score: 1.000 (High-accuracy specialist)
+  2. scratchpad           Score: 0.810 (Standard)
+  3. episodic_buffer      Score: 0.810 (Standard)
+  4. episodic_store       Score: 0.810 (Balanced)
+  5. context_buffer       Score: 0.810 (Standard)
+  6. entity_store         Score: 0.647 (Standard)
+  7. semantic_store       Score: 0.504 (Ultra-low latency specialist)
+
+🎯 SPECIALIZATIONS
+--------------------------------------------------------------------------------
+  context_buffer:
+    Best on:   LoCoMo (0.684)
+    Worst on:  LoCoMo (0.684)
+    Average:   0.684
+  entity_store:
+    Best on:   LoCoMo (0.414)
+    Worst on:  LoCoMo (0.414)
+    Average:   0.414
+  episodic_buffer:
+    Best on:   LoCoMo (0.684)
+    Worst on:  LoCoMo (0.684)
+    Average:   0.684
+  episodic_store:
+    Best on:   LoCoMo (0.684)
+    Worst on:  LoCoMo (0.684)
+    Average:   0.684
+  preference_store:
+    Best on:   LoCoMo (1.000)
+    Worst on:  LoCoMo (1.000)
+    Average:   1.000
+  scratchpad:
+    Best on:   LoCoMo (0.684)
+    Worst on:  LoCoMo (0.684)
+    Average:   0.684
+  semantic_store:
+    Best on:   LoCoMo (0.179)
+    Worst on:  LoCoMo (0.179)
+    Average:   0.179
+
+================================================================================

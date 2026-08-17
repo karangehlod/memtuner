@@ -1,0 +1,277 @@
+{
+  "schema_version": "1.0",
+  "scenario": "cross_task_interference",
+  "description": "Tests whether memories from different tasks and users interfere with each other during retrieval",
+  "user_ids": ["user-alice", "user-bob", "user-carol"],
+  "total_conversation_turns": 16,
+  "events": [
+    {
+      "day": 0,
+      "memory_events": [
+        {
+          "id": "M-101",
+          "user_id": "user-alice",
+          "type": "episodic",
+          "content": "Team decided to use React for the frontend framework",
+          "importance": 0.9,
+          "entities": ["team", "react", "frontend"],
+          "task_id": "frontend_selection",
+          "conversation_turn": 1
+        },
+        {
+          "id": "M-102",
+          "user_id": "user-bob",
+          "type": "episodic",
+          "content": "Team decided to use FastAPI for the backend framework",
+          "importance": 0.9,
+          "entities": ["team", "fastapi", "backend"],
+          "task_id": "backend_selection",
+          "conversation_turn": 1
+        },
+        {
+          "id": "M-103",
+          "user_id": "user-alice",
+          "type": "preference",
+          "content": "User prefers TypeScript over JavaScript for frontend development",
+          "importance": 0.8,
+          "entities": ["user", "typescript", "javascript", "frontend"],
+          "task_id": "frontend_selection",
+          "conversation_turn": 2
+        },
+        {
+          "id": "M-104",
+          "user_id": "user-carol",
+          "type": "preference",
+          "content": "User prefers GraphQL over REST for API design",
+          "importance": 0.85,
+          "entities": ["user", "graphql", "rest", "api"],
+          "task_id": "api_design",
+          "conversation_turn": 1
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "memory_events": [
+        {
+          "id": "M-105",
+          "user_id": "user-alice",
+          "type": "semantic",
+          "content": "React supports server-side rendering with Next.js",
+          "importance": 0.6,
+          "entities": ["react", "nextjs", "server-side-rendering"],
+          "task_id": "frontend_selection",
+          "conversation_turn": 3
+        },
+        {
+          "id": "M-106",
+          "user_id": "user-bob",
+          "type": "semantic",
+          "content": "FastAPI supports async endpoints with native Python coroutines",
+          "importance": 0.65,
+          "entities": ["fastapi", "async", "python"],
+          "task_id": "backend_selection",
+          "conversation_turn": 2
+        },
+        {
+          "id": "M-107",
+          "user_id": "user-carol",
+          "type": "episodic",
+          "content": "Carol demonstrated GraphQL schema stitching for microservices",
+          "importance": 0.7,
+          "entities": ["carol", "graphql", "schema-stitching", "microservices"],
+          "task_id": "api_design",
+          "conversation_turn": 2
+        }
+      ]
+    },
+    {
+      "day": 6,
+      "memory_events": [
+        {
+          "id": "M-108",
+          "user_id": "user-alice",
+          "type": "entity",
+          "content": "Alice is the lead frontend developer on the project",
+          "importance": 0.5,
+          "entities": ["alice", "frontend", "developer"],
+          "task_id": "frontend_selection",
+          "conversation_turn": 4
+        },
+        {
+          "id": "M-109",
+          "user_id": "user-bob",
+          "type": "entity",
+          "content": "Bob is the lead backend developer on the project",
+          "importance": 0.5,
+          "entities": ["bob", "backend", "developer"],
+          "task_id": "backend_selection",
+          "conversation_turn": 3
+        },
+        {
+          "id": "M-110",
+          "user_id": "user-carol",
+          "type": "entity",
+          "content": "Carol is the API architect responsible for GraphQL gateway",
+          "importance": 0.55,
+          "entities": ["carol", "api", "architect", "graphql"],
+          "task_id": "api_design",
+          "conversation_turn": 3
+        }
+      ]
+    },
+    {
+      "day": 9,
+      "memory_events": [
+        {
+          "id": "M-111",
+          "user_id": "user-alice",
+          "type": "episodic",
+          "content": "Alice integrated Next.js with the React frontend for SSR support",
+          "importance": 0.75,
+          "entities": ["alice", "nextjs", "react", "ssr"],
+          "task_id": "frontend_selection",
+          "conversation_turn": 5
+        },
+        {
+          "id": "M-112",
+          "user_id": "user-bob",
+          "type": "episodic",
+          "content": "Bob added WebSocket support to FastAPI backend for real-time features",
+          "importance": 0.7,
+          "entities": ["bob", "websocket", "fastapi", "real-time"],
+          "task_id": "backend_selection",
+          "conversation_turn": 4
+        },
+        {
+          "id": "M-113",
+          "user_id": "user-carol",
+          "type": "preference",
+          "content": "User changed preference from GraphQL to tRPC for type-safe API calls",
+          "importance": 0.88,
+          "entities": ["user", "graphql", "trpc", "type-safe", "api"],
+          "task_id": "api_design",
+          "conversation_turn": 4
+        }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "day": 4,
+      "query": "What framework was chosen for the frontend?",
+      "task_id": "frontend_selection",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-101"],
+        "acceptable_modules": ["episodic_store", "episodic_buffer"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 4}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 4,
+      "query": "What framework was chosen for the backend?",
+      "task_id": "backend_selection",
+      "user_id": "user-bob",
+      "expected": {
+        "memory_ids": ["M-102"],
+        "acceptable_modules": ["episodic_store", "episodic_buffer"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 4}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 4,
+      "query": "What API style does Carol prefer?",
+      "task_id": "api_design",
+      "user_id": "user-carol",
+      "expected": {
+        "memory_ids": ["M-104"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 4}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 7,
+      "query": "What are the technical capabilities of the frontend framework?",
+      "task_id": "frontend_selection",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-105"],
+        "acceptable_modules": ["episodic_store", "semantic_store"],
+        "temporal_window": {"not_before_day": 3, "not_after_day": 7}
+      },
+      "is_followup": true,
+      "references_turn": 3
+    },
+    {
+      "day": 7,
+      "query": "What async capabilities does FastAPI provide?",
+      "task_id": "backend_selection",
+      "user_id": "user-bob",
+      "expected": {
+        "memory_ids": ["M-106"],
+        "acceptable_modules": ["semantic_store", "episodic_store"],
+        "temporal_window": {"not_before_day": 3, "not_after_day": 7}
+      },
+      "is_followup": true,
+      "references_turn": 2
+    },
+    {
+      "day": 10,
+      "query": "Who is responsible for frontend development?",
+      "task_id": "frontend_selection",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-108"],
+        "acceptable_modules": ["episodic_store", "entity_store"],
+        "temporal_window": {"not_before_day": 6, "not_after_day": 10}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 10,
+      "query": "Does Alice prefer TypeScript or JavaScript?",
+      "task_id": "frontend_selection",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-103"],
+        "acceptable_modules": ["preference_store", "episodic_store"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 10}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 10,
+      "query": "What API approach does Carol currently prefer?",
+      "task_id": "api_design",
+      "user_id": "user-carol",
+      "expected": {
+        "memory_ids": ["M-113"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 9, "not_after_day": 10}
+      },
+      "is_followup": true,
+      "references_turn": 4
+    },
+    {
+      "day": 11,
+      "query": "What real-time features were added to the backend?",
+      "task_id": "backend_selection",
+      "user_id": "user-bob",
+      "expected": {
+        "memory_ids": ["M-112"],
+        "acceptable_modules": ["episodic_store"],
+        "temporal_window": {"not_before_day": 9, "not_after_day": 11}
+      },
+      "is_followup": true,
+      "references_turn": 4
+    }
+  ],
+  "evaluation_criteria": {
+    "recall_k": 5,
+    "temporal_tolerance_days": 1
+  }
+}

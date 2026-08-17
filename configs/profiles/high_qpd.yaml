@@ -1,0 +1,9 @@
+# High queries-per-day workload profile
+# Simulates heavy usage: ~50+ queries per simulated day
+# Good for: stress testing, production readiness evaluation
+benchmark:
+  evaluation_horizon: 100
+  seed: 42
+  scenarios:
+    - delayed_recall
+  retrieval_strategy: bm25

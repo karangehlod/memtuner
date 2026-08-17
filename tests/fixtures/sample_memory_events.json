@@ -1,0 +1,18 @@
+[
+  {
+    "id": "M-FIXTURE-001",
+    "type": "episodic",
+    "content": "User discussed database options for the new project",
+    "importance": 0.8,
+    "entities": ["user", "database"],
+    "task_id": "test_task"
+  },
+  {
+    "id": "M-FIXTURE-002",
+    "type": "preference",
+    "content": "User prefers dark mode for all applications",
+    "importance": 0.7,
+    "entities": ["user", "dark-mode"],
+    "task_id": "test_task"
+  }
+]

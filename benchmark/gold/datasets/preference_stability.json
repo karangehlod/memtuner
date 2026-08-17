@@ -1,0 +1,276 @@
+{
+  "schema_version": "1.0",
+  "scenario": "preference_stability",
+  "description": "Tests whether preference memories remain stable, update correctly on contradiction, and are retrievable per-user over extended time periods",
+  "user_ids": ["user-alice", "user-bob"],
+  "total_conversation_turns": 14,
+  "events": [
+    {
+      "day": 0,
+      "memory_events": [
+        {
+          "id": "M-201",
+          "user_id": "user-alice",
+          "type": "preference",
+          "content": "User prefers vim key bindings in all editors",
+          "importance": 0.9,
+          "entities": ["user", "vim", "editor"],
+          "task_id": "editor_config",
+          "conversation_turn": 1
+        },
+        {
+          "id": "M-202",
+          "user_id": "user-alice",
+          "type": "preference",
+          "content": "User prefers dark themes with high contrast colors",
+          "importance": 0.85,
+          "entities": ["user", "dark-theme", "high-contrast"],
+          "task_id": "ui_preferences",
+          "conversation_turn": 2
+        },
+        {
+          "id": "M-203",
+          "user_id": "user-bob",
+          "type": "preference",
+          "content": "User prefers emacs key bindings in all editors",
+          "importance": 0.88,
+          "entities": ["user", "emacs", "editor"],
+          "task_id": "editor_config",
+          "conversation_turn": 1
+        }
+      ]
+    },
+    {
+      "day": 1,
+      "memory_events": [
+        {
+          "id": "M-204",
+          "user_id": "user-alice",
+          "type": "episodic",
+          "content": "Configured VS Code with Monokai Pro theme and vim extension",
+          "importance": 0.6,
+          "entities": ["vscode", "monokai-pro", "vim"],
+          "task_id": "editor_config",
+          "conversation_turn": 3
+        },
+        {
+          "id": "M-205",
+          "user_id": "user-bob",
+          "type": "episodic",
+          "content": "Configured Emacs with Doom framework and evil mode disabled",
+          "importance": 0.6,
+          "entities": ["emacs", "doom", "evil-mode"],
+          "task_id": "editor_config",
+          "conversation_turn": 2
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "memory_events": [
+        {
+          "id": "M-206",
+          "user_id": "user-alice",
+          "type": "preference",
+          "content": "User prefers 2-space indentation for TypeScript files",
+          "importance": 0.7,
+          "entities": ["user", "indentation", "typescript"],
+          "task_id": "code_style",
+          "conversation_turn": 4
+        },
+        {
+          "id": "M-207",
+          "user_id": "user-bob",
+          "type": "preference",
+          "content": "User prefers 4-space indentation for all files",
+          "importance": 0.72,
+          "entities": ["user", "indentation"],
+          "task_id": "code_style",
+          "conversation_turn": 3
+        }
+      ]
+    },
+    {
+      "day": 8,
+      "memory_events": [
+        {
+          "id": "M-208",
+          "user_id": "user-alice",
+          "type": "preference",
+          "content": "User prefers tabs over spaces for Go files",
+          "importance": 0.65,
+          "entities": ["user", "tabs", "go"],
+          "task_id": "code_style",
+          "conversation_turn": 5
+        },
+        {
+          "id": "M-209",
+          "user_id": "user-bob",
+          "type": "semantic",
+          "content": "Go standard formatting uses tabs and gofmt enforces it",
+          "importance": 0.55,
+          "entities": ["go", "gofmt", "tabs"],
+          "task_id": "code_style",
+          "conversation_turn": 4
+        }
+      ]
+    },
+    {
+      "day": 10,
+      "memory_events": [
+        {
+          "id": "M-210",
+          "user_id": "user-alice",
+          "type": "preference",
+          "content": "User updated preference to use Catppuccin theme instead of Monokai",
+          "importance": 0.88,
+          "entities": ["user", "catppuccin", "theme"],
+          "task_id": "ui_preferences",
+          "conversation_turn": 6
+        }
+      ]
+    },
+    {
+      "day": 12,
+      "memory_events": [
+        {
+          "id": "M-211",
+          "user_id": "user-bob",
+          "type": "preference",
+          "content": "User changed preference from emacs to neovim key bindings",
+          "importance": 0.9,
+          "entities": ["user", "emacs", "neovim", "editor"],
+          "task_id": "editor_config",
+          "conversation_turn": 5
+        },
+        {
+          "id": "M-212",
+          "user_id": "user-bob",
+          "type": "episodic",
+          "content": "Bob migrated all Emacs config to Neovim with Lua configuration",
+          "importance": 0.65,
+          "entities": ["bob", "emacs", "neovim", "lua"],
+          "task_id": "editor_config",
+          "conversation_turn": 6
+        }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "day": 3,
+      "query": "What key bindings does Alice prefer?",
+      "task_id": "editor_config",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-201"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 3}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 3,
+      "query": "What key bindings does Bob prefer?",
+      "task_id": "editor_config",
+      "user_id": "user-bob",
+      "expected": {
+        "memory_ids": ["M-203"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 3}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 7,
+      "query": "What theme does Alice prefer?",
+      "task_id": "ui_preferences",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-202"],
+        "acceptable_modules": ["preference_store", "episodic_store"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 7}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 7,
+      "query": "What indentation does Alice prefer for TypeScript?",
+      "task_id": "code_style",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-206"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 5, "not_after_day": 7}
+      },
+      "is_followup": true,
+      "references_turn": 4
+    },
+    {
+      "day": 9,
+      "query": "What indentation does Bob prefer?",
+      "task_id": "code_style",
+      "user_id": "user-bob",
+      "expected": {
+        "memory_ids": ["M-207"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 5, "not_after_day": 9}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 12,
+      "query": "What theme does Alice currently prefer?",
+      "task_id": "ui_preferences",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-210"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 10, "not_after_day": 12}
+      },
+      "is_followup": true,
+      "references_turn": 6
+    },
+    {
+      "day": 14,
+      "query": "What key bindings does Alice use?",
+      "task_id": "editor_config",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-201"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 14}
+      },
+      "is_followup": false
+    },
+    {
+      "day": 14,
+      "query": "What key bindings does Bob currently use?",
+      "task_id": "editor_config",
+      "user_id": "user-bob",
+      "expected": {
+        "memory_ids": ["M-211"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 12, "not_after_day": 14}
+      },
+      "is_followup": true,
+      "references_turn": 5
+    },
+    {
+      "day": 14,
+      "query": "What indentation style does Alice prefer for TypeScript?",
+      "task_id": "code_style",
+      "user_id": "user-alice",
+      "expected": {
+        "memory_ids": ["M-206"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 5, "not_after_day": 14}
+      },
+      "is_followup": false
+    }
+  ],
+  "evaluation_criteria": {
+    "recall_k": 5,
+    "temporal_tolerance_days": 2
+  }
+}

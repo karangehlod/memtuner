@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "scenario": "delayed_recall",
+  "description": "Tests memory retention and recall accuracy over simulated days with decay",
+  "events": [
+    {
+      "day": 0,
+      "memory_events": [
+        {
+          "id": "M-001",
+          "type": "preference",
+          "content": "User prefers Postgres over Pinecone for vector storage",
+          "importance": 0.85,
+          "entities": ["user", "postgres", "pinecone", "database"],
+          "task_id": "db_selection"
+        },
+        {
+          "id": "M-002",
+          "type": "episodic",
+          "content": "Team discussed migration from MongoDB to Postgres",
+          "importance": 0.7,
+          "entities": ["team", "mongodb", "postgres"],
+          "task_id": "db_selection"
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "memory_events": [
+        {
+          "id": "M-003",
+          "type": "semantic",
+          "content": "Postgres supports pgvector extension for vector similarity search",
+          "importance": 0.6,
+          "entities": ["postgres", "pgvector"],
+          "task_id": "db_selection"
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "memory_events": [
+        {
+          "id": "M-004",
+          "type": "preference",
+          "content": "User prefers Python 3.11 for new projects",
+          "importance": 0.75,
+          "entities": ["user", "python"],
+          "task_id": "language_selection"
+        }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "day": 3,
+      "query": "Which database did the user prefer?",
+      "task_id": "db_selection",
+      "expected": {
+        "memory_ids": ["M-001"],
+        "acceptable_modules": ["preference_store", "episodic_store"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 3}
+      }
+    },
+    {
+      "day": 7,
+      "query": "What was discussed about database migration?",
+      "task_id": "db_selection",
+      "expected": {
+        "memory_ids": ["M-002", "M-003"],
+        "acceptable_modules": ["episodic_store"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 7}
+      }
+    },
+    {
+      "day": 10,
+      "query": "Which database does the user prefer for vector storage?",
+      "task_id": "db_selection",
+      "expected": {
+        "memory_ids": ["M-001"],
+        "acceptable_modules": ["preference_store", "episodic_store"],
+        "temporal_window": {"not_before_day": 0, "not_after_day": 10}
+      }
+    },
+    {
+      "day": 12,
+      "query": "What programming language does the user prefer?",
+      "task_id": "language_selection",
+      "expected": {
+        "memory_ids": ["M-004"],
+        "acceptable_modules": ["preference_store"],
+        "temporal_window": {"not_before_day": 5, "not_after_day": 12}
+      }
+    }
+  ],
+  "evaluation_criteria": {
+    "recall_k": 5,
+    "temporal_tolerance_days": 1
+  }
+}

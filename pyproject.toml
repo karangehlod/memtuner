@@ -1,0 +1,127 @@
+[project]
+name = "memtuner"
+version = "0.0.1"
+description = "Adaptive benchmarking and configuration tuning for AI agent memory retrieval systems."
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "MemTuner Team"}
+]
+readme = "README.md"
+keywords = ["ai", "agents", "agent-memory", "memory", "memory-retrieval", "benchmark", "evaluation", "llm", "rag", "retrieval", "embeddings", "machine-learning"]
+dependencies = [
+    "click>=8.1",
+    "python-dotenv>=1.0",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp>=1.20",
+    "psutil>=5.9",
+    "rank-bm25>=0.2.2",
+    "sentence-transformers>=2.2.0",
+    "httpx[socks]==0.28.1",
+    "openai>=1.0",
+]
+
+[project.optional-dependencies]
+hf_inference = []
+llm = []
+bm25 = ["rank-bm25>=0.2.2"]
+database = ["psycopg[binary]>=3.1", "pgvector>=0.2"]
+explorer = ["fastapi>=0.100", "uvicorn>=0.23"]
+mlx = ["mlx>=0.16", "mlx-embeddings>=0.1.0"]  # Apple Silicon only
+viz = ["matplotlib>=3.7"]
+judge = ["httpx>=0.28"]
+stats = ["scipy>=1.11"]
+all = [
+    "memtuner[database,explorer,viz]",
+]
+dev = [
+    "memtuner[all]",
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "mypy>=1.5",
+    "ruff>=0.1",
+    "hypothesis>=6.75",
+]
+
+[project.urls]
+Homepage = "https://github.com/karangehlod/Agenticmemory_benchmark"
+Repository = "https://github.com/karangehlod/Agenticmemory_benchmark"
+Documentation = "https://agenticmemory-benchmark.readthedocs.io"
+"Bug Tracker" = "https://github.com/karangehlod/Agenticmemory_benchmark/issues"
+
+[project.scripts]
+benchmark = "benchmark.cli.main:cli"
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["benchmark*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "unit: Pure logic tests with no I/O",
+    "contract: Interface compliance tests",
+    "integration: End-to-end tests that may use I/O",
+]
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+python_version = "3.11"
+plugins = ["pydantic.mypy"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "TCH",  # flake8-type-checking
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "RUF001",  # Ambiguous unicode in strings — intentional math symbols (×, λ, α)
+    "RUF002",  # Ambiguous unicode in docstrings — intentional math symbols
+    "RUF003",  # Ambiguous unicode in comments — intentional math symbols
+    "RUF012",  # Mutable class-level defaults — used for strategy-to-extra mapping
+    "TC001",   # Move import into TYPE_CHECKING — runtime-needed imports
+    "TC003",   # Move stdlib import into TYPE_CHECKING — runtime-needed imports
+    "E501",    # Line too long — enforced at 120 via per-file-ignores where needed
+    "N806",    # Variable in function should be lowercase — constants in local scope
+    "SIM113",  # Use enumerate — false positive in ProcessPoolExecutor callback
+    "B904",    # raise from in except — CLI SystemExit and strategy RuntimeError are intentional
+    "B905",    # zip() without strict — false positive for intentionally matched-length sequences
+    "F811",    # Redefinition — false positive in side-effect-only imports
+    "E402",    # Module-level import not at top — CLI entrypoint pattern
+    "SIM108",  # Ternary operator — readability choice in multi-line conditionals
+    "SIM110",  # Use all() — readability choice for explicit early return
+    "SIM118",  # Use `in dict` — .keys() is explicit and harmless
+    "UP042",   # StrEnum — requires Python 3.11+ StrEnum migration (future release)
+    "RUF005",  # Consider iterable unpacking — readability choice
+    "RUF015",  # Prefer next(iter()) — readability choice
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["benchmark"]
+
+[tool.coverage.run]
+source = ["benchmark"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
