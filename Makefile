@@ -1,7 +1,7 @@
 .PHONY: help install install-all install-dev test test-unit test-integration test-verbose test-coverage lint format type-check check-all build clean release publish dev-setup shell
 
 # Project settings
-PROJECT_NAME := agentic-memory-benchmark
+PROJECT_NAME := memtuner
 VERSION := 0.0.1
 PYTHON := python3
 PIP := pip3

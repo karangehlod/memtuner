@@ -23,7 +23,7 @@ _meter: metrics.Meter | None = None
 _instruments: dict[str, metrics.Instrument] = {}
 
 
-def initialize_metrics(service_name: str = "agentic-memory-benchmark") -> metrics.Meter:
+def initialize_metrics(service_name: str = "memtuner") -> metrics.Meter:
     """Initialize the global OTel meter and create all metric instruments.
 
     Args:

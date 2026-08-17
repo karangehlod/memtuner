@@ -77,7 +77,7 @@ class SessionEmbeddingsStrategy(RetrievalStrategy):
             if SentenceTransformer is None:
                 raise ImportError(
                     "sentence-transformers not installed. "
-                    "Install: pip install agentic-memory-benchmark[embeddings]"
+                    "Install: pip install memtuner[embeddings]"
                 )
             self._model = SentenceTransformer(model_name, device=_EMBEDDING_DEVICE)
         self._max_session_length = max_session_length

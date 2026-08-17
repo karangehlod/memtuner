@@ -49,8 +49,8 @@ cat data/output/grid_*/grid_*_report.txt
 ### macOS / Linux
 
 ```bash
-git clone https://github.com/karangehlod/agentic-memory-benchmark.git
-cd agentic-memory-benchmark
+git clone https://github.com/karangehlod/memtuner.git
+cd memtuner
 
 # Create a virtual environment (recommended)
 python3 -m venv .venv
@@ -63,8 +63,8 @@ pip install -e ".[dev]"
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/karangehlod/agentic-memory-benchmark.git
-cd agentic-memory-benchmark
+git clone https://github.com/karangehlod/memtuner.git
+cd memtuner
 
 # Create a virtual environment
 python -m venv .venv
