@@ -545,6 +545,75 @@ def _check_import(module: str, pip_name: str) -> bool:
         return False
 
 
+def _rename_csv_descriptively(csv_path: Path) -> Path:
+    """Rename a grid CSV to a human-readable name that encodes dataset + phases.
+
+    Before: study_20260818_032941_b4853b73731c_grid.csv
+    After:  squad_11873q_p1-baselines_p2-embeddings_p3-bm25_p4-decay_20260818_b4853b73_grid.csv
+
+    Phase abbreviations and dataset names come from configs/benchmark_config.yaml.
+    """
+    import csv as _csv
+    from datetime import datetime as _dt
+    try:
+        import sys as _sys
+        from pathlib import Path as _P
+        _sys.path.insert(0, str(_P(__file__).parent / "scripts"))
+        from config import cfg as _cfg
+        _PHASE_SHORT = _cfg.phase_abbreviations
+        _DS_NAMES    = {k: v.lower().replace(" ", "_") for k, v in _cfg.datasets.query_count_to_name.items()}
+        _max_tokens  = _cfg.reporting.max_phase_tokens_in_filename
+    except Exception:
+        # Fallback if config isn't loadable
+        _PHASE_SHORT = {
+            "phase1_baselines": "p1-baselines", "phase2_embedding_comparison": "p2-embeddings",
+            "phase3_hybrid_broad": "p3-bm25-broad", "phase4_decay_broad": "p4-decay-broad",
+            "phase5_reranker_comparison": "p5-reranker",
+        }
+        _DS_NAMES   = {11873: "squad", 7983: "coqa", 1977: "locomo", 470: "longmemeval", 200: "synthetic"}
+        _max_tokens = 4
+
+    try:
+        rows: list[dict] = []
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            rows = list(_csv.DictReader(f))
+        if not rows:
+            return csv_path
+
+        nq      = int(rows[0].get("total_queries", 0))
+        ds      = _DS_NAMES.get(nq, f"ds{nq}")
+        phases  = sorted({r.get("study_phase", "") for r in rows if r.get("study_phase")})
+        p_short = [_PHASE_SHORT.get(p, p.replace("phase", "p")) for p in phases]
+        phase_str = "_".join(p_short[:_max_tokens])
+        if len(p_short) > _max_tokens:
+            phase_str += f"_p{len(p_short)}total"
+
+        date_str  = _dt.now().strftime("%Y%m%d")
+        short_id  = csv_path.parent.name.replace("study_", "")[:8]  # first 8 chars of run_id
+
+        new_name = f"{ds}_{nq}q_{phase_str}_{date_str}_{short_id}_grid.csv"
+        new_path = csv_path.parent / new_name
+        csv_path.rename(new_path)
+        return new_path
+    except Exception:
+        return csv_path  # leave original name on any error
+
+
+def _trigger_report_generation(project_root: str) -> None:
+    """Regenerate master CSV, formula doc, and reports_data.js after a run."""
+    try:
+        import importlib.util, sys as _sys
+        script = Path(project_root) / "scripts" / "generate_reports.py"
+        if not script.exists():
+            return
+        spec = importlib.util.spec_from_file_location("generate_reports", script)
+        mod  = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        mod.generate(Path(project_root))
+    except Exception as _e:
+        print(f"  [warn] Report generation skipped: {_e}")
+
+
 def _write_leaderboards_json(agg, dataset_label: str, run_id: str) -> "Path | None":
     """Write benchmark_results/leaderboards.json from study_aggregator output.
 
@@ -1061,6 +1130,7 @@ def _run_multi_dataset(args, gold_paths: list, phases: list, project_root: str) 
                 print(f"    {name:20s}: {path}")
         if "viz_error" in paths:
             print(f"  [warn] Visualization: {paths['viz_error']}")
+        _trigger_report_generation(project_root)
 
 
 def _run_single_dataset(args, gold_path: Path, phases: list, project_root: str) -> "Path | None":
@@ -1341,6 +1411,9 @@ def _run_single_dataset(args, gold_path: Path, phases: list, project_root: str) 
         print(f"  [warn] Visualization failed: {paths['viz_error']}")
 
     csv_path = paths.get("grid_csv")
+    if csv_path:
+        csv_path = str(_rename_csv_descriptively(Path(csv_path)))
+    _trigger_report_generation(project_root)
     return Path(csv_path) if csv_path else None
 
 
