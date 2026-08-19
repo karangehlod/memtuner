@@ -31,6 +31,36 @@ from typing import ClassVar
 from pathlib import Path
 
 
+def _load_composite_weights() -> dict:
+    """Load composite score weights from configs/benchmark_config.yaml + env overrides.
+
+    Falls back to hardcoded defaults if the config file is absent (e.g. in test environments).
+    Weights must sum to 1.0; caller is responsible for validation.
+    """
+    _defaults = {"recall": 0.40, "precision": 0.25, "mrr": 0.20, "temporal": 0.15}
+    try:
+        import yaml as _yaml
+        _cfg_path = Path(__file__).resolve().parents[3] / "configs" / "benchmark_config.yaml"
+        if _cfg_path.exists():
+            with open(_cfg_path, encoding="utf-8") as _f:
+                _raw = _yaml.safe_load(_f) or {}
+            _w = _raw.get("composite", {}).get("weights", {})
+            _defaults.update({k: float(v) for k, v in _w.items() if k in _defaults})
+    except Exception:
+        pass  # config unavailable — use defaults
+
+    # Environment variable overrides win over YAML
+    for key in ("recall", "precision", "mrr", "temporal"):
+        env_key = f"BENCHMARK_COMPOSITE_W_{key.upper()}"
+        env_val = os.environ.get(env_key)
+        if env_val is not None:
+            try:
+                _defaults[key] = float(env_val)
+            except ValueError:
+                pass
+    return _defaults
+
+
 @dataclass
 class MatrixRunResult:
     """Result of a single matrix cell benchmark run."""
@@ -116,17 +146,11 @@ class MatrixRunResult:
             platform=row.get("platform", ""),
         )
 
-    # Default composite score weights — single source of truth.
-    # Rationale: Recall (40%) = primary retrieval coverage; Precision (25%) = set
-    # cleanliness; MRR (20%) = ranking quality; Temporal (15%) = time-window accuracy.
-    # Run sensitivity analysis with composite_score_weighted() before relying on
-    # rankings that are within 0.01 of each other.
-    COMPOSITE_WEIGHTS: ClassVar[dict] = {
-        "recall":    0.40,
-        "precision": 0.25,
-        "mrr":       0.20,
-        "temporal":  0.15,
-    }
+    # Composite score weights — loaded from configs/benchmark_config.yaml at runtime,
+    # with env var overrides (BENCHMARK_COMPOSITE_W_RECALL etc.).
+    # Hardcoded values are the fallback when the config file is absent.
+    # Annotation omitted: Python 3.13 + PEP 563 bug treats ClassVar as instance field.
+    COMPOSITE_WEIGHTS = _load_composite_weights()
 
     def composite_score(self) -> float:
         """Weighted composite score for ranking using COMPOSITE_WEIGHTS.

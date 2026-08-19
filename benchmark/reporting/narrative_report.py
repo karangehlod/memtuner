@@ -142,7 +142,7 @@ class NarrativeReportGenerator:
             profile = get_profile(ds_name)
             recs = summary.get("recommendations", {})
             best_strat = recs.get("best_retrieval_strategy", "—")
-            best_embed = recs.get("best_embedding_model", "—").split("/")[-1]
+            best_embed = (recs.get("best_embedding_model") or "—").split("/")[-1]
             best_rerank = recs.get("best_reranker", "none")
             best_lambda = _best_lambda(summary)
 
@@ -216,7 +216,7 @@ class NarrativeReportGenerator:
             ]
 
         lines += [
-            f"  Top config     : {best_strat} | embed={best_embed.split('/')[-1]} | reranker={best_rerank} | λ={_best_lambda(summary)}",
+            f"  Top config     : {best_strat} | embed={(best_embed or '—').split('/')[-1]} | reranker={best_rerank} | λ={_best_lambda(summary)}",
             f"  Recall@K    : {top_recall:.1%}   (gap to 2nd place: {margin:.3f})",
             "",
             f"  Structural explanation (IR theory, not a verdict):",
@@ -272,7 +272,7 @@ class NarrativeReportGenerator:
             profile = get_profile(ds_name)
             recs = summary.get("recommendations", {})
             winner = recs.get("best_retrieval_strategy", "—")
-            best_embed = recs.get("best_embedding_model", "—").split("/")[-1]
+            best_embed = (recs.get("best_embedding_model") or "—").split("/")[-1]
             best_reranker = recs.get("best_reranker", "none")
             best_lam = _best_lambda(summary)
             best_bm25w = _best_bm25_weight(summary)

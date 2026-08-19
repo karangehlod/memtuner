@@ -1,0 +1,138 @@
+# =============================================================================
+# MemTuner — Benchmark Configuration
+# =============================================================================
+# This file controls all non-secret, non-model configuration values.
+# Secrets and API keys belong in .env, never here.
+#
+# Environment variable overrides (set in .env or shell) take precedence over
+# every value in this file.  Naming convention: BENCHMARK_<SECTION>_<KEY>
+# e.g. BENCHMARK_COMPOSITE_W_RECALL=0.50 overrides composite.weights.recall
+# =============================================================================
+
+# ── Dataset identification ────────────────────────────────────────────────────
+# Maps total_queries count → human-readable dataset name.
+# Add a row here whenever you add a new gold dataset.
+datasets:
+  query_count_to_name:
+    11873: "SQuAD"
+    7983:  "CoQA"
+    1977:  "LoCoMo"
+    470:   "LongMemEval"
+    200:   "Synthetic"
+
+  # Display order in cross-dataset plots and tables
+  display_order:
+    - SQuAD
+    - CoQA
+    - LoCoMo
+    - LongMemEval
+    - Synthetic
+
+# ── Composite score ───────────────────────────────────────────────────────────
+# composite = gate(R@10 ≥ recall_gate) × (w_recall×R@10 + w_precision×P@10 + w_mrr×MRR + w_temporal×TA)
+# Weights must sum to 1.0.
+# Override via env: BENCHMARK_COMPOSITE_W_RECALL, _PRECISION, _MRR, _TEMPORAL
+composite:
+  weights:
+    recall:    0.40   # primary — missing a memory = no answer
+    precision: 0.25   # irrelevant results waste LLM context
+    mrr:       0.20   # rank quality: correct top-1 needs less context
+    temporal:  0.15   # time-window correctness (zero-weight if inapplicable)
+
+  # Configs with Recall@K below this are gated to 0.0 composite
+  # Override via env: BENCHMARK_COMPOSITE_RECALL_GATE
+  recall_gate: 0.01
+
+  # Configs within this margin are statistically equivalent (not separately ranked)
+  significance_margin: 0.01
+
+# ── Evaluation ────────────────────────────────────────────────────────────────
+evaluation:
+  # Number of results retrieved per query for recall/precision calculation
+  # Override via env: BENCHMARK_RECALL_K
+  recall_k: 10
+
+  # Bootstrap CI resamples
+  bootstrap_resamples: 1000
+
+  # Minimum delta to reset early-stopping counter (Phase 5)
+  # Override via env: BENCHMARK_EARLY_STOP_MIN_DELTA
+  early_stop_min_delta: 0.005
+
+  # Consecutive non-improving λ values before stopping
+  # Override via env: BENCHMARK_EARLY_STOP_PATIENCE
+  early_stop_patience: 3
+
+# ── Phase abbreviations (used in CSV filenames) ───────────────────────────────
+# Maps study_phase column values → short filename tokens
+phase_abbreviations:
+  phase1_baselines:            "p1-baselines"
+  phase2_embedding_comparison: "p2-embeddings"
+  phase2_embedding_sweep:      "p2-embeddings"
+  phase3_hybrid_broad:         "p3-bm25-broad"
+  phase3_hybrid_fine:          "p3-bm25-fine"
+  phase3_hybrid_weight:        "p3-bm25"
+  phase4_decay_broad:          "p4-decay-broad"
+  phase4_decay_fine:           "p4-decay-fine"
+  phase4b_archival_floor:      "p4b-archival"
+  phase5_reranker_comparison:  "p5-reranker"
+  phase_reranker_comparison:   "p5-reranker"
+  general:                     "general"
+
+# ── Reporting & output paths ──────────────────────────────────────────────────
+reporting:
+  # All paths are relative to the project root unless they start with /
+  # Override via env: BENCHMARK_OUTPUT_DIR, BENCHMARK_PLOTS_DIR
+  output_dir:  "data/output"
+  plots_dir:   "data/output/plots"
+
+  # DPI for saved PNG files — 150 for screen, 300 for print/publication
+  # Override via env: BENCHMARK_DPI
+  plot_dpi: 150
+
+  # Maximum number of phase tokens to include in a CSV filename
+  max_phase_tokens_in_filename: 4
+
+# ── Plot colours ──────────────────────────────────────────────────────────────
+# Validated palette — matches dashboard CSS tokens.
+# ΔE(CVD) ≥ 8 on adjacent pairs in both light and dark modes.
+colors:
+  # Base palette (light mode; dark mode values auto-stepped in dashboard CSS)
+  blue:    "#2a78d6"
+  orange:  "#eb6834"
+  aqua:    "#1baf7a"
+  yellow:  "#c98500"
+  magenta: "#d55181"
+  green:   "#008300"
+  violet:  "#4a3aa7"
+  red:     "#e34948"
+  gray:    "#898781"
+  light:   "#e1e0d9"
+
+  # Surface colours (used for figure backgrounds)
+  surface_light: "#fcfcfb"
+  surface_dark:  "#1a1a19"
+
+  # Retrieval strategy → colour slot
+  strategy_colors:
+    hybrid:   "blue"
+    semantic: "orange"
+    colbert:  "aqua"
+    adaptive: "yellow"
+    bm25:     "magenta"
+    bm25l:    "green"
+    recency:  "violet"
+
+  # Decay policy → colour slot
+  decay_colors:
+    linear:       "blue"
+    logarithmic:  "orange"
+    tiered:       "aqua"
+    exponential:  "yellow"
+    none:         "gray"
+
+  # Memory type → colour slot
+  memory_colors:
+    episodic:   "blue"
+    semantic:   "orange"
+    preference: "aqua"

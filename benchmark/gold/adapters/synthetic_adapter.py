@@ -78,6 +78,20 @@ class SyntheticAdapter(DatasetAdapter):
         "implemented", "tested", "deployed", "improved", "discovered",
     ]
 
+    # Task-specific detail phrases — give retrieval models real signal to match on
+    TASK_DETAILS: dict[str, list[str]] = {
+        "analysis":       ["performance bottlenecks", "data quality issues", "usage trends", "error rate spikes"],
+        "report":         ["quarterly results", "progress metrics", "findings summary", "status update"],
+        "meeting":        ["roadmap priorities", "team blockers", "sprint goals", "stakeholder updates"],
+        "decision":       ["architecture choices", "vendor selection", "timeline approval", "scope changes"],
+        "review":         ["code quality", "security audit", "design feedback", "documentation gaps"],
+        "planning":       ["sprint breakdown", "resource allocation", "milestone targets", "risk assessment"],
+        "design":         ["system architecture", "API contracts", "database schema", "UI wireframes"],
+        "implementation": ["feature development", "bug fixes", "refactoring work", "integration points"],
+        "testing":        ["regression suite", "load testing", "edge case coverage", "acceptance criteria"],
+        "deployment":     ["production rollout", "staging validation", "rollback procedure", "service health"],
+    }
+
     def __init__(
         self,
         query_count: int = 100,
@@ -149,9 +163,10 @@ class SyntheticAdapter(DatasetAdapter):
             users = [f"user_{i}" for i in range(self.user_count)]
 
             # Generate memories distributed across days.
-            # Track injection day per memory ID for temporal query validation.
+            # Track injection day and task per memory ID for query generation.
             all_memories: dict[int, list[GoldMemoryEvent]] = {}
             memory_id_to_day: dict[str, int] = {}
+            memory_id_to_task: dict[str, str] = {}
 
             for mem_idx in range(total_memories):
                 day = random.randint(0, self.day_range - 1)
@@ -162,6 +177,7 @@ class SyntheticAdapter(DatasetAdapter):
                 )
                 all_memories[day].append(memory)
                 memory_id_to_day[memory.id] = day
+                memory_id_to_task[memory.id] = memory.task_id
 
             # Ensure all days have at least one memory (fill sparse days)
             for day in range(self.day_range):
@@ -171,11 +187,12 @@ class SyntheticAdapter(DatasetAdapter):
                     )
                     all_memories[day] = [memory]
                     memory_id_to_day[memory.id] = day
+                    memory_id_to_task[memory.id] = memory.task_id
 
             # Generate queries — each query day >= max injection day of its gold memories
             queries = []
             for q_idx in range(self.query_count):
-                query = self._generate_query(q_idx, users, memory_id_to_day)
+                query = self._generate_query(q_idx, users, memory_id_to_day, memory_id_to_task)
                 queries.append(query)
 
             # Build events
@@ -316,7 +333,12 @@ class SyntheticAdapter(DatasetAdapter):
         importance = random.gauss(0.6, 0.15)
         importance = max(0.0, min(1.0, importance))
 
-        content = f"{verb.capitalize()} {task_id} involving {', '.join(entities) if entities else 'team'}."
+        focus = random.choice(self.TASK_DETAILS.get(task_id, ["general progress"]))
+        who = ", ".join(entities) if entities else "the team"
+        content = (
+            f"{verb.capitalize()} the {task_id} with {who}. "
+            f"The session covered {focus}."
+        )
 
         return GoldMemoryEvent(
             id=f"mem_{mem_idx}",
@@ -334,8 +356,12 @@ class SyntheticAdapter(DatasetAdapter):
         q_idx: int,
         users: list[str],
         memory_id_to_day: dict[str, int],
+        memory_id_to_task: dict[str, str],
     ) -> GoldQuery:
         """Generate a synthetic query with temporally valid gold memories.
+
+        Gold memories are selected from those sharing the query's task so that
+        retrieval models have a real semantic signal to match against.
 
         The query day is always >= the injection day of every gold memory,
         so the memories exist in the store when the query executes.
@@ -344,6 +370,7 @@ class SyntheticAdapter(DatasetAdapter):
             q_idx: Query index.
             users: Available users.
             memory_id_to_day: Mapping from memory_id → injection day.
+            memory_id_to_task: Mapping from memory_id → task_id.
 
         Returns:
             Generated GoldQuery.
@@ -354,28 +381,43 @@ class SyntheticAdapter(DatasetAdapter):
         num_relevant = {
             "low": 1,
             "medium": random.randint(2, 4),
-            "high": random.randint(3, 8),
+            "high": random.randint(3, 6),
         }[self.query_diversity]
 
-        # Select relevant memories
-        relevant = random.sample(memory_ids, min(num_relevant, len(memory_ids)))
+        # Choose the query's task first, then select gold memories about that task
+        # so there is genuine semantic overlap between the query and its answers.
+        task = random.choice(self.TASKS)
+        task_memories = [mid for mid in memory_ids if memory_id_to_task.get(mid) == task]
+
+        if len(task_memories) >= num_relevant:
+            relevant = random.sample(task_memories, num_relevant)
+        elif task_memories:
+            # Fill remainder from other memories when not enough task matches
+            others = [mid for mid in memory_ids if mid not in task_memories]
+            n_fill = min(num_relevant - len(task_memories), len(others))
+            relevant = task_memories + random.sample(others, n_fill)
+        else:
+            relevant = random.sample(memory_ids, min(num_relevant, len(memory_ids)))
 
         # Query day must be >= max injection day of gold memories
-        # so all gold memories are already in the store when the query runs.
         min_query_day = max(memory_id_to_day[mid] for mid in relevant)
         day = random.randint(min_query_day, self.day_range - 1)
 
-        # Generate query text
-        task = random.choice(self.TASKS)
+        # Generate query text — more templates reduces repetition
         entity = random.choice(self.ENTITIES)
-        queries = [
-            f"What was decided about {task} with {entity}?",
-            f"When did we review the {task}?",
+        templates = [
+            f"What was decided about the {task} with {entity}?",
+            f"When did we complete the {task}?",
             f"Who was involved in the {task}?",
-            f"What happened in {entity}'s {task}?",
+            f"What happened during {entity}'s {task}?",
             f"What was the outcome of the {task}?",
+            f"What issues came up during the {task}?",
+            f"What did {entity} contribute to the {task}?",
+            f"What was covered in the {task} session?",
+            f"What did the team decide about the {task}?",
+            f"How did the {task} with {entity} go?",
         ]
-        query_text = random.choice(queries)
+        query_text = random.choice(templates)
         user_id = random.choice(users)
 
         expected = GoldExpectedResult(memory_ids=relevant)
