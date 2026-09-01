@@ -79,12 +79,12 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Agentic Memory Benchmark — Comprehensive Study Runner",
+        description="MemTuner — Comprehensive Study Runner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 First time? Run the system check first:
-  python study_runner.py --doctor
-  benchmark doctor              (if installed via pip install -e .)
+  python scripts/study_runner.py --doctor
+  memtuner doctor              (if installed via pip install -e .)
 
 This reads your CPU, RAM, and GPU, then prints the exact command
 to run for your hardware — no configuration needed.
@@ -109,17 +109,17 @@ Dataset behaviour:
 
 Examples:
   # Run everything — download datasets if needed, benchmark all, merge report
-  python study_runner.py --mode full --ollama-url http://localhost:11434/v1
+  python scripts/study_runner.py --mode full --ollama-url http://localhost:11434/v1
 
   # Run only LoCoMo
-  python study_runner.py --gold-dataset data/input/locomo10.json --mode full \\
+  python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode full \\
       --ollama-url http://localhost:11434/v1
 
   # Run two specific datasets and get a merged report
-  python study_runner.py --gold-dataset data/input/locomo10.json data/input/squad_gold.json --mode full
+  python scripts/study_runner.py --gold-dataset data/input/locomo10.json data/input/squad_gold.json --mode full
 
   # Quick sanity check on LoCoMo only
-  python study_runner.py --gold-dataset data/input/locomo10.json --mode quick
+  python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode quick
 """,
     )
 
@@ -313,7 +313,7 @@ Examples:
         _run_merge(args)
         return
 
-    project_root = str(Path(__file__).parent)
+    project_root = _PROJECT_ROOT  # set at module top: scripts/../ = repo root
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
@@ -437,7 +437,7 @@ Examples:
     _rank_ok    = _check_import("rank_bm25",             "rank-bm25")
     _httpx_ok   = _check_import("httpx",                 "httpx")
 
-    print(f"\nAgentic Memory Benchmark — Comprehensive Study Runner")
+    print(f"\nMemTuner — Comprehensive Study Runner")
     print(f"{'=' * 60}")
     print(f"  Run ID:         {run_id}")
     print(f"  Mode:           {args.mode}")
@@ -1045,7 +1045,7 @@ def _run_multi_dataset(args, gold_paths: list, phases: list, project_root: str) 
     n = len(gold_paths)
     written_csvs: list[Path] = []
 
-    print(f"\nAgentic Memory Benchmark — Multi-Dataset Run")
+    print(f"\nMemTuner — Multi-Dataset Run")
     print(f"{'=' * 60}")
     print(f"  Datasets ({n}):")
     for i, p in enumerate(gold_paths, 1):

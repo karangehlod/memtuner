@@ -1,4 +1,4 @@
-"""``benchmark doctor`` — system capability check and run recommendation.
+"""``memtuner doctor`` — system capability check and run recommendation.
 
 Reads actual hardware (CPU cores, RAM, GPU), checks which Python packages
 are installed, then prints hardware-specific information:
@@ -56,7 +56,7 @@ def _write_env(config: dict[str, str], env_path: Path) -> None:
     - New keys are appended at the end under a doctor-managed block.
     - Keys set to empty string are removed (uncommented or deleted).
     """
-    MANAGED_HEADER = "# --- auto-configured by benchmark doctor ---"
+    MANAGED_HEADER = "# --- auto-configured by memtuner doctor ---"
     MANAGED_FOOTER = "# --- end doctor config ---"
 
     # Read existing file
@@ -331,17 +331,17 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
         print()
         print("  Run the benchmark now (settings from .env apply automatically):")
         if has_st and has_torch:
-            print("    python study_runner.py --mode full")
+            print("    python scripts/study_runner.py --mode full")
         else:
-            print("    python study_runner.py --mode full --phases 1 5")
+            print("    python scripts/study_runner.py --mode full --phases 1 5")
 
     else:
         _section("Commands for This Machine — Copy & Run")
         print()
         print("  These commands are tailored to your hardware.")
         print("  To apply this config automatically to every run:")
-        print("    python study_runner.py --doctor --apply")
-        print("    benchmark doctor --apply")
+        print("    python scripts/study_runner.py --doctor --apply")
+        print("    memtuner doctor --apply")
         print()
 
         def _cmd(label: str, cmd: str) -> None:
@@ -353,17 +353,17 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
 
         # Always available
         _cmd("Sanity check — BM25 + Recency only, ~45s, no GPU needed",
-             f"python study_runner.py {ds_arg} --mode quick --workers {workers}")
+             f"python scripts/study_runner.py {ds_arg} --mode quick --workers {workers}")
 
         if has_st and has_torch:
             skip_arg = f"--skip-models {' '.join(skip_models)}" if skip_models else ""
-            full_cmd = f"python study_runner.py {ds_arg} --mode full --workers {workers} {skip_arg}".strip()
+            full_cmd = f"python scripts/study_runner.py {ds_arg} --mode full --workers {workers} {skip_arg}".strip()
             _cmd("Full study — all phases", full_cmd)
             _cmd("Statistical run — 3 seeds for 95% bootstrap CIs (3× longer)",
-                 f"python study_runner.py {ds_arg} --mode full --seeds 42 123 456 --workers {workers} {skip_arg}".strip())
+                 f"python scripts/study_runner.py {ds_arg} --mode full --seeds 42 123 456 --workers {workers} {skip_arg}".strip())
         else:
             _cmd("Full study — BM25 + decay only (no embedding models)",
-                 f"python study_runner.py {ds_arg} --mode full --phases 1 5 --workers {workers}")
+                 f"python scripts/study_runner.py {ds_arg} --mode full --phases 1 5 --workers {workers}")
         print()
 
     print(f"  {'─' * 56}")
