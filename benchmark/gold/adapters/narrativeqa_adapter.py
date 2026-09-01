@@ -1,11 +1,25 @@
 """Adapter for NarrativeQA - long narrative comprehension."""
 
-import hashlib, json
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
-from benchmark.gold.adapters.adapter import AdapterError, DatasetAdapter, FingerprintError, StatisticsError, ValidationError, ValidationReport
-from benchmark.gold.schema import GoldDataset, GoldDayEvents, GoldMemoryEvent, GoldQuery, GoldExpectedResult
+from benchmark.gold.adapters.adapter import (
+    AdapterError,
+    DatasetAdapter,
+    FingerprintError,
+    StatisticsError,
+    ValidationError,
+    ValidationReport,
+)
+from benchmark.gold.schema import (
+    GoldDataset,
+    GoldDayEvents,
+    GoldExpectedResult,
+    GoldMemoryEvent,
+    GoldQuery,
+)
 from benchmark.gold.statistics import DatasetStatistics, StatisticsComputer
 from benchmark.gold.validators import ValidationRegistry
 from benchmark.models.memory_event import MemoryType
@@ -21,7 +35,7 @@ class NarrativeQAAdapter(DatasetAdapter):
         try:
             with open(source) as f:
                 data = json.load(f)
-        except (FileNotFoundError, IOError) as e:
+        except (OSError, FileNotFoundError) as e:
             raise AdapterError(f"Cannot read NarrativeQA file {source}: {e}")
         except json.JSONDecodeError as e:
             raise AdapterError(f"Invalid JSON in NarrativeQA file: {e}")
@@ -67,7 +81,7 @@ class NarrativeQAAdapter(DatasetAdapter):
 
                 # Questions as queries
                 questions = narrative.get("questions", [])
-                for q_idx, q_data in enumerate(questions):
+                for _q_idx, q_data in enumerate(questions):
                     question = q_data if isinstance(q_data, str) else q_data.get("question", "")
                     if not question:
                         continue

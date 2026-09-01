@@ -3,8 +3,6 @@
 Provides configurable retry logic for handling transient failures in I/O operations.
 """
 
-from typing import Type, Tuple
-import time
 import logging
 
 try:
@@ -60,15 +58,20 @@ class RetryStrategy:
         self.max_delay = max(self.base_delay, max_delay)
         self.attempts = 0
 
+    def _compute_delay(self) -> float:
+        """Compute the backoff delay for the current attempt without advancing state."""
+        return min(self.base_delay * (2 ** self.attempts), self.max_delay)
+
     def get_delay(self) -> float:
-        """Calculate delay for next attempt using exponential backoff.
+        """Return delay for the current attempt and advance the attempt counter.
 
         Delay grows as: base_delay * (2^attempts), capped at max_delay.
+        Side effect: increments self.attempts.
 
         Returns:
             Delay in seconds.
         """
-        delay = min(self.base_delay * (2 ** self.attempts), self.max_delay)
+        delay = self._compute_delay()
         self.attempts += 1
         return delay
 

@@ -1,11 +1,25 @@
 """Adapter for MultiWOZ - task-oriented dialogue state tracking."""
 
-import hashlib, json
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
-from benchmark.gold.adapters.adapter import AdapterError, DatasetAdapter, FingerprintError, StatisticsError, ValidationError, ValidationReport
-from benchmark.gold.schema import GoldDataset, GoldDayEvents, GoldMemoryEvent, GoldQuery, GoldExpectedResult
+from benchmark.gold.adapters.adapter import (
+    AdapterError,
+    DatasetAdapter,
+    FingerprintError,
+    StatisticsError,
+    ValidationError,
+    ValidationReport,
+)
+from benchmark.gold.schema import (
+    GoldDataset,
+    GoldDayEvents,
+    GoldExpectedResult,
+    GoldMemoryEvent,
+    GoldQuery,
+)
 from benchmark.gold.statistics import DatasetStatistics, StatisticsComputer
 from benchmark.gold.validators import ValidationRegistry
 from benchmark.models.memory_event import MemoryType
@@ -21,7 +35,7 @@ class MultiWOZAdapter(DatasetAdapter):
         try:
             with open(source) as f:
                 data = json.load(f)
-        except (FileNotFoundError, IOError) as e:
+        except (OSError, FileNotFoundError) as e:
             raise AdapterError(f"Cannot read MultiWOZ file {source}: {e}")
         except json.JSONDecodeError as e:
             raise AdapterError(f"Invalid JSON in MultiWOZ file: {e}")
@@ -34,7 +48,7 @@ class MultiWOZAdapter(DatasetAdapter):
 
         all_memories, all_queries = {}, []
 
-        for d_idx, (dialogue_id, dialogue) in enumerate(data.items()):
+        for d_idx, (_dialogue_id, dialogue) in enumerate(data.items()):
             try:
                 day = d_idx % 30
                 if day not in all_memories:

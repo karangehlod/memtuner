@@ -1,11 +1,11 @@
 """Manage memory state replication across geographically distributed datacenters."""
 
+import hashlib
 import logging
 import time
-from typing import Any, Optional, Dict
 from dataclasses import dataclass, field
 from enum import Enum
-import hashlib
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class ReplicationResult:
     replicated_to: list[str] = field(default_factory=list)
     failed_replicas: list[str] = field(default_factory=list)
     replication_time_sec: float = 0.0
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 @dataclass
@@ -61,10 +61,10 @@ class ReplicationMetrics:
 class FailoverResult:
     """Result from failover operation."""
     success: bool
-    new_primary: Optional[str]
+    new_primary: str | None
     promoted_replicas: list[str] = field(default_factory=list)
     failover_time_sec: float = 0.0
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class DatacenterReplicationManager:
@@ -92,19 +92,19 @@ class DatacenterReplicationManager:
         self.conflict_resolution = conflict_resolution
 
         # State tracking
-        self._dc_states: Dict[str, Any] = {dc: {} for dc in self.all_dcs}
-        self._state_versions: Dict[str, int] = {dc: 0 for dc in self.all_dcs}
-        self._last_sync_times: Dict[str, float] = {}
-        self._sync_lags: Dict[str, float] = {dc: 0.0 for dc in self.all_dcs}
-        self._replication_metrics: Dict[str, Any] = {
+        self._dc_states: dict[str, Any] = {dc: {} for dc in self.all_dcs}
+        self._state_versions: dict[str, int] = {dc: 0 for dc in self.all_dcs}
+        self._last_sync_times: dict[str, float] = {}
+        self._sync_lags: dict[str, float] = {dc: 0.0 for dc in self.all_dcs}
+        self._replication_metrics: dict[str, Any] = {
             "total": 0,
             "successful": 0,
             "failed": 0,
             "total_time": 0.0,
             "total_bytes": 0,
         }
-        self._dc_health: Dict[str, str] = {dc: "healthy" for dc in self.all_dcs}
-        self._state_checksums: Dict[str, str] = {}
+        self._dc_health: dict[str, str] = {dc: "healthy" for dc in self.all_dcs}
+        self._state_checksums: dict[str, str] = {}
 
     def replicate_to_dc(
         self,
@@ -168,7 +168,7 @@ class DatacenterReplicationManager:
 
     def sync_state(
         self,
-        dc_ids: Optional[list[str]] = None,
+        dc_ids: list[str] | None = None,
     ) -> dict[str, SyncStatus]:
         """Synchronize state across datacenters.
 
@@ -356,7 +356,7 @@ class DatacenterReplicationManager:
 
         return len(set(checksums)) == 1
 
-    def get_dc_state(self, dc_id: str) -> Optional[Any]:
+    def get_dc_state(self, dc_id: str) -> Any | None:
         """Get current state for a datacenter.
 
         Args:

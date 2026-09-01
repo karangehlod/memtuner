@@ -33,16 +33,16 @@ from benchmark.gold.statistics import DatasetStatistics
 __all__ = [
     # Exceptions
     "AdapterError",
-    "ValidationError",
-    "FingerprintError",
-    "StatisticsError",
-    "MetadataError",
-    # Validation
-    "ValidationSeverity",
-    "ValidationIssue",
-    "ValidationReport",
+    "AdapterRegistry",
     # Core interfaces
     "DatasetAdapter",
     "DatasetStatistics",
-    "AdapterRegistry",
+    "FingerprintError",
+    "MetadataError",
+    "StatisticsError",
+    "ValidationError",
+    "ValidationIssue",
+    "ValidationReport",
+    # Validation
+    "ValidationSeverity",
 ]

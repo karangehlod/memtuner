@@ -5,8 +5,21 @@ import json
 from pathlib import Path
 from typing import Any
 
-from benchmark.gold.adapters.adapter import AdapterError, DatasetAdapter, FingerprintError, StatisticsError, ValidationError, ValidationReport
-from benchmark.gold.schema import GoldDataset, GoldDayEvents, GoldMemoryEvent, GoldQuery, GoldExpectedResult
+from benchmark.gold.adapters.adapter import (
+    AdapterError,
+    DatasetAdapter,
+    FingerprintError,
+    StatisticsError,
+    ValidationError,
+    ValidationReport,
+)
+from benchmark.gold.schema import (
+    GoldDataset,
+    GoldDayEvents,
+    GoldExpectedResult,
+    GoldMemoryEvent,
+    GoldQuery,
+)
 from benchmark.gold.statistics import DatasetStatistics, StatisticsComputer
 from benchmark.gold.validators import ValidationRegistry
 from benchmark.models.memory_event import MemoryType
@@ -23,7 +36,7 @@ class NaturalQuestionsAdapter(DatasetAdapter):
             source_path = Path(source)
             with open(source_path) as f:
                 data = json.load(f) if str(source_path).endswith('.json') else [json.loads(line) for line in f]
-        except (FileNotFoundError, IOError) as e:
+        except (OSError, FileNotFoundError) as e:
             raise AdapterError(f"Cannot read Natural Questions file {source}: {e}")
         except json.JSONDecodeError as e:
             raise AdapterError(f"Invalid JSON in Natural Questions file: {e}")

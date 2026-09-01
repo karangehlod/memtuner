@@ -3,11 +3,11 @@ Model tester for comparing different embedding and LLM models across providers.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from typing import Any
 
-from benchmark.services.provider_service import ProviderConfig, ProviderType
 from benchmark.memory.strategies.api_embeddings_strategy import ApiEmbeddingsStrategy
+from benchmark.services.provider_service import ProviderConfig, ProviderType
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +19,14 @@ class ModelTestResult:
     model_name: str
     test_type: str  # "embedding" or "reranker"
     success: bool
-    recall: Optional[float] = None
-    precision: Optional[float] = None
-    mrr: Optional[float] = None
-    ndcg: Optional[float] = None
-    time_seconds: Optional[float] = None
-    error: Optional[str] = None
+    recall: float | None = None
+    precision: float | None = None
+    mrr: float | None = None
+    ndcg: float | None = None
+    time_seconds: float | None = None
+    error: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -36,7 +36,7 @@ class ModelTester:
     @staticmethod
     def test_embedding_model(
         provider_config: ProviderConfig,
-        test_texts: List[str],
+        test_texts: list[str],
         timeout: float = 120.0
     ) -> ModelTestResult:
         """
@@ -104,10 +104,10 @@ class ModelTester:
 
     @staticmethod
     def test_embedding_models_batch(
-        provider_configs: List[ProviderConfig],
-        test_texts: List[str],
+        provider_configs: list[ProviderConfig],
+        test_texts: list[str],
         timeout: float = 120.0
-    ) -> List[ModelTestResult]:
+    ) -> list[ModelTestResult]:
         """
         Test multiple embedding models
 
@@ -132,7 +132,7 @@ class ModelTester:
         return results
 
     @staticmethod
-    def get_openai_embedding_models() -> List[ProviderConfig]:
+    def get_openai_embedding_models() -> list[ProviderConfig]:
         """Get OpenAI embedding models to test"""
         import os
 
@@ -157,7 +157,7 @@ class ModelTester:
         ]
 
     @staticmethod
-    def get_api_embedding_models() -> List[ProviderConfig]:
+    def get_api_embedding_models() -> list[ProviderConfig]:
         """Get API embedding models configured via BENCHMARK_OPENAI_BASE_URL + BENCHMARK_API_EMBEDDING_MODELS."""
         import os
 
@@ -179,7 +179,7 @@ class ModelTester:
         ]
 
     @staticmethod
-    def get_all_embedding_models() -> List[ProviderConfig]:
+    def get_all_embedding_models() -> list[ProviderConfig]:
         """Get all embedding models to test (Ollama + OpenAI)"""
         models = []
 

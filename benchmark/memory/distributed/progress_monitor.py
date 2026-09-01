@@ -2,9 +2,9 @@
 
 import logging
 import time
-from typing import Any, Optional
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import timedelta
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class ProgressInfo:
     start_time: float
     last_update_time: float
     throughput: float = 0.0
-    eta_seconds: Optional[float] = None
+    eta_seconds: float | None = None
     progress_percent: float = 0.0
     worker_health: dict[int, str] = field(default_factory=dict)
 
@@ -153,7 +153,7 @@ class ProgressMonitor:
             job = self._jobs[job_id]
             job.worker_health[worker_id] = status
 
-    def get_progress(self, job_id: str) -> Optional[ProgressInfo]:
+    def get_progress(self, job_id: str) -> ProgressInfo | None:
         """Get current progress for job.
 
         Args:
@@ -164,7 +164,7 @@ class ProgressMonitor:
         """
         return self._jobs.get(job_id)
 
-    def estimate_completion_time(self, job_id: str) -> Optional[float]:
+    def estimate_completion_time(self, job_id: str) -> float | None:
         """Estimate when job will complete.
 
         Args:
@@ -263,7 +263,7 @@ class ProgressMonitor:
 
         return True
 
-    def get_bottleneck_worker(self, job_id: str) -> Optional[int]:
+    def get_bottleneck_worker(self, job_id: str) -> int | None:
         """Identify bottleneck worker (slowest).
 
         Args:

@@ -14,8 +14,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from benchmark.models.run_result import BenchmarkRunResult
-
 
 @dataclass
 class ResourceMetrics:

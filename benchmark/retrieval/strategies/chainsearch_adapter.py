@@ -4,6 +4,7 @@ import time
 from typing import Any
 
 from benchmark.retrieval.metrics_utils import compute_metric_summary
+from benchmark.retrieval.strategies.ann_adapter import ANNAdapter
 from benchmark.retrieval.strategies.base import (
     RetrievalMetrics,
     RetrievalStrategy,
@@ -11,7 +12,6 @@ from benchmark.retrieval.strategies.base import (
 )
 from benchmark.retrieval.strategies.bm25_adapter import BM25Adapter
 from benchmark.retrieval.strategies.learned_dense_adapter import LearnedDenseAdapter
-from benchmark.retrieval.strategies.ann_adapter import ANNAdapter
 
 
 class ChainSearchAdapter(RetrievalStrategy):

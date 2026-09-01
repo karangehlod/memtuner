@@ -18,9 +18,17 @@ VRAM usage when embedding + reranker run together (A4000 16GB):
 
 from __future__ import annotations
 
+import contextlib
+import math
 import os
 import time
+
 import httpx
+
+try:
+    import torch as _torch
+except ImportError:
+    _torch = None  # type: ignore[assignment]
 
 try:
     from sentence_transformers import CrossEncoder as _CrossEncoder
@@ -42,7 +50,7 @@ from benchmark.models.memory_event import MemoryEvent
 
 # CrossEncoder model cache — same pattern as EmbeddingsStrategy model cache.
 # Avoids reloading weights for every cell.
-_CE_MODEL_CACHE: dict[str, "_CrossEncoder"] = {}
+_CE_MODEL_CACHE: dict[str, _CrossEncoder] = {}
 
 # CrossEncoder pairwise scoring hangs on both MPS (Apple Silicon) and CPU with
 # Python 3.13 / macOS ARM — the same class of issues affecting loky subprocesses.
@@ -52,7 +60,7 @@ _CE_MODEL_CACHE: dict[str, "_CrossEncoder"] = {}
 _CE_AVAILABLE = _CUDA_AVAILABLE   # only CUDA supports CrossEncoder on this codebase
 
 
-def _get_crossencoder(model_name: str) -> "_CrossEncoder":
+def _get_crossencoder(model_name: str) -> _CrossEncoder:
     if not _CE_AVAILABLE:
         raise RuntimeError(
             f"CrossEncoder reranking requires CUDA. "
@@ -239,17 +247,14 @@ class LLMRerankStrategy(RetrievalStrategy):
             scores = model.predict(pairs, batch_size=batch_size, show_progress_bar=False)
         except RuntimeError as e:
             if "out of memory" in str(e).lower():
-                try:
+                with contextlib.suppress(Exception):
                     _torch.cuda.empty_cache()
-                except Exception:
-                    pass
                 scores = model.predict(pairs, batch_size=max(1, batch_size // 2),
                                        show_progress_bar=False)
             else:
                 raise
 
         # Normalize CrossEncoder logits to [0, 1] via sigmoid, fuse with BM25
-        import math
         reranked = []
         for i, memory_id in enumerate(memory_ids):
             raw = float(scores[i])
@@ -386,7 +391,7 @@ class LLMRerankStrategy(RetrievalStrategy):
             return [float(item.get("score", 0.0)) for item in data]
         raise RuntimeError("Unexpected Ollama reranker response format")
 
-    def _post_with_retry(self, endpoint: str, payload: dict) -> "httpx.Response":
+    def _post_with_retry(self, endpoint: str, payload: dict) -> httpx.Response:
         if self._client is None:
             raise RuntimeError("Reranker client is not configured")
 
@@ -412,7 +417,7 @@ class LLMRerankStrategy(RetrievalStrategy):
 
         raise RuntimeError(f"Reranker request failed after retries: {last_error}")
 
-    def _retry_delay_seconds(self, response: "httpx.Response", attempt: int) -> float:
+    def _retry_delay_seconds(self, response: httpx.Response, attempt: int) -> float:
         retry_after = response.headers.get("Retry-After")
         if retry_after:
             try:

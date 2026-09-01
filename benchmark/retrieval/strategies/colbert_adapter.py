@@ -42,7 +42,6 @@ class ColBERTAdapter(RetrievalStrategy):
             # Try to import ColBERT or use fallback
             try:
                 from sentence_transformers import SentenceTransformer
-                import numpy as np
 
                 self.use_transformers = True
                 # Use a model that works well for token-level tasks
@@ -66,7 +65,6 @@ class ColBERTAdapter(RetrievalStrategy):
                 # Get token-level embeddings
                 if self.use_transformers:
                     try:
-                        import numpy as np
 
                         # Embed individual tokens
                         embeddings = self.model.encode(tokens, show_progress_bar=False)
@@ -101,7 +99,6 @@ class ColBERTAdapter(RetrievalStrategy):
             # Get query token embeddings
             if self.use_transformers:
                 try:
-                    import numpy as np
 
                     query_embeddings = self.model.encode(query_tokens, show_progress_bar=False)
                     query_vecs = query_embeddings.tolist()

@@ -1,10 +1,9 @@
 """Semantic clustering manager for organizing memories by theme."""
 
-import numpy as np
-from typing import Any, Optional, Protocol
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Any
 
-from benchmark.models.memory_event import MemoryEvent
+import numpy as np
 
 
 @dataclass
@@ -12,7 +11,7 @@ class ClusterInfo:
     """Information about a memory cluster."""
     cluster_id: int
     size: int
-    centroid: Optional[list[float]]
+    centroid: list[float] | None
     top_terms: list[str]
     summary: str
     average_score: float
@@ -267,7 +266,7 @@ class SemanticClusterManager:
 
         return np.array(embeddings)
 
-    def _extract_single_embedding(self, memory: dict[str, Any]) -> Optional[np.ndarray]:
+    def _extract_single_embedding(self, memory: dict[str, Any]) -> np.ndarray | None:
         """Extract embedding from single memory."""
         if hasattr(memory, 'embedding') and memory.embedding is not None:
             if isinstance(memory.embedding, (list, tuple)):
@@ -296,7 +295,7 @@ class SemanticClusterManager:
             self._cluster_scores[cluster_id] = []
 
         # Assign memories to clusters
-        for memory, label, embedding in zip(memories, labels, embeddings):
+        for memory, label, _embedding in zip(memories, labels, embeddings):
             cluster_id = int(label)
             self._clusters[cluster_id].append(memory)
             self._memory_to_cluster[memory.id] = cluster_id
@@ -327,7 +326,7 @@ class SemanticClusterManager:
 
     def _fit_hierarchical(self, embeddings: np.ndarray) -> np.ndarray:
         """Fit hierarchical clustering."""
-        from scipy.cluster.hierarchy import linkage, fcluster
+        from scipy.cluster.hierarchy import fcluster, linkage
 
         linkage_matrix = linkage(embeddings, method='ward')
         n_clusters = min(self.num_clusters, len(embeddings))

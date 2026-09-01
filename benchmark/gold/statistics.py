@@ -16,8 +16,7 @@ SOLID principles:
 from dataclasses import dataclass, field
 from typing import Any
 
-from benchmark.gold.schema import GoldDataset, GoldDayEvents, GoldMemoryEvent
-
+from benchmark.gold.schema import GoldDataset
 
 # ============================================================================
 # Statistics Dataclasses
@@ -188,20 +187,28 @@ class StatisticsComputer:
         )
 
         # Compute distributions
-        importance_mean = (
-            sum(all_importance) / len(all_importance)
-            if all_importance
-            else 0.0
-        )
-
+        # Welford's one-pass online algorithm: mean, variance, min, max in a single scan.
         if all_importance:
-            variance = sum(
-                (x - importance_mean) ** 2 for x in all_importance
-            ) / len(all_importance)
-            importance_std = variance ** 0.5
-            importance_min = min(all_importance)
-            importance_max = max(all_importance)
+            _n = 0
+            _mean = 0.0
+            _m2 = 0.0
+            _imp_min = all_importance[0]
+            _imp_max = all_importance[0]
+            for x in all_importance:
+                _n += 1
+                delta = x - _mean
+                _mean += delta / _n
+                _m2 += delta * (x - _mean)
+                if x < _imp_min:
+                    _imp_min = x
+                if x > _imp_max:
+                    _imp_max = x
+            importance_mean = _mean
+            importance_std = (_m2 / _n) ** 0.5 if _n > 1 else 0.0
+            importance_min = _imp_min
+            importance_max = _imp_max
         else:
+            importance_mean = 0.0
             importance_std = 0.0
             importance_min = 0.0
             importance_max = 0.0

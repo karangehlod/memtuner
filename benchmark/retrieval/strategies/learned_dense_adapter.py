@@ -53,7 +53,7 @@ class LearnedDenseAdapter(RetrievalStrategy):
                 # Use a stronger model optimized for retrieval
                 try:
                     self.model = SentenceTransformer("all-mpnet-base-v2")
-                except Exception as e:
+                except Exception:
                     # Network error or model not available, use fallback
                     self.use_transformers = False
             except ImportError:
@@ -74,7 +74,6 @@ class LearnedDenseAdapter(RetrievalStrategy):
 
             # Generate document embeddings
             if self.use_transformers and self.model:
-                import numpy as np
 
                 embeddings_array = self.model.encode(texts, show_progress_bar=False)
 

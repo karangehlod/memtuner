@@ -83,7 +83,6 @@ class RetrievalRerankAdapter(RetrievalStrategy):
         """Rerank candidates using neural scoring."""
         try:
             from sentence_transformers import CrossEncoder
-            import numpy as np
 
             try:
                 # Use cross-encoder for reranking (more sophisticated than bi-encoder)
@@ -138,7 +137,6 @@ class RetrievalRerankAdapter(RetrievalStrategy):
         try:
             from sklearn.feature_extraction.text import TfidfVectorizer
             from sklearn.metrics.pairwise import cosine_similarity
-            import numpy as np
 
             # Vectorize query and candidates
             texts = [query] + [c["content"] for c in candidates]

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 """
 Test OpenAI API interface compatibility across providers.
 Shows how the same API works with different providers.
@@ -8,7 +9,7 @@ import os
 import sys
 import httpx
 
-os.chdir('/Users/karangehlod/Codes/Agenticmemory_benchmark')
+os.chdir(Path(__file__).parent.parent)
 sys.path.insert(0, '.')
 
 from dotenv import load_dotenv

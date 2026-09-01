@@ -14,11 +14,9 @@ Usage:
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
-from benchmark.gold.dataset_profiles import DATASET_PROFILES, DatasetProfile, get_profile
-
+from benchmark.gold.dataset_profiles import get_profile
 
 # Explanation library: maps (dataset_key, strategy) → WHY this works/fails.
 # These are structural IR-theory explanations about dataset/strategy compatibility.
@@ -219,7 +217,7 @@ class NarrativeReportGenerator:
             f"  Top config     : {best_strat} | embed={(best_embed or '—').split('/')[-1]} | reranker={best_rerank} | λ={_best_lambda(summary)}",
             f"  Recall@K    : {top_recall:.1%}   (gap to 2nd place: {margin:.3f})",
             "",
-            f"  Structural explanation (IR theory, not a verdict):",
+            "  Structural explanation (IR theory, not a verdict):",
             f"  {_wrap(_get_explanation(ds_name.lower(), best_strat), 68, '  ')}",
             "",
         ]

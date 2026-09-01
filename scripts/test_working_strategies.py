@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 """
 Test only the working strategies (bm25 and llm_rerank) to verify benchmark works.
 Skip HF and Ollama which have network/proxy issues.
@@ -8,7 +9,7 @@ import subprocess
 import json
 import os
 
-os.chdir('/Users/karangehlod/Codes/Agenticmemory_benchmark')
+os.chdir(Path(__file__).parent.parent)
 
 print("="*70)
 print("Running benchmark with working strategies only")

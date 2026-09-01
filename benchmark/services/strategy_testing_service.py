@@ -8,9 +8,9 @@ This service reduces 69 lines of testing logic in analyze_command.py
 by providing a clean, focused API.
 """
 
-from dataclasses import dataclass
-from typing import Any, Optional, Literal
 import time
+from dataclasses import dataclass
+from typing import Any, Literal
 
 from benchmark.application.composer import BenchmarkComposer
 from benchmark.application.errors import CompositionError
@@ -30,19 +30,19 @@ class StrategyTestResult:
     status: Literal["success", "failed", "skipped"]
     """The test outcome: success, failed, or skipped."""
 
-    metrics: Optional[dict[str, float]] = None
+    metrics: dict[str, float] | None = None
     """Performance metrics if successful (recall, precision, etc.)."""
 
-    elapsed: Optional[float] = None
+    elapsed: float | None = None
     """Elapsed time in seconds if successful."""
 
-    reason: Optional[str] = None
+    reason: str | None = None
     """Human-readable reason if failed or skipped."""
 
-    composed: Optional[Any] = None
+    composed: Any | None = None
     """Composed benchmark object (if successful) - for state capture."""
 
-    config: Optional[dict[str, Any]] = None
+    config: dict[str, Any] | None = None
     """Configuration used (if successful) - for state capture."""
 
     def to_dict(self) -> dict[str, Any]:
@@ -87,9 +87,9 @@ class StrategyTestingService:
         self,
         strategy_name: str,
         base_config_dict: dict[str, Any],
-        config_overrides: Optional[dict[str, Any]] = None,
-        gold_dataset: Optional[Any] = None,
-        judge_evaluator: Optional[Any] = None,
+        config_overrides: dict[str, Any] | None = None,
+        gold_dataset: Any | None = None,
+        judge_evaluator: Any | None = None,
     ) -> StrategyTestResult:
         """Test a single strategy with given configuration.
 
@@ -161,7 +161,7 @@ class StrategyTestingService:
             return StrategyTestResult(
                 strategy_name=strategy_name,
                 status="failed",
-                reason=f"Composition error: {str(e)}",
+                reason=f"Composition error: {e!s}",
             )
         except Exception as e:
             self.logger.exception(f"Strategy {strategy_name} test failed")
@@ -175,9 +175,9 @@ class StrategyTestingService:
         self,
         strategy_names: list[str],
         base_config_dict: dict[str, Any],
-        config_overrides_per_strategy: Optional[dict[str, dict[str, Any]]] = None,
-        gold_dataset: Optional[Any] = None,
-        judge_evaluator: Optional[Any] = None,
+        config_overrides_per_strategy: dict[str, dict[str, Any]] | None = None,
+        gold_dataset: Any | None = None,
+        judge_evaluator: Any | None = None,
     ) -> list[StrategyTestResult]:
         """Test multiple strategies sequentially.
 
@@ -203,7 +203,7 @@ class StrategyTestingService:
             result = self.test_strategy(
                 strategy_name,
                 base_config_dict,
-                config_overrides,
+                overrides,
                 gold_dataset,
                 judge_evaluator,
             )

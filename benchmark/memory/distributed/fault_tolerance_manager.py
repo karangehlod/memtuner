@@ -2,9 +2,10 @@
 
 import logging
 import time
-from typing import Any, Optional, Callable
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class CircuitBreakerConfig:
 class ErrorRecord:
     """Record of an error that occurred."""
     timestamp: float
-    worker_id: Optional[int]
+    worker_id: int | None
     error_type: str
     error_message: str
     attempt: int
@@ -52,14 +53,14 @@ class CircuitBreakerState:
     state: CircuitState
     failure_count: int
     success_count: int
-    last_failure_time: Optional[float]
+    last_failure_time: float | None
     last_state_change: float
 
 
 class RetryStrategy:
     """Exponential backoff retry logic."""
 
-    def __init__(self, config: Optional[RetryConfig] = None):
+    def __init__(self, config: RetryConfig | None = None):
         """Initialize retry strategy.
 
         Args:
@@ -125,7 +126,7 @@ class RetryStrategy:
 class CircuitBreaker:
     """Circuit breaker for fault tolerance."""
 
-    def __init__(self, worker_id: int, config: Optional[CircuitBreakerConfig] = None):
+    def __init__(self, worker_id: int, config: CircuitBreakerConfig | None = None):
         """Initialize circuit breaker.
 
         Args:
@@ -229,8 +230,8 @@ class FaultToleranceManager:
 
     def __init__(
         self,
-        retry_config: Optional[RetryConfig] = None,
-        circuit_breaker_config: Optional[CircuitBreakerConfig] = None,
+        retry_config: RetryConfig | None = None,
+        circuit_breaker_config: CircuitBreakerConfig | None = None,
     ):
         """Initialize fault tolerance manager.
 
@@ -251,7 +252,7 @@ class FaultToleranceManager:
         worker_id: int,
         operation: Callable[[], Any],
         operation_name: str = "operation",
-    ) -> tuple[bool, Any, Optional[str]]:
+    ) -> tuple[bool, Any, str | None]:
         """Execute operation with retry logic.
 
         Args:
@@ -355,7 +356,7 @@ class FaultToleranceManager:
 
     def get_error_log(
         self,
-        worker_id: Optional[int] = None,
+        worker_id: int | None = None,
     ) -> list[ErrorRecord]:
         """Get error log.
 
@@ -372,7 +373,7 @@ class FaultToleranceManager:
 
     def get_circuit_breaker_status(
         self,
-        worker_id: Optional[int] = None,
+        worker_id: int | None = None,
     ) -> dict[int, CircuitBreakerState]:
         """Get circuit breaker status.
 
@@ -390,7 +391,7 @@ class FaultToleranceManager:
 
     def get_worker_health(
         self,
-        worker_id: Optional[int] = None,
+        worker_id: int | None = None,
     ) -> dict[int, dict[str, Any]]:
         """Get worker health status.
 
@@ -446,7 +447,7 @@ class FaultToleranceManager:
 
     def _record_error(
         self,
-        worker_id: Optional[int],
+        worker_id: int | None,
         error_type: str,
         error_message: str,
         attempt: int,

@@ -1,4 +1,4 @@
-# Contributing to Agentic Memory Benchmark
+# Contributing to MemTuner
 
 Thank you for your interest in contributing. This guide covers everything you need to get started.
 
@@ -8,8 +8,8 @@ Thank you for your interest in contributing. This guide covers everything you ne
 
 ```bash
 # 1. Fork the repo on GitHub, then clone your fork
-git clone https://github.com/<your-username>/Agenticmemory_benchmark.git
-cd Agenticmemory_benchmark
+git clone https://github.com/<your-username>/memtuner.git
+cd memtuner
 
 # 2. Create a virtual environment (Python 3.11+)
 python -m venv .venv

@@ -8,14 +8,12 @@ and reranker_model from the cell's to_summary_dict().
 from __future__ import annotations
 
 import csv
-import multiprocessing
 import os
 import sys
 import threading
 import time
 import traceback
 import uuid
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -237,7 +235,7 @@ class StudyRunResult(MatrixRunResult):
             object.__setattr__(self, k, v)
 
     @staticmethod
-    def from_csv_row(row: dict, source_run_id: str = "") -> "StudyRunResult":
+    def from_csv_row(row: dict, source_run_id: str = "") -> StudyRunResult:
         """Reconstruct a StudyRunResult from a grid CSV row dict.
         Uses empty string / 0.0 when fields are absent — never fabricates values.
         """
@@ -317,7 +315,7 @@ class CellCheckpointer:
     def path(self) -> Path:
         return self._path
 
-    def on_cell_done(self, completed: int, total: int, result: "StudyRunResult") -> None:
+    def on_cell_done(self, completed: int, total: int, result: StudyRunResult) -> None:
         row = {
             "completed_at": datetime.now().isoformat(timespec="seconds"),
             "study_phase": result.study_phase,
@@ -476,7 +474,8 @@ class StudyScheduler:
         # with only 3-6 cells that overhead is larger than the GIL savings.
         # CPU utilisation will look modest (~20-30% per active core) because the
         # bottleneck is memory bandwidth (indexing + querying 5879 docs), not FLOPS.
-        from concurrent.futures import ThreadPoolExecutor, as_completed as tpas_completed
+        from concurrent.futures import ThreadPoolExecutor
+        from concurrent.futures import as_completed as tpas_completed
 
         with ThreadPoolExecutor(max_workers=effective_workers) as executor:
             futures = {
@@ -514,7 +513,7 @@ class StudyScheduler:
 
         return results
 
-    def _make_error_result(self, cell_dict: dict, error: str) -> "StudyRunResult":
+    def _make_error_result(self, cell_dict: dict, error: str) -> StudyRunResult:
         bm25w = cell_dict.get("bm25_weight", 0.0)
         return StudyRunResult(
             cell_id=cell_dict.get("cell_id", "unknown"),
@@ -542,7 +541,7 @@ class StudyScheduler:
         self,
         completed: int,
         total: int,
-        result: "StudyRunResult",
+        result: StudyRunResult,
         cell_times: list[float] | None = None,
         all_cells: list | None = None,
     ) -> None:

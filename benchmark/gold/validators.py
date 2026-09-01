@@ -15,8 +15,7 @@ SOLID principles:
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from benchmark.gold.adapters import (
     ValidationIssue,
@@ -24,7 +23,6 @@ from benchmark.gold.adapters import (
     ValidationSeverity,
 )
 from benchmark.gold.schema import GoldDataset
-
 
 # ============================================================================
 # Validator Base Class
@@ -220,8 +218,11 @@ class TemporalValidator(Validator):
             max_day = dataset.events[-1].day
             for i, query in enumerate(dataset.queries):
                 # If query has reference_day, check it's within bounds
-                if hasattr(query, "reference_day") and query.reference_day is not None:
-                    if query.reference_day > max_day:
+                if (
+                    hasattr(query, "reference_day")
+                    and query.reference_day is not None
+                    and query.reference_day > max_day
+                ):
                         issues.append(
                             ValidationIssue(
                                 severity=ValidationSeverity.WARNING,

@@ -17,7 +17,6 @@ import random
 from typing import Any
 
 from benchmark.gold.adapters.adapter import (
-    AdapterError,
     DatasetAdapter,
     FingerprintError,
     StatisticsError,
@@ -27,9 +26,9 @@ from benchmark.gold.adapters.adapter import (
 from benchmark.gold.schema import (
     GoldDataset,
     GoldDayEvents,
+    GoldExpectedResult,
     GoldMemoryEvent,
     GoldQuery,
-    GoldExpectedResult,
 )
 from benchmark.gold.statistics import DatasetStatistics, StatisticsComputer
 from benchmark.gold.validators import ValidationRegistry

@@ -8,7 +8,6 @@ strategies are available based on installed dependencies.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 from benchmark.factory.registry import RetrievalStrategyRegistry
 from benchmark.observability.logger import get_logger
@@ -26,7 +25,7 @@ class StrategyInfo:
     available: bool
     """Whether this strategy can be used."""
 
-    reason: Optional[str] = None
+    reason: str | None = None
     """Human-readable reason why unavailable (if applicable)."""
 
 
@@ -53,8 +52,8 @@ class StrategyAvailabilityService:
 
     def discover(
         self,
-        allowlist: Optional[list[str]] = None,
-        embedding_candidates: Optional[list[tuple[str, str]]] = None,
+        allowlist: list[str] | None = None,
+        embedding_candidates: list[tuple[str, str]] | None = None,
         reranker_enabled: bool = True,
     ) -> dict[str, StrategyInfo]:
         """Discover all available strategies.
@@ -111,8 +110,8 @@ class StrategyAvailabilityService:
 
     def available_names(
         self,
-        allowlist: Optional[list[str]] = None,
-        embedding_candidates: Optional[list[tuple[str, str]]] = None,
+        allowlist: list[str] | None = None,
+        embedding_candidates: list[tuple[str, str]] | None = None,
     ) -> list[str]:
         """Get list of available strategy names.
 

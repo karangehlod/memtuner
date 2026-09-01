@@ -14,6 +14,7 @@ This closes the gap between "did we find the right IDs?" and
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 
 from benchmark.judge.answer_generator import AnswerGenerator, GeneratedAnswer
@@ -87,15 +88,14 @@ class EndToEndEvaluator:
         import os as _os
         if _os.environ.get("BENCHMARK_JUDGE_UNLOAD_EMBED") == "1":
             try:
-                from benchmark.memory.strategies.embeddings_strategy import (
-                    _MODEL_CACHE, _MODEL_CACHE_ORDER,
-                )
                 import torch as _t
+
+                from benchmark.memory.strategies.embeddings_strategy import (
+                    _MODEL_CACHE,
+                )
                 for _k in list(_MODEL_CACHE.keys()):
-                    try:
+                    with contextlib.suppress(Exception):
                         _MODEL_CACHE[_k].to("cpu")
-                    except Exception:
-                        pass
                 _t.cuda.empty_cache()
             except Exception:
                 pass

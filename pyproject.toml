@@ -50,10 +50,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/karangehlod/Agenticmemory_benchmark"
-Repository = "https://github.com/karangehlod/Agenticmemory_benchmark"
-Documentation = "https://agenticmemory-benchmark.readthedocs.io"
-"Bug Tracker" = "https://github.com/karangehlod/Agenticmemory_benchmark/issues"
+Homepage = "https://github.com/karangehlod/memtuner"
+Repository = "https://github.com/karangehlod/memtuner"
+Documentation = "https://memtuner.readthedocs.io"
+"Bug Tracker" = "https://github.com/karangehlod/memtuner/issues"
 
 [project.scripts]
 benchmark = "benchmark.cli.main:cli"

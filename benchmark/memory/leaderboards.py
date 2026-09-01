@@ -34,10 +34,10 @@ study_runner.py._write_leaderboards_json() using gold-grounded StudyAggregator d
 """
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass
 from typing import Any
 
-from benchmark.memory.adapters import MemoryMetrics, MemoryRegistry
+from benchmark.memory.adapters import MemoryMetrics
 
 
 @dataclass

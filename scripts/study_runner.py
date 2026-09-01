@@ -12,10 +12,10 @@ After each phase the study uses the best result to seed the next phase,
 so later phases automatically build on the winner of the prior phase.
 
 Usage:
-    python study_runner.py --gold-dataset data/input/locomo10.json
-    python study_runner.py --gold-dataset data/input/locomo10.json --phases 1 2 3
-    python study_runner.py --gold-dataset data/input/locomo10.json --mode quick
-    python study_runner.py --gold-dataset data/input/locomo10.json --mode full \\
+    python scripts/study_runner.py --gold-dataset data/input/locomo10.json
+    python scripts/study_runner.py --gold-dataset data/input/locomo10.json --phases 1 2 3
+    python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode quick
+    python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode full \\
         --ollama-url http://localhost:11434/v1
 
 Outputs (inside --output-dir):
@@ -41,6 +41,13 @@ import time
 import uuid
 from pathlib import Path
 
+# Ensure the project root (parent of scripts/) is on sys.path so that
+# `import benchmark` works whether this script is run from the project root,
+# from within scripts/, or via `memtuner study`.
+_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
 # Invalidate stale .pyc bytecode for the benchmark package on every run.
 # On Windows, copying files (e.g. via zip extract) preserves the source mtime
 # but not the pyc mtime, so Python may silently run old bytecode that doesn't
@@ -53,7 +60,7 @@ def _purge_pycache(root: str) -> None:
         except OSError:
             pass
 
-_purge_pycache(str(Path(__file__).parent / "benchmark"))
+_purge_pycache(str(Path(_PROJECT_ROOT) / "benchmark"))
 
 # ── CPU thread cap ──────────────────────────────────────────────────────────
 # HuggingFace tokenizers and numpy/OpenBLAS use ALL cores by default, pinning

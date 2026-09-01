@@ -67,7 +67,7 @@ except Exception:
 # ── MLX detection (Apple MLX framework — faster than torch MPS for inference) ─
 MLX_AVAILABLE: bool = False
 try:
-    import mlx.core as _mlx_core  # type: ignore
+    import mlx.core as _mlx_core  # type: ignore  # noqa: F401
     from mlx_embeddings.utils import load as _mlx_load  # type: ignore  # noqa: F401
     MLX_AVAILABLE = True
 except ImportError:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 """
 Test OpenAI configuration and model support.
 Tests the new provider-agnostic embedding and LLM infrastructure.
@@ -7,7 +8,7 @@ Tests the new provider-agnostic embedding and LLM infrastructure.
 import os
 import sys
 
-os.chdir('/Users/karangehlod/Codes/Agenticmemory_benchmark')
+os.chdir(Path(__file__).parent.parent)
 sys.path.insert(0, '.')
 
 from dotenv import load_dotenv

@@ -27,9 +27,9 @@ from benchmark.gold.adapters.adapter import (
 from benchmark.gold.schema import (
     GoldDataset,
     GoldDayEvents,
+    GoldExpectedResult,
     GoldMemoryEvent,
     GoldQuery,
-    GoldExpectedResult,
 )
 from benchmark.gold.statistics import DatasetStatistics, StatisticsComputer
 from benchmark.gold.validators import ValidationRegistry
@@ -57,7 +57,7 @@ class CoQAAdapter(DatasetAdapter):
             source_path = Path(source)
             with open(source_path) as f:
                 data = json.load(f)
-        except (FileNotFoundError, IOError) as e:
+        except (OSError, FileNotFoundError) as e:
             raise AdapterError(f"Cannot read CoQA file {source}: {e}")
         except json.JSONDecodeError as e:
             raise AdapterError(f"Invalid JSON in CoQA file: {e}")
@@ -103,9 +103,9 @@ class CoQAAdapter(DatasetAdapter):
 
                 # Process Q&A turns
                 questions = story_item.get("questions", [])
-                answers = story_item.get("answers", [])
+                story_item.get("answers", [])
 
-                for turn_idx, question_raw in enumerate(questions):
+                for _turn_idx, question_raw in enumerate(questions):
                     # CoQA questions are dicts {"input_text": "...", "turn_id": N}
                     # in v1.0 format, or plain strings in older formats.
                     if isinstance(question_raw, dict):

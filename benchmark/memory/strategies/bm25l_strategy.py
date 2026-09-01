@@ -40,12 +40,12 @@ class BM25LStrategy(RetrievalStrategy):
                 "rank-bm25 not installed or too old (need >= 0.2.2). "
                 "Install: pip install rank-bm25"
             )
-        self._memories: dict[str, "MemoryEvent"] = {}
-        self._bm25: "_BM25L | None" = None
+        self._memories: dict[str, MemoryEvent] = {}
+        self._bm25: _BM25L | None = None
         self._id_list: list[str] = []
         self._user_index: dict[str, set] = {}
 
-    def index(self, memories: list["MemoryEvent"]) -> None:
+    def index(self, memories: list[MemoryEvent]) -> None:
         self._memories = {m.id: m for m in memories}
         if not memories:
             self._bm25 = None

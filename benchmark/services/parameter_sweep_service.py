@@ -10,9 +10,10 @@ focused API for parallel parameter optimization.
 
 import os
 import time
+from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any
 
 from benchmark.observability.logger import get_logger
 
@@ -29,13 +30,13 @@ class SweepResult:
     status: str
     """Status: 'success' or 'failed'."""
 
-    metrics: Optional[dict[str, Any]] = None
+    metrics: dict[str, Any] | None = None
     """Performance metrics if successful."""
 
-    elapsed: Optional[float] = None
+    elapsed: float | None = None
     """Elapsed time in seconds."""
 
-    error: Optional[str] = None
+    error: str | None = None
     """Error message if failed."""
 
 
@@ -57,7 +58,7 @@ class ParameterSweepService:
 
     def __init__(
         self,
-        max_workers: Optional[int] = None,
+        max_workers: int | None = None,
         logger_instance: Any = None,
     ) -> None:
         """Initialize sweep service.
@@ -73,9 +74,9 @@ class ParameterSweepService:
         self,
         gold_dataset: Any,
         seed: int,
-        lambdas: Optional[list[float]] = None,
-        thresholds: Optional[list[float]] = None,
-        test_func: Optional[Callable] = None,
+        lambdas: list[float] | None = None,
+        thresholds: list[float] | None = None,
+        test_func: Callable | None = None,
     ) -> list[SweepResult]:
         """Sweep over decay configurations in parallel.
 
@@ -166,7 +167,7 @@ class ParameterSweepService:
         self,
         results: list[SweepResult],
         metric_name: str = "recall",
-    ) -> Optional[SweepResult]:
+    ) -> SweepResult | None:
         """Find the parameter combination with best metric.
 
         Args:

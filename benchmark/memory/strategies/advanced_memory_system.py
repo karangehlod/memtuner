@@ -1,21 +1,19 @@
 """End-to-end advanced memory system orchestrating all components."""
 
-from typing import Any, Optional
-from dataclasses import dataclass
-from datetime import datetime
 import logging
+from dataclasses import dataclass
+from typing import Any
 
-from benchmark.memory.strategies.semantic_cluster_manager import SemanticClusterManager
+from benchmark.memory.strategies.adaptive_strategy_selector import AdaptiveStrategySelector
 from benchmark.memory.strategies.attention_weighter import AttentionWeighter
 from benchmark.memory.strategies.memory_consolidation_engine import (
     MemoryConsolidationEngine,
 )
-from benchmark.memory.strategies.adaptive_strategy_selector import AdaptiveStrategySelector
 from benchmark.memory.strategies.personalized_memory_ranker import (
     PersonalizedMemoryRanker,
     UserProfile,
 )
-
+from benchmark.memory.strategies.semantic_cluster_manager import SemanticClusterManager
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +46,7 @@ class AdvancedMemorySystem:
     def __init__(
         self,
         user_profile: UserProfile,
-        retrieval_strategies: Optional[list[str]] = None,
+        retrieval_strategies: list[str] | None = None,
     ):
         """Initialize the advanced memory system.
 
@@ -156,7 +154,7 @@ class AdvancedMemorySystem:
         candidates = self._retrieve_candidates(query, strategy)
 
         # Step 4: Apply attention weighting
-        attention_scores = self.attention_weighter.compute_scores(candidates, query)
+        self.attention_weighter.compute_scores(candidates, query)
 
         # Step 5: Apply personalized ranking
         ranked_results = self.ranker.rank(candidates, query)

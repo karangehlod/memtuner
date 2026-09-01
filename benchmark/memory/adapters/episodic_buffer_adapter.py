@@ -5,8 +5,10 @@ import time
 from collections import deque
 from typing import Any
 
+from benchmark.memory.adapters._sys_metrics import cpu_percent_snapshot as _cpu
+from benchmark.memory.adapters._sys_metrics import peak_rss_mb as _rss
+from benchmark.memory.adapters._sys_metrics import percentile as _pct
 from benchmark.memory.adapters.memory_adapter import MemoryAdapter, MemoryMetrics, MemoryRegistry
-from benchmark.memory.adapters._sys_metrics import percentile as _pct, peak_rss_mb as _rss, cpu_percent_snapshot as _cpu
 
 
 class EpisodicBufferAdapter(MemoryAdapter):
@@ -170,7 +172,7 @@ class EpisodicBufferAdapter(MemoryAdapter):
             )
 
             # Reliability: track evictions
-            eviction_rate = self.evictions / max(1, self.num_writes)
+            self.evictions / max(1, self.num_writes)
             success_rate = 1.0 - (self.num_failures / max(1, self.num_writes + self.num_queries))
 
             return MemoryMetrics(

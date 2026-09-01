@@ -96,7 +96,8 @@ def compute_rehearsal_curve(
     results = []
     for d in days:
         rehearsals = d // rehearsal_interval
-        effective_stability = stability * (rehearsal_boost**rehearsals)
+        # Cap exponent to prevent overflow: 2^43 ≈ 8.8T produces degenerate 1.0 retention.
+        effective_stability = stability * (rehearsal_boost ** min(rehearsals, 40))
         retention = math.exp(-d / effective_stability)
         results.append(min(1.0, retention))
     return results

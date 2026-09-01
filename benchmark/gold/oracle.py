@@ -11,6 +11,7 @@ Supports loading:
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,9 @@ class GoldOracle:
         """Initialize an empty gold oracle."""
         self._datasets: dict[str, GoldDataset] = {}
         self._normalization_metadata: dict[str, dict] = {}
+        # O(1) lookup indices keyed by scenario name, built in load_dataset()
+        self._query_index: dict[str, dict[tuple[int, str], GoldExpectedResult]] = {}
+        self._day_index: dict[str, dict[int, list[GoldQuery]]] = {}
 
     def load_dataset(
         self,
@@ -75,6 +79,7 @@ class GoldOracle:
         self._normalization_metadata[dataset.scenario] = norm_meta
 
         self._datasets[dataset.scenario] = dataset
+        self._build_indices(dataset)
         return dataset
 
     def get_normalization_metadata(self, scenario_name: str) -> dict:
@@ -121,10 +126,11 @@ class GoldOracle:
         Raises:
             GoldDatasetError: If no matching query is found.
         """
-        dataset = self.get_dataset(scenario_name)
-        for gold_query in dataset.queries:
-            if gold_query.day == day and gold_query.query == query_text:
-                return gold_query.expected
+        self.get_dataset(scenario_name)  # validate scenario is loaded
+        idx = self._query_index.get(scenario_name, {})
+        result = idx.get((day, query_text))
+        if result is not None:
+            return result
         raise GoldDatasetError(
             f"No gold query found for scenario={scenario_name}, query='{query_text}', day={day}"
         )
@@ -139,8 +145,18 @@ class GoldOracle:
         Returns:
             List of GoldQuery objects for the given day.
         """
-        dataset = self.get_dataset(scenario_name)
-        return [query for query in dataset.queries if query.day == day]
+        self.get_dataset(scenario_name)  # validate scenario is loaded
+        return list(self._day_index.get(scenario_name, {}).get(day, []))
+
+    def _build_indices(self, dataset: GoldDataset) -> None:
+        """Build O(1) lookup indices for a loaded dataset."""
+        q_idx: dict[tuple[int, str], GoldExpectedResult] = {}
+        d_idx: dict[int, list[GoldQuery]] = defaultdict(list)
+        for q in dataset.queries:
+            q_idx[(q.day, q.query)] = q.expected
+            d_idx[q.day].append(q)
+        self._query_index[dataset.scenario] = q_idx
+        self._day_index[dataset.scenario] = dict(d_idx)
 
     def list_loaded_scenarios(self) -> list[str]:
         """List all loaded scenario names.

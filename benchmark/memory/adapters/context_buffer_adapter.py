@@ -4,8 +4,10 @@ import json
 import time
 from typing import Any
 
+from benchmark.memory.adapters._sys_metrics import cpu_percent_snapshot as _cpu
+from benchmark.memory.adapters._sys_metrics import peak_rss_mb as _rss
+from benchmark.memory.adapters._sys_metrics import percentile as _pct
 from benchmark.memory.adapters.memory_adapter import MemoryAdapter, MemoryMetrics, MemoryRegistry
-from benchmark.memory.adapters._sys_metrics import percentile as _pct, peak_rss_mb as _rss, cpu_percent_snapshot as _cpu
 
 
 class ContextBufferAdapter(MemoryAdapter):

@@ -49,11 +49,12 @@ from __future__ import annotations
 import csv
 import json
 import math
-import random
 import statistics
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+
+import numpy as np
 
 from benchmark.workload.aggregator import MatrixAggregator
 
@@ -69,7 +70,7 @@ class StudyAggregator(MatrixAggregator):
         self._dataset_name = dataset_name
 
     @classmethod
-    def from_csv(cls, path: "Path", source_run_id: str = "") -> "StudyAggregator":
+    def from_csv(cls, path: Path, source_run_id: str = "") -> StudyAggregator:
         """Load a StudyAggregator from a previously written grid CSV file.
 
         Args:
@@ -77,6 +78,7 @@ class StudyAggregator(MatrixAggregator):
             source_run_id: Optional tag prepended to run_id for provenance tracking.
         """
         import csv as _csv
+
         from benchmark.workload.study_scheduler import StudyRunResult
         results = []
         with open(path, newline="", encoding="utf-8") as f:
@@ -330,7 +332,6 @@ class StudyAggregator(MatrixAggregator):
         Returns:
             Dict mapping group_value → {mean, ci_low, ci_high, std, n, ci_level}.
         """
-        rng = random.Random(seed)
         alpha = 1.0 - ci_level
 
         by_group: dict[str, list[float]] = defaultdict(list)
@@ -341,6 +342,7 @@ class StudyAggregator(MatrixAggregator):
                 by_group[group_val].append(float(val))
 
         results = {}
+        rng_np = np.random.default_rng(seed)
         for group_val, values in by_group.items():
             n = len(values)
             if n == 0:
@@ -348,23 +350,21 @@ class StudyAggregator(MatrixAggregator):
             observed_mean = sum(values) / n
             observed_std = statistics.stdev(values) if n > 1 else 0.0
 
-            # Bootstrap resampling
-            boot_means = []
-            for _ in range(n_bootstrap):
-                sample = [rng.choice(values) for _ in range(n)]
-                boot_means.append(sum(sample) / n)
-            boot_means.sort()
+            # Vectorized bootstrap resampling — 1 call instead of n_bootstrap × n Python RNG calls
+            vals_arr = np.array(values, dtype=np.float64)
+            samples = rng_np.choice(vals_arr, size=(n_bootstrap, n), replace=True)
+            boot_means_arr = np.sort(samples.mean(axis=1))
 
             # Both indices are 0-based. ceil() gives a 1-indexed rank — subtract 1
             # to convert to a 0-based array subscript; otherwise ci_high is one
             # position too large, making the CI slightly wider than requested.
-            lo_idx = max(0, int(math.floor(alpha / 2 * n_bootstrap)))
-            hi_idx = min(n_bootstrap - 1, int(math.ceil((1 - alpha / 2) * n_bootstrap)) - 1)
+            lo_idx = max(0, math.floor(alpha / 2 * n_bootstrap))
+            hi_idx = min(n_bootstrap - 1, math.ceil((1 - alpha / 2) * n_bootstrap) - 1)
 
             results[group_val] = {
                 "mean":    round(observed_mean, 4),
-                "ci_low":  round(boot_means[lo_idx], 4),
-                "ci_high": round(boot_means[hi_idx], 4),
+                "ci_low":  round(float(boot_means_arr[lo_idx]), 4),
+                "ci_high": round(float(boot_means_arr[hi_idx]), 4),
                 "std":     round(observed_std, 4),
                 "n":       n,
                 "ci_level": ci_level,
@@ -495,7 +495,9 @@ class StudyAggregator(MatrixAggregator):
 
     def study_summary(self) -> dict:
         base = self.summary()
-        base["embedding_model_ranking"] = self.rank_by_embedding_model()
+        # Compute once, reuse below to avoid a second O(N) pass over _study_results.
+        _em_ranked = self.rank_by_embedding_model()
+        base["embedding_model_ranking"] = _em_ranked
         base["bm25_weight_ranking"] = self.rank_by_bm25_weight()
         base["reranker_ranking"] = self.rank_by_reranker()
         base["best_per_phase"] = self.best_per_phase()
@@ -505,7 +507,6 @@ class StudyAggregator(MatrixAggregator):
         # top_ranked: each axis is ranked independently from its own phase data.
         # embedding_model and embedding_backend are always from the same row —
         # they are never mixed from separate rankings.
-        _em_ranked = self.rank_by_embedding_model()
         _top_em_row = _em_ranked[0] if _em_ranked else {}
         base["top_ranked"] = {
             "top_retrieval_strategy": _strat_ranks[0]["retrieval_strategy"] if _strat_ranks else None,
@@ -603,7 +604,7 @@ class StudyReporter:
         sep = "=" * 76
         lines = [
             sep,
-            "AGENTIC MEMORY BENCHMARK — COMPREHENSIVE STUDY REPORT",
+            "MEMTUNER — COMPREHENSIVE STUDY REPORT",
             f"Run ID:       {run_id}",
             f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"Cells:        {agg.success_count}/{agg.total} successful",

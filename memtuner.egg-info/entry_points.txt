@@ -1,2 +1,0 @@
-[console_scripts]
-memtuner = benchmark.cli.main:cli

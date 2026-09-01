@@ -1,11 +1,11 @@
 """Parallel query execution across multiple workers."""
 
-import time
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Optional
-from dataclasses import dataclass, field
+import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class ParallelQueryExecutor:
 
         start_time = time.time()
         results = [None] * len(queries)
-        query_to_idx = {query: idx for idx, query in enumerate(queries)}
+        {query: idx for idx, query in enumerate(queries)}
 
         # Execute queries in parallel
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -133,7 +133,7 @@ class ParallelQueryExecutor:
         results = self.execute_queries(queries)
 
         # Merge with original batch metadata
-        for i, (query_dict, result) in enumerate(zip(batch, results)):
+        for _i, (query_dict, result) in enumerate(zip(batch, results)):
             if result is not None:
                 result["original_query"] = query_dict
 

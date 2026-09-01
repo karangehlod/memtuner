@@ -56,14 +56,14 @@ def _load_repo_env_without_dependency(env_path: Path) -> None:
 
 
 @click.group()
-@click.version_option(version="0.0.1", prog_name="benchmark")
+@click.version_option(version="0.0.1", prog_name="memtuner")
 def cli() -> None:
-    """Agentic Memory Benchmarking Tool.
+    """MemTuner — adaptive benchmarking for AI agent memory retrieval.
 
-    Evaluate agent memory systems across accuracy, reliability,
-    temporal correctness, efficiency, and cost.
+    Evaluate memory systems across accuracy, reliability, temporal
+    correctness, efficiency, and cost.
 
-    Run `benchmark doctor` first to see what your machine can run
+    Run `memtuner doctor` first to see what your machine can run
     and get a copy-paste command tailored to your hardware.
     """
     _load_repo_env()
@@ -87,8 +87,8 @@ def doctor_cmd(verbose: bool, apply: bool) -> None:
 
     \b
     Examples:
-      benchmark doctor               # analyse hardware, print commands
-      benchmark doctor --apply       # analyse + write config to .env
+      memtuner doctor               # analyse hardware, print commands
+      memtuner doctor --apply       # analyse + write config to .env
     """
     from benchmark.cli.commands.doctor_command import run_doctor
     run_doctor(verbose=verbose, apply=apply)
@@ -116,19 +116,19 @@ def study_cmd(study_args: tuple) -> None:
 
     \b
     Examples:
-      benchmark study --gold-dataset data/input/locomo10.json --mode quick
-      benchmark study --gold-dataset data/input/locomo10.json --mode full --workers 5
-      benchmark study --doctor
+      memtuner study --gold-dataset data/input/locomo10.json --mode quick
+      memtuner study --gold-dataset data/input/locomo10.json --mode full --workers 5
+      memtuner study --doctor
     """
     import sys
     from pathlib import Path
-    # study_runner.py lives at the project root, not inside the package.
-    # When running via the installed venv binary the cwd may differ, so
-    # resolve the root from this file's location and add it to sys.path.
-    _project_root = str(Path(__file__).resolve().parents[2])
-    if _project_root not in sys.path:
-        sys.path.insert(0, _project_root)
-    sys.argv = ["benchmark study"] + list(study_args)
+    # study_runner.py lives in scripts/ relative to the project root.
+    # Resolve from this file's location so the installed venv binary works
+    # regardless of the current working directory.
+    _scripts_dir = str(Path(__file__).resolve().parents[2] / "scripts")
+    if _scripts_dir not in sys.path:
+        sys.path.insert(0, _scripts_dir)
+    sys.argv = ["memtuner study"] + list(study_args)
     from study_runner import main
     main()
 

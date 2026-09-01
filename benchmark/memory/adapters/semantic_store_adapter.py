@@ -1,12 +1,13 @@
 """Adapter for Semantic Store - concept and topic memory."""
 
-import hashlib
 import json
 import time
 from typing import Any
 
+from benchmark.memory.adapters._sys_metrics import cpu_percent_snapshot as _cpu
+from benchmark.memory.adapters._sys_metrics import peak_rss_mb as _rss
+from benchmark.memory.adapters._sys_metrics import percentile as _pct
 from benchmark.memory.adapters.memory_adapter import MemoryAdapter, MemoryMetrics, MemoryRegistry
-from benchmark.memory.adapters._sys_metrics import percentile as _pct, peak_rss_mb as _rss, cpu_percent_snapshot as _cpu
 
 
 class SemanticStoreAdapter(MemoryAdapter):
@@ -101,7 +102,7 @@ class SemanticStoreAdapter(MemoryAdapter):
             # Score all memories by concept overlap and importance
             scores: dict[str, tuple[float, str, float]] = {}
 
-            for topic, memories in self.topics.items():
+            for _topic, memories in self.topics.items():
                 for memory in memories:
                     memory_id = memory["id"]
                     memory_content = memory["content"]

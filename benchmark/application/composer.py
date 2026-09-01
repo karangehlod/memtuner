@@ -374,7 +374,9 @@ class BenchmarkComposer:
         # Add ranking evaluators — MRR, NDCG, Precision@1
         try:
             from benchmark.evaluation.ranking import (
-                MRREvaluator, NDCGEvaluator, PrecisionAtKEvaluator,
+                MRREvaluator,
+                NDCGEvaluator,
+                PrecisionAtKEvaluator,
             )
 
             evaluators.append(MRREvaluator(top_k=recall_k))

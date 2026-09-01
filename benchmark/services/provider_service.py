@@ -3,10 +3,10 @@ Provider service for handling different LLM/embedding providers.
 Supports: Ollama, OpenAI, HuggingFace, Anthropic (extensible)
 """
 
-import os
 import logging
-from typing import Optional, Dict, Any
+import os
 from enum import Enum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class ProviderConfig:
         self.model_name = model_name
         self.timeout = timeout
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary"""
         return {
             "provider": self.provider_type.value,

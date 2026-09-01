@@ -1,9 +1,9 @@
 """Aggregate and analyze distributed execution results."""
 
 import logging
-import statistics
-from typing import Any, Optional
 from dataclasses import dataclass
+from typing import Any
+
 import numpy as np
 
 logger = logging.getLogger(__name__)

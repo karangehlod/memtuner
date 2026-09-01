@@ -20,6 +20,7 @@ Each worker:
 
 from __future__ import annotations
 
+import contextlib
 import multiprocessing
 import os
 import sys
@@ -27,7 +28,6 @@ import traceback
 import uuid
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import ClassVar
 from pathlib import Path
 
 
@@ -54,10 +54,8 @@ def _load_composite_weights() -> dict:
         env_key = f"BENCHMARK_COMPOSITE_W_{key.upper()}"
         env_val = os.environ.get(env_key)
         if env_val is not None:
-            try:
+            with contextlib.suppress(ValueError):
                 _defaults[key] = float(env_val)
-            except ValueError:
-                pass
     return _defaults
 
 
@@ -113,7 +111,7 @@ class MatrixRunResult:
     resolved_retriever_class: str = ""
 
     @staticmethod
-    def from_csv_row(row: dict) -> "MatrixRunResult":
+    def from_csv_row(row: dict) -> MatrixRunResult:
         """Reconstruct a MatrixRunResult from a grid CSV row dict."""
         return MatrixRunResult(
             cell_id=row.get("cell_id", ""),

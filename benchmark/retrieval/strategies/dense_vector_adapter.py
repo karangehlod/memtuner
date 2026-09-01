@@ -1,5 +1,6 @@
 """Adapter for Dense Vector - semantic retrieval with pre-trained embeddings."""
 
+import contextlib
 import hashlib
 import math
 import time
@@ -23,14 +24,13 @@ except ImportError:
 
 try:
     import os as _os
+
     import torch as _torch
     _CUDA_AVAILABLE = _torch.cuda.is_available()
     if _CUDA_AVAILABLE:
         _cpu_cap = max(1, (_os.cpu_count() or 4) // 2)
-        try:
+        with contextlib.suppress(RuntimeError):
             _torch.set_num_threads(_cpu_cap)
-        except RuntimeError:
-            pass
 except ImportError:
     _CUDA_AVAILABLE = False
 

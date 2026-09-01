@@ -31,11 +31,10 @@ from __future__ import annotations
 
 import hashlib
 import itertools
+import math
 from dataclasses import dataclass
 
-import math
-
-from benchmark.workload.matrix import DecaySpec, LAMBDA_STEPS, ARCHIVAL_FLOORS
+from benchmark.workload.matrix import ARCHIVAL_FLOORS, LAMBDA_STEPS, DecaySpec
 
 # ─── Algorithmic sweep constants (not model lists — those live in configs/study_defaults.yaml) ──
 

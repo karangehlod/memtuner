@@ -1,9 +1,9 @@
 """Load balancing for distributed execution."""
 
 import logging
-from typing import Any, Optional, List, Dict
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -47,14 +47,14 @@ class LoadBalancer:
         """
         self.strategy = strategy
         self._round_robin_idx = 0
-        self._worker_loads: Dict[int, float] = {}
-        self._assignment_history: List[Dict[str, Any]] = []
+        self._worker_loads: dict[int, float] = {}
+        self._assignment_history: list[dict[str, Any]] = []
 
     def select_worker(
         self,
-        available_workers: List[Worker],
-        task: Optional[Task] = None,
-    ) -> Optional[Worker]:
+        available_workers: list[Worker],
+        task: Task | None = None,
+    ) -> Worker | None:
         """Select worker for task.
 
         Args:
@@ -83,8 +83,8 @@ class LoadBalancer:
 
     def rebalance(
         self,
-        workers: List[Worker],
-    ) -> Dict[int, List[Task]]:
+        workers: list[Worker],
+    ) -> dict[int, list[Task]]:
         """Rebalance work across workers.
 
         Args:
@@ -100,7 +100,7 @@ class LoadBalancer:
 
         return rebalancing
 
-    def get_load_metrics(self) -> Dict[str, Any]:
+    def get_load_metrics(self) -> dict[str, Any]:
         """Get load metrics.
 
         Returns:
@@ -112,16 +112,16 @@ class LoadBalancer:
             "worker_loads": self._worker_loads.copy(),
         }
 
-    def _select_round_robin(self, workers: List[Worker]) -> Worker:
+    def _select_round_robin(self, workers: list[Worker]) -> Worker:
         """Select using round-robin."""
         worker = workers[self._round_robin_idx % len(workers)]
         self._round_robin_idx += 1
         return worker
 
-    def _select_least_loaded(self, workers: List[Worker]) -> Worker:
+    def _select_least_loaded(self, workers: list[Worker]) -> Worker:
         """Select least loaded worker."""
         return min(workers, key=lambda w: w.cpu_usage + w.memory_usage)
 
-    def _select_latency_aware(self, workers: List[Worker]) -> Worker:
+    def _select_latency_aware(self, workers: list[Worker]) -> Worker:
         """Select based on latency."""
         return min(workers, key=lambda w: w.avg_latency_ms)

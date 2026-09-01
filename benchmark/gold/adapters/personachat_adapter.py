@@ -16,9 +16,9 @@ from benchmark.gold.adapters.adapter import (
 from benchmark.gold.schema import (
     GoldDataset,
     GoldDayEvents,
+    GoldExpectedResult,
     GoldMemoryEvent,
     GoldQuery,
-    GoldExpectedResult,
 )
 from benchmark.gold.statistics import DatasetStatistics, StatisticsComputer
 from benchmark.gold.validators import ValidationRegistry
@@ -36,7 +36,7 @@ class PersonaChatAdapter(DatasetAdapter):
             source_path = Path(source)
             with open(source_path) as f:
                 data = json.load(f)
-        except (FileNotFoundError, IOError) as e:
+        except (OSError, FileNotFoundError) as e:
             raise AdapterError(f"Cannot read PersonaChat file {source}: {e}")
         except json.JSONDecodeError as e:
             raise AdapterError(f"Invalid JSON in PersonaChat file: {e}")
@@ -79,7 +79,7 @@ class PersonaChatAdapter(DatasetAdapter):
 
                 # Extract dialogue turns as queries
                 history = dialogue.get("history", [])
-                for turn_idx, turn in enumerate(history):
+                for _turn_idx, turn in enumerate(history):
                     if isinstance(turn, list) and len(turn) >= 2:
                         query_text = turn[0]
                         relevant_memories = [

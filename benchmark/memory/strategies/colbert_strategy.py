@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from benchmark.models.memory_event import MemoryEvent
 
 try:
-    from sentence_transformers import SentenceTransformer as _ST
+    from sentence_transformers import SentenceTransformer as _ST  # noqa: N814
     _ST_AVAILABLE = True
 except ImportError:
     _ST_AVAILABLE = False
@@ -38,14 +38,14 @@ except ImportError:
 from benchmark.resources.hw_probe import DEVICE as _DEVICE
 
 _DEFAULT_MODEL = "all-MiniLM-L6-v2"
-_MODEL_CACHE: dict[str, "_ST"] = {}
+_MODEL_CACHE: dict[str, _ST] = {}
 
 # Number of tokens to split each text into for MaxSim scoring.
 # Larger = more accurate but slower. 32 is a good balance.
 _CHUNK_TOKENS = int(os.environ.get("BENCHMARK_COLBERT_CHUNK", "32"))
 
 
-def _get_model(name: str) -> "_ST":
+def _get_model(name: str) -> _ST:
     if name not in _MODEL_CACHE:
         _MODEL_CACHE[name] = _ST(name, device=_DEVICE)
     return _MODEL_CACHE[name]
@@ -86,7 +86,7 @@ class ColBERTStrategy(RetrievalStrategy):
             )
         _model_name = os.environ.get("BENCHMARK_COLBERT_MODEL", _DEFAULT_MODEL)
         self._model = _get_model(_model_name)
-        self._memories: dict[str, "MemoryEvent"] = {}
+        self._memories: dict[str, MemoryEvent] = {}
         # memory_id → stacked token embeddings (K, D)
         self._doc_vecs: dict[str, np.ndarray] = {}
         self._user_index: dict[str, list[str]] = {}
@@ -100,7 +100,7 @@ class ColBERTStrategy(RetrievalStrategy):
         self._doc_vecs = {}
         self._user_index = {}
 
-    def index(self, memories: list["MemoryEvent"]) -> None:
+    def index(self, memories: list[MemoryEvent]) -> None:
         self._memories = {m.id: m for m in memories}
         self._doc_vecs = {}
         self._user_index = {}

@@ -1,9 +1,10 @@
 """Distributed benchmark execution across worker nodes."""
 
-import time
 import logging
-from typing import Any, Optional, Callable
+import time
 from dataclasses import dataclass
+from typing import Any
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ class WorkerResult:
     items_processed: int
     total_time_sec: float
     metrics: dict[str, Any]
-    error: Optional[str] = None
+    error: str | None = None
 
 
 @dataclass
@@ -61,7 +62,7 @@ class DistributedBenchmarkRunner:
         self.num_workers = num_workers
 
         # State
-        self._current_job_id: Optional[str] = None
+        self._current_job_id: str | None = None
         self._workload_shards: list[list[dict[str, Any]]] = []
         self._worker_results: list[WorkerResult] = []
         self._checkpoint_data: dict[str, Any] = {}
@@ -69,7 +70,7 @@ class DistributedBenchmarkRunner:
     def run_benchmark(
         self,
         dataset: list[dict[str, Any]],
-        config: Optional[BenchmarkConfig] = None,
+        config: BenchmarkConfig | None = None,
     ) -> AggregatedResult:
         """Run full benchmark on dataset.
 

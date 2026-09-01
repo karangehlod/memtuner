@@ -114,7 +114,7 @@ Examples:
     args = parser.parse_args()
 
     # Ensure project root in path
-    project_root = str(Path(__file__).parent)
+    project_root = str(Path(__file__).resolve().parent.parent)
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 

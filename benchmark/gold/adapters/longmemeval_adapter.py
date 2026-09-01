@@ -28,7 +28,6 @@ from benchmark.gold.adapters.adapter import (
     AdapterError,
     DatasetAdapter,
     FingerprintError,
-    MetadataError,
     StatisticsError,
     ValidationError,
     ValidationReport,
@@ -36,9 +35,9 @@ from benchmark.gold.adapters.adapter import (
 from benchmark.gold.schema import (
     GoldDataset,
     GoldDayEvents,
+    GoldExpectedResult,
     GoldMemoryEvent,
     GoldQuery,
-    GoldExpectedResult,
 )
 from benchmark.gold.statistics import DatasetStatistics, StatisticsComputer
 from benchmark.gold.validators import ValidationRegistry
@@ -78,7 +77,7 @@ class LongMemEvalAdapter(DatasetAdapter):
             source_path = Path(source)
             with open(source_path) as f:
                 data = json.load(f)
-        except (FileNotFoundError, IOError) as e:
+        except (OSError, FileNotFoundError) as e:
             raise AdapterError(f"Cannot read LongMemEval file {source}: {e}")
         except json.JSONDecodeError as e:
             raise AdapterError(f"Invalid JSON in LongMemEval file: {e}")
@@ -93,7 +92,6 @@ class LongMemEvalAdapter(DatasetAdapter):
         all_memories: dict[int, list[GoldMemoryEvent]] = {}
         all_queries: list[GoldQuery] = []
         user_ids = set()
-        day_counter = 0
 
         for q_idx, question_item in enumerate(data):
             try:
@@ -111,7 +109,7 @@ class LongMemEvalAdapter(DatasetAdapter):
                 if "haystack_sessions" in question_item:
                     sessions = question_item["haystack_sessions"]
                     if isinstance(sessions, list):
-                        for session_idx, session_text in enumerate(sessions):
+                        for _session_idx, session_text in enumerate(sessions):
                             # Track how many memories are already on this day
                             day_offset = len(all_memories[day])
                             memory = self._parse_haystack_session(

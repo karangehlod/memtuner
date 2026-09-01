@@ -207,11 +207,9 @@ data/input/
 ### Step 2 — Check what your machine can run
 
 ```bash
-memtuner doctor           # recommended (avoids benchmark name conflicts)
+memtuner doctor
 # or
-memtuner doctor          
-# or
-python study_runner.py --doctor
+python scripts/study_runner.py --doctor
 ```
 
 This prints hardware analysis, which phases are available, and the exact copy-paste command for your machine.
@@ -303,13 +301,13 @@ Batch sizes are auto-computed from GPU VRAM at startup (`benchmark/resources/hw_
 
 ### CLI entry point
 
-All benchmark runs go through `memtuner study` (or `python study_runner.py` directly).
+All benchmark runs go through `memtuner study` (or `python scripts/study_runner.py` directly).
 The `memtuner` command requires `pip install -e .` with the venv active.
 
 ```bash
 # Both of these are equivalent:
 memtuner study --gold-dataset data/input/locomo10.json --mode quick
-python study_runner.py --gold-dataset data/input/locomo10.json --mode quick
+python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode quick
 ```
 
 ### Run options
@@ -704,14 +702,14 @@ Decay trades recall breadth for ranking quality. Tiered policy improves MRR sign
 | **Composite** | `0.40R + 0.25P + 0.20MRR + 0.15T` | Single ranking score |
 | **Latency P50/P90/P99** | ms | Typical and tail query latency |
 
-Evaluation K defaults to 10. Override: `BENCHMARK_RECALL_K=5 python study_runner.py ...`
+Evaluation K defaults to 10. Override: `BENCHMARK_RECALL_K=5 python scripts/study_runner.py ...`
 
 ### Statistical significance
 
 Run with multiple seeds to get bootstrap CIs:
 
 ```bash
-python study_runner.py --mode full --seeds 42 123 456
+python scripts/study_runner.py --mode full --seeds 42 123 456
 ```
 
 Output:
@@ -735,7 +733,7 @@ It works with **any OpenAI-compatible endpoint** — Ollama, OpenAI API, Anthrop
 ```bash
 # Option 1: Local Ollama (recommended for reproducibility)
 ollama pull nemotron-3-nano    # ~2.7 GB Q4
-python study_runner.py --mode full \
+python scripts/study_runner.py --mode full \
   --ollama-url http://localhost:11434/v1 \
   --judge-model nemotron-3-nano:4b
 
@@ -743,12 +741,12 @@ python study_runner.py --mode full \
 BENCHMARK_JUDGE_BASE_URL=https://api.openai.com/v1
 BENCHMARK_JUDGE_API_KEY=sk-your-key
 BENCHMARK_JUDGE_MODEL=gpt-4o-mini
-python study_runner.py --mode full
+python scripts/study_runner.py --mode full
 
 # Option 3: Any OpenAI-compatible server (vLLM, LM Studio, etc.)
 BENCHMARK_JUDGE_BASE_URL=http://localhost:8000/v1
 BENCHMARK_JUDGE_MODEL=your-model-name
-python study_runner.py --mode full
+python scripts/study_runner.py --mode full
 ```
 
 When enabled, each query produces an additional `llm_judge_score` (0–1) alongside `recall_at_k`.
@@ -992,9 +990,14 @@ graph LR
 | Incremental embedding index | `EmbeddingsStrategy` | Each memory encoded once per cell, not per day |
 | Query prewarm | `EmbeddingsStrategy` | All queries batch-encoded in one GPU call |
 | Two-stage reranking | `LLMRerankStrategy` | BM25 top-100 → CrossEncoder; not full corpus |
-| Model LRU cache | `_INDEX_CACHE` (16 slots) | Same corpus+model → skip encode (Phase 3 reuses Phase 2) |
+| Model LRU cache | `_INDEX_CACHE` (16 slots, deque eviction) | Same corpus+model → skip encode (Phase 3 reuses Phase 2) |
 | CrossEncoder cache | `_CE_MODEL_CACHE` | Reranker loaded once, reused across Phase 5 cells |
 | BM25 corpus cache | `_BM25_CORPUS_CACHE` | Tokenize corpus once per unique corpus |
+| User mask cache | `BM25Strategy`, `EmbeddingsStrategy` | Boolean mask built once per (user, corpus); reused for all 1977 queries |
+| Gold oracle O(1) lookups | `GoldOracle` | Pre-built `{(day, query): result}` index; eliminates O(N) scan per query call |
+| NDCG IDCG table | `NDCGEvaluator` | Precomputed at init; O(1) per query vs O(K) log2 calls |
+| Vectorized bootstrap CI | `StudyAggregator` | NumPy resample replaces 30K Python RNG calls; ~10–50× faster |
+| Heap-based top-k fusion | `HybridStrategy` | `heapq.nlargest` O(M log K) vs `sorted` O(M log M) for RRF |
 | Dataset parse cache | `GoldOracle` | 2.7 MB JSON parsed once per phase, shared across cells |
 | Thread pool (BM25/Recency) | `StudyScheduler` | Up to `cpu_count-1` true-parallel workers via threads |
 | Hard worker cap | `StudyScheduler` | `min(requested, cpu_count-1, n_parallel_cells)` — no idle threads |
@@ -1008,6 +1011,7 @@ graph LR
 
 ```bash
 pip install -e ".[dev]"
+pip install pre-commit
 pre-commit install
 ```
 
@@ -1070,9 +1074,9 @@ Please open an issue (or GitHub Discussion for questions) before starting large 
 If you use this benchmark in your research, please cite:
 
 ```bibtex
-@software{agentic_memory_benchmark_2026,
-  title   = {Agentic Memory Benchmark: A Systematic Framework for
-             Evaluating AI Agent Memory Retrieval},
+@software{memtuner_2026,
+  title   = {MemTuner: Adaptive Benchmarking and Configuration Tuning
+             for AI Agent Memory Retrieval Systems},
   author  = {Gehlod, Karan},
   year    = {2026},
   url     = {https://github.com/karangehlod/memtuner},
@@ -1108,14 +1112,14 @@ python -c "import torch; print(torch.backends.mps.is_available())"  # must print
 **`CUDA out of memory` during encoding**
 Batch size auto-halves and retries. If it keeps failing:
 ```bash
-BENCHMARK_RERANKER_BATCH_SIZE=64 python study_runner.py ...
+BENCHMARK_RERANKER_BATCH_SIZE=64 python scripts/study_runner.py ...
 ```
 
 **`squad_gold.json` all cells fail / `[skip] cannot load dataset`**
 The file is empty from a failed prior conversion. Delete and re-run:
 ```powershell
 del data\squad_gold.json
-python study_runner.py --mode full
+python scripts/study_runner.py --mode full
 ```
 
 **Models still showing as `ollama_embeddings` after code update**

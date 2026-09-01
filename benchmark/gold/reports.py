@@ -14,15 +14,12 @@ SOLID principles:
 
 import json
 from abc import ABC, abstractmethod
-from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from benchmark.gold.schema import GoldDataset
 from benchmark.gold.adapters import ValidationReport
 from benchmark.gold.statistics import DatasetStatistics, StatisticsFormatter
-
 
 # ============================================================================
 # Report Data Container
@@ -141,7 +138,6 @@ class HTMLReporter(Reporter):
         validation_status = (
             "✓ PASSED" if report.validation_report.passed else "✗ FAILED"
         )
-        validation_status_color = "green" if report.validation_report.passed else "red"
 
         issues_html = self._format_issues(report.validation_report.issues)
         stats_html = self._format_statistics(report.statistics)
@@ -413,7 +409,7 @@ class ReportGenerator:
 
     @classmethod
     def generate(
-        self,
+        cls,
         report: DatasetReport,
         format: str = "json",
     ) -> Any:
@@ -429,18 +425,18 @@ class ReportGenerator:
         Raises:
             ValueError: If format is not supported.
         """
-        if format not in self._reporters:
-            available = ", ".join(self._reporters.keys())
+        if format not in cls._reporters:
+            available = ", ".join(cls._reporters.keys())
             raise ValueError(
                 f"Unknown format '{format}'. Available: {available}"
             )
 
-        reporter = self._reporters[format]
+        reporter = cls._reporters[format]
         return reporter.generate(report)
 
     @classmethod
     def save_json(
-        self,
+        cls,
         report: DatasetReport,
         path: Path | str,
     ) -> None:
@@ -450,13 +446,13 @@ class ReportGenerator:
             report: Report to save.
             path: Output file path.
         """
-        data = self.generate(report, format="json")
+        data = cls.generate(report, format="json")
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
 
     @classmethod
     def save_html(
-        self,
+        cls,
         report: DatasetReport,
         path: Path | str,
     ) -> None:
@@ -466,13 +462,13 @@ class ReportGenerator:
             report: Report to save.
             path: Output file path.
         """
-        html = self.generate(report, format="html")
+        html = cls.generate(report, format="html")
         with open(path, "w") as f:
             f.write(html)
 
     @classmethod
     def save_text(
-        self,
+        cls,
         report: DatasetReport,
         path: Path | str,
     ) -> None:
@@ -482,6 +478,6 @@ class ReportGenerator:
             report: Report to save.
             path: Output file path.
         """
-        text = self.generate(report, format="text")
+        text = cls.generate(report, format="text")
         with open(path, "w") as f:
             f.write(text)

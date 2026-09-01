@@ -199,6 +199,11 @@ class NDCGEvaluator(MetricEvaluator):
             top_k: Maximum rank to consider.
         """
         self._top_k = top_k
+        # Precompute IDCG for every n in [0, top_k] — avoids top_k log2 calls per query.
+        # idcg_table[n] = sum(1/log2(i+2) for i in range(n))
+        self._idcg_table = [0.0] * (top_k + 1)
+        for n in range(1, top_k + 1):
+            self._idcg_table[n] = self._idcg_table[n - 1] + 1.0 / math.log2(n + 1)
 
     def evaluate(
         self,
@@ -238,11 +243,9 @@ class NDCGEvaluator(MetricEvaluator):
                 dcg += 1.0 / math.log2(rank + 1)
                 _seen_ndcg.add(memory_id)
 
-        # IDCG: the DCG of the ideal ranking (all relevant docs at top positions).
-        # num_relevant = min(|gold|, K) — we can't retrieve more than K items.
-        # Loop variable i is 0-indexed; position = i+1; discount = 1/log2(i+2).
+        # IDCG: ideal DCG — O(1) lookup in precomputed table built in __init__.
         num_relevant = min(len(gold_set), self._top_k)
-        idcg = sum(1.0 / math.log2(i + 2) for i in range(num_relevant))
+        idcg = self._idcg_table[num_relevant]
 
         # NDCG = DCG / IDCG. When idcg=0 (top_k=0), return 0 by convention.
         ndcg = dcg / idcg if idcg > 0 else 0.0

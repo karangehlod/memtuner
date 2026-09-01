@@ -1,13 +1,13 @@
 """Retrieval strategy implementations."""
 
 from benchmark.retrieval.strategies.base import (
-    RetrievalStrategy,
     RetrievalMetrics,
+    RetrievalStrategy,
     RetrievalStrategyRegistry,
 )
 
 __all__ = [
-    "RetrievalStrategy",
     "RetrievalMetrics",
+    "RetrievalStrategy",
     "RetrievalStrategyRegistry",
 ]

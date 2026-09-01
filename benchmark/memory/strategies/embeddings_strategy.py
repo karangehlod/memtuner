@@ -13,8 +13,10 @@ Latency: 50-200ms | Cost: Low | Accuracy: Excellent | Setup: 1 hour
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import os
+from collections import deque
 
 import numpy as np
 
@@ -24,11 +26,21 @@ except ImportError:
     SentenceTransformer = None
 
 from benchmark.resources.hw_probe import (
-    CUDA_AVAILABLE as _CUDA_AVAILABLE,
-    MPS_AVAILABLE as _MPS_AVAILABLE,
-    MLX_AVAILABLE as _MLX_AVAILABLE,
-    DEVICE as _EMBEDDING_DEVICE,
     CPU_CORES as _CPU_CORES,
+)
+from benchmark.resources.hw_probe import (
+    CUDA_AVAILABLE as _CUDA_AVAILABLE,
+)
+from benchmark.resources.hw_probe import (
+    DEVICE as _EMBEDDING_DEVICE,
+)
+from benchmark.resources.hw_probe import (
+    MLX_AVAILABLE as _MLX_AVAILABLE,
+)
+from benchmark.resources.hw_probe import (
+    MPS_AVAILABLE as _MPS_AVAILABLE,
+)
+from benchmark.resources.hw_probe import (
     embed_batch_size as _hw_embed_batch_size,
 )
 from benchmark.resources.mlx_embedder import MLXEmbedder as _MLXEmbedder
@@ -39,51 +51,45 @@ try:
     import torch as _torch
     if _CUDA_AVAILABLE or _MPS_AVAILABLE:
         _cpu_cap = max(1, _CPU_CORES // 2)
-        try:
+        with contextlib.suppress(RuntimeError):  # already started — OMP_NUM_THREADS handles it
             _torch.set_num_threads(_cpu_cap)
-        except RuntimeError:
-            pass  # already started — OMP_NUM_THREADS handles it instead
 except ImportError:
     pass
 
 # Model singleton cache — avoids reloading 90-450 MB weights for every cell.
 # Key: "<model_name>:<device>" so different devices stay separate.
 # Max 2 models resident at once — evicts the oldest when full to free VRAM.
-_MODEL_CACHE: dict[str, "SentenceTransformer"] = {}
-_MODEL_CACHE_ORDER: list[str] = []  # insertion-order LRU tracking
-_MODEL_CACHE_MAX = 2                 # keep at most 2 models in VRAM at once
+_MODEL_CACHE: dict[str, SentenceTransformer] = {}
+_MODEL_CACHE_ORDER: deque[str] = deque()  # insertion-order LRU tracking; popleft() is O(1)
+_MODEL_CACHE_MAX = 2                       # keep at most 2 models in VRAM at once
 
 
 def _evict_model_cache_if_needed() -> None:
     """Evict the oldest cached model when the cache is at capacity."""
     while len(_MODEL_CACHE) >= _MODEL_CACHE_MAX:
-        oldest_key = _MODEL_CACHE_ORDER.pop(0)
+        oldest_key = _MODEL_CACHE_ORDER.popleft()
         evicted = _MODEL_CACHE.pop(oldest_key, None)
         if evicted is not None:
             # Move weights off GPU before deleting so VRAM is freed immediately
-            try:
+            with contextlib.suppress(Exception):
                 evicted.to("cpu")
-            except Exception:
-                pass
             del evicted
-            try:
+            with contextlib.suppress(Exception):
                 if _CUDA_AVAILABLE:
                     _torch.cuda.empty_cache()
                 elif _MPS_AVAILABLE:
                     _torch.mps.empty_cache()
-            except Exception:
-                pass
 
 # Index cache — stores the encoded matrix so identical corpus+model combos skip .encode()
 # Key: "model_name:device:corpus_hash"  Value: (matrix, ids, norms)
 _INDEX_CACHE: dict[str, tuple[np.ndarray, list[str], np.ndarray]] = {}
-_INDEX_CACHE_ORDER: list[str] = []
+_INDEX_CACHE_ORDER: deque[str] = deque()  # popleft() is O(1) vs list.pop(0) O(N)
 _INDEX_CACHE_MAX = 16  # 16 × ~17MB bge-base matrices ≈ 272MB; well within 64GB RAM
 
 
 def _evict_index_cache_if_needed() -> None:
     while len(_INDEX_CACHE) >= _INDEX_CACHE_MAX:
-        _INDEX_CACHE.pop(_INDEX_CACHE_ORDER.pop(0), None)
+        _INDEX_CACHE.pop(_INDEX_CACHE_ORDER.popleft(), None)
 
 
 from benchmark.memory.interfaces.retrieval_strategy import RetrievalStrategy
@@ -530,13 +536,14 @@ class EmbeddingsStrategy(RetrievalStrategy):
             )
             np.maximum(similarities, 0.0, out=similarities)
 
-            # Apply user filter if needed
+            # Apply user filter via the shared cache — built once, reused for each query
             if user_id:
-                mask = np.array(
-                    [self._memories[mid].user_id == user_id for mid in self._embedding_ids],
-                    dtype=bool,
-                )
-                similarities[~mask] = -1.0
+                if user_id not in self._user_mask_cache:
+                    self._user_mask_cache[user_id] = np.array(
+                        [self._memories[mid].user_id == user_id for mid in self._embedding_ids],
+                        dtype=bool,
+                    )
+                similarities[~self._user_mask_cache[user_id]] = -1.0
 
             # Get top-k results
             if top_k < len(similarities):

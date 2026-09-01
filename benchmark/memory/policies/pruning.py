@@ -6,6 +6,8 @@ Policies return IDs to prune but do NOT mutate storage.
 
 from __future__ import annotations
 
+import heapq
+
 from benchmark.memory.interfaces.lifecycle import LifecyclePolicy
 
 
@@ -64,17 +66,22 @@ class CapacityBasedPruningPolicy(LifecyclePolicy):
         if len(memory_scores) <= self._max_capacity:
             return []
 
-        sorted_by_score = sorted(memory_scores.items(), key=lambda pair: pair[1], reverse=True)
-        to_keep = {memory_id for memory_id, _ in sorted_by_score[: self._max_capacity]}
+        # heapq.nlargest is O(N log K) vs O(N log N) for a full sort
+        to_keep = {
+            memory_id
+            for memory_id, _ in heapq.nlargest(
+                self._max_capacity, memory_scores.items(), key=lambda pair: pair[1]
+            )
+        }
         return [memory_id for memory_id in memory_scores if memory_id not in to_keep]
 
 
-class AgeBasedPruningPolicy(LifecyclePolicy):
+class AgeBasedPruningPolicy(ScoreThresholdPruningPolicy):
     """Prune memories whose decay-adjusted score has fallen below threshold.
 
-    Identical to ScoreThresholdPruningPolicy in logic, but semantically
-    represents "age-based" pruning configured for periodic decay policies.
-    The distinction is in config naming, not algorithm.
+    Semantically represents age-based pruning configured for periodic decay
+    policies. Uses a lower default threshold (0.30) than ScoreThresholdPruningPolicy
+    (0.35) to reflect that age-decayed scores are naturally lower over time.
     """
 
     def __init__(self, threshold: float = 0.30) -> None:
@@ -83,16 +90,4 @@ class AgeBasedPruningPolicy(LifecyclePolicy):
         Args:
             threshold: Minimum score to survive pruning.
         """
-        self._threshold = threshold
-
-    def apply(self, day: int, memory_scores: dict[str, float]) -> list[str]:
-        """Return memory IDs with scores below threshold.
-
-        Args:
-            day: The current simulated day.
-            memory_scores: Mapping of memory_id → current score.
-
-        Returns:
-            List of memory IDs to prune.
-        """
-        return [memory_id for memory_id, score in memory_scores.items() if score < self._threshold]
+        super().__init__(threshold=threshold)

@@ -1,11 +1,25 @@
 """Adapter for FEVER - fact verification."""
 
-import hashlib, json
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
-from benchmark.gold.adapters.adapter import AdapterError, DatasetAdapter, FingerprintError, StatisticsError, ValidationError, ValidationReport
-from benchmark.gold.schema import GoldDataset, GoldDayEvents, GoldMemoryEvent, GoldQuery, GoldExpectedResult
+from benchmark.gold.adapters.adapter import (
+    AdapterError,
+    DatasetAdapter,
+    FingerprintError,
+    StatisticsError,
+    ValidationError,
+    ValidationReport,
+)
+from benchmark.gold.schema import (
+    GoldDataset,
+    GoldDayEvents,
+    GoldExpectedResult,
+    GoldMemoryEvent,
+    GoldQuery,
+)
 from benchmark.gold.statistics import DatasetStatistics, StatisticsComputer
 from benchmark.gold.validators import ValidationRegistry
 from benchmark.models.memory_event import MemoryType
@@ -21,7 +35,7 @@ class FEVERAdapter(DatasetAdapter):
         try:
             with open(source) as f:
                 data = [json.loads(line) for line in f if line.strip()]
-        except (FileNotFoundError, IOError) as e:
+        except (OSError, FileNotFoundError) as e:
             raise AdapterError(f"Cannot read FEVER file {source}: {e}")
         except json.JSONDecodeError as e:
             raise AdapterError(f"Invalid JSON in FEVER file: {e}")

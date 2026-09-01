@@ -1,9 +1,9 @@
 """Personalized memory ranking based on user preferences."""
 
-from typing import Any, Optional
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Any
+
 import numpy as np
 
 

@@ -3,21 +3,9 @@
 import json
 from typing import Any
 
-# Import all strategy adapters to register them
-from benchmark.retrieval.strategies.bm25_adapter import BM25Adapter
-from benchmark.retrieval.strategies.tfidf_adapter import TFIDFAdapter
-from benchmark.retrieval.strategies.boolean_adapter import BooleanAdapter
-from benchmark.retrieval.strategies.dense_vector_adapter import DenseVectorAdapter
-from benchmark.retrieval.strategies.learned_dense_adapter import LearnedDenseAdapter
-from benchmark.retrieval.strategies.ann_adapter import ANNAdapter
-from benchmark.retrieval.strategies.quantized_adapter import QuantizedAdapter
-from benchmark.retrieval.strategies.hybrid_fusion_adapter import HybridFusionAdapter
-from benchmark.retrieval.strategies.cascading_adapter import CascadingAdapter
-from benchmark.retrieval.strategies.retrieval_rerank_adapter import RetrievalRerankAdapter
-from benchmark.retrieval.strategies.chainsearch_adapter import ChainSearchAdapter
-
 from benchmark.retrieval.benchmark_orchestrator import RetrievalBenchmarkOrchestrator
-from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
+
+# Import all strategy adapters to register them
 
 
 def generate_sample_dataset(name: str, num_docs: int = 100, num_queries: int = 20) -> tuple[list[dict[str, Any]], list[str]]:
@@ -41,7 +29,7 @@ def generate_sample_dataset(name: str, num_docs: int = 100, num_queries: int = 2
         ]
 
         for i in range(num_docs):
-            q, a = qa_pairs[i % len(qa_pairs)]
+            _q, a = qa_pairs[i % len(qa_pairs)]
             docs.append({"id": f"doc_{i}", "content": a})
 
         for i in range(num_queries):

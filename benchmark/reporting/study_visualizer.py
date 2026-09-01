@@ -21,18 +21,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 
 def _require_matplotlib():
     try:
         import matplotlib
         matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
+        import matplotlib.pyplot as plt
         import numpy as np
         return plt, gridspec, np
     except ImportError as e:
@@ -164,8 +160,8 @@ class StudyVisualizer:
     @classmethod
     def plot_cross_dataset_heatmap(
         cls,
-        per_dataset_summaries: "dict[str, dict]",
-        output_path: "Path | str",
+        per_dataset_summaries: dict[str, dict],
+        output_path: Path | str,
     ) -> str:
         """Cross-dataset strategy heatmap — shows visually which strategy wins where.
 
@@ -191,10 +187,9 @@ class StudyVisualizer:
         for s in strategy_order:
             if any(s in {r["retrieval_strategy"] for r in
                          sum.get("retrieval_strategy_ranking", [])}
-                   for sum in per_dataset_summaries.values()):
-                if s not in _seen:
-                    all_strats.append(s)
-                    _seen.add(s)
+                   for sum in per_dataset_summaries.values()) and s not in _seen:
+                all_strats.append(s)
+                _seen.add(s)
 
         if not all_strats:
             return ""
@@ -229,7 +224,7 @@ class StudyVisualizer:
         ax.set_xlabel("Retrieval Strategy", fontsize=_LABEL_SIZE)
         ax.set_ylabel("Dataset", fontsize=_LABEL_SIZE)
 
-        for i, ds in enumerate(datasets):
+        for i, _ds in enumerate(datasets):
             row_best = float(matrix[i].max())
             for j in range(len(all_strats)):
                 val = float(matrix[i, j])
@@ -488,7 +483,7 @@ class StudyVisualizer:
 
         # Lift annotation: delta vs baseline (none)
         baseline_recall = vals_map.get(("none", "recall_at_k"), 0.0)
-        x_pos = range(len(rerankers))
+        range(len(rerankers))
         for xi, rr in enumerate(rerankers):
             rv = vals_map.get((rr, "recall_at_k"), 0.0)
             delta = rv - baseline_recall
@@ -562,7 +557,7 @@ class StudyVisualizer:
                            vmin=vmin, vmax=vmax + 0.02 * vmax)
 
             ax.set_xticks(np.arange(len(lambdas)))
-            ax.set_xticklabels([f"{l:.3f}" for l in lambdas],
+            ax.set_xticklabels([f"{lam_val:.3f}" for lam_val in lambdas],
                                rotation=40, ha="right", fontsize=_TICK_SIZE)
             ax.set_yticks(np.arange(len(policies)))
             ax.set_yticklabels(policies, fontsize=_TICK_SIZE)
@@ -784,7 +779,8 @@ class StudyVisualizer:
         bm25 = [r for r in self._results if r.retrieval_strategy == "bm25"]
         if not bm25:
             ax.text(0.5, 0.5, "No BM25 data", ha="center", va="center", transform=ax.transAxes)
-            _style_ax(ax, "BM25 Baseline"); return
+            _style_ax(ax, "BM25 Baseline")
+            return
 
         by_mem: dict[str, list] = defaultdict(list)
         for r in bm25:
@@ -802,7 +798,8 @@ class StudyVisualizer:
                  if r.retrieval_strategy in ("embeddings", "api_embeddings")]
         if not embed:
             ax.text(0.5, 0.5, "No embedding data", ha="center", va="center", transform=ax.transAxes)
-            _style_ax(ax, "Embedding Models"); return
+            _style_ax(ax, "Embedding Models")
+            return
 
         models = sorted({r.embedding_model for r in embed})
         short  = [m.split("/")[-1][:14] for m in models]
@@ -815,7 +812,7 @@ class StudyVisualizer:
         x     = np.arange(len(models))
         means = [_mean_std(by_m_r[m])[0] for m in models]
         stds  = [_mean_std(by_m_r[m])[1] for m in models]
-        bars  = ax.bar(x, means, color=_PALETTE[:len(models)], alpha=0.88,
+        ax.bar(x, means, color=_PALETTE[:len(models)], alpha=0.88,
                        yerr=stds, capsize=3, error_kw={"elinewidth": 1.0})
         ax2 = ax.twinx()
         lats = [_mean_std(by_m_l[m])[0] for m in models]
@@ -830,7 +827,8 @@ class StudyVisualizer:
         hybrid = [r for r in self._results if r.retrieval_strategy == "hybrid"]
         if not hybrid:
             ax.text(0.5, 0.5, "No hybrid data", ha="center", va="center", transform=ax.transAxes)
-            _style_ax(ax, "Hybrid Weight Sweep"); return
+            _style_ax(ax, "Hybrid Weight Sweep")
+            return
 
         mem_types = sorted({r.memory_type for r in hybrid})
         for i, mem in enumerate(mem_types):
@@ -851,7 +849,8 @@ class StudyVisualizer:
         rerank = [r for r in self._results if r.study_phase == "phase_reranker_comparison"]
         if not rerank:
             ax.text(0.5, 0.5, "No reranker data", ha="center", va="center", transform=ax.transAxes)
-            _style_ax(ax, "Reranker Comparison"); return
+            _style_ax(ax, "Reranker Comparison")
+            return
 
         rerankers = sorted({r.reranker_model for r in rerank})
         short     = [rr.split("/")[-1][:13] if rr != "none" else "none" for rr in rerankers]
@@ -878,7 +877,8 @@ class StudyVisualizer:
             decay_r = [r for r in self._results if r.lambda_value > 0]
         if not decay_r:
             ax.text(0.5, 0.5, "No decay data", ha="center", va="center", transform=ax.transAxes)
-            _style_ax(ax, "Decay Sweep"); return
+            _style_ax(ax, "Decay Sweep")
+            return
 
         policies = sorted({r.decay_policy for r in decay_r})
         lambdas  = sorted({r.lambda_value for r in decay_r})
@@ -891,9 +891,9 @@ class StudyVisualizer:
                     grid[pi, li] = sum(vals) / len(vals)
 
         vmax = max(float(grid.max()), 0.01)
-        im = ax.imshow(grid, aspect="auto", cmap="YlGn", vmin=0, vmax=vmax)
+        ax.imshow(grid, aspect="auto", cmap="YlGn", vmin=0, vmax=vmax)
         ax.set_xticks(np.arange(len(lambdas)))
-        ax.set_xticklabels([f"{l:.3f}" for l in lambdas], rotation=40, ha="right", fontsize=_TICK_SIZE - 1)
+        ax.set_xticklabels([f"{lam_val:.3f}" for lam_val in lambdas], rotation=40, ha="right", fontsize=_TICK_SIZE - 1)
         ax.set_yticks(np.arange(len(policies)))
         ax.set_yticklabels(policies, fontsize=_TICK_SIZE - 1)
         ax.set_xlabel("Lambda (λ)", fontsize=_LABEL_SIZE - 1)
@@ -913,7 +913,8 @@ class StudyVisualizer:
         if len(by_ds) <= 1:
             ax.text(0.5, 0.5, "Single dataset — no cross-dataset comparison",
                     ha="center", va="center", transform=ax.transAxes, fontsize=9)
-            _style_ax(ax, "Per-Dataset Comparison"); return
+            _style_ax(ax, "Per-Dataset Comparison")
+            return
 
         datasets   = sorted(by_ds.keys())
         strategies = sorted({r.retrieval_strategy for r in self._results})
@@ -935,7 +936,8 @@ class StudyVisualizer:
     def _render_leaderboard_panel(self, ax, plt, np):
         if not self._results:
             ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
-            _style_ax(ax, "Leaderboard"); return
+            _style_ax(ax, "Leaderboard")
+            return
 
         ranked = sorted(self._results, key=lambda r: r.composite_score(), reverse=True)[:12]
         labels = [

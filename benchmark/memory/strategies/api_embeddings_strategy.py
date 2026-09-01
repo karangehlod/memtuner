@@ -13,9 +13,8 @@ Environment variables (read if constructor args are None):
 """
 
 from __future__ import annotations
+
 import os
-import time
-from typing import List
 
 import numpy as np
 

@@ -13,8 +13,7 @@ cpu_percent_snapshot()   — instantaneous CPU% for this PID
 
 from __future__ import annotations
 
-import statistics
-from typing import Sequence
+from collections.abc import Sequence
 
 
 def percentile(values: Sequence[float], p: float) -> float:
@@ -65,7 +64,8 @@ def peak_rss_mb() -> float:
     allocation occurred earlier in the benchmark run.
     """
     try:
-        import resource, platform
+        import platform
+        import resource
         ru = resource.getrusage(resource.RUSAGE_SELF)
         if platform.system() == "Darwin":
             return ru.ru_maxrss / (1024 * 1024)   # bytes → MiB
@@ -87,7 +87,9 @@ def cpu_percent_snapshot() -> float:
     Subsequent calls return the CPU% accumulated since the previous call.
     """
     try:
-        import psutil, os
+        import os
+
+        import psutil
         return psutil.Process(os.getpid()).cpu_percent(interval=None)
     except Exception:
         return 0.0

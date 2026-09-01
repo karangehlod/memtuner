@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 """
 Test HuggingFace components only (no Ollama required).
 Run: source .venv/bin/activate && python test_hf_only.py
@@ -8,7 +9,7 @@ import os
 import sys
 
 # Load environment
-os.chdir('/Users/karangehlod/Codes/Agenticmemory_benchmark')
+os.chdir(Path(__file__).parent.parent)
 sys.path.insert(0, '.')
 from dotenv import load_dotenv
 load_dotenv()

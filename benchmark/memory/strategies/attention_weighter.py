@@ -1,11 +1,11 @@
 """Attention-based weighting system for intelligent memory scoring."""
 
-import numpy as np
-from datetime import datetime, timedelta
-from typing import Any, Optional, Literal
-from dataclasses import dataclass
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Literal
 
+import numpy as np
 
 QueryType = Literal["factual", "semantic", "exact", "complex"]
 

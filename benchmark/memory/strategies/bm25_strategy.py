@@ -36,6 +36,9 @@ class BM25Strategy(RetrievalStrategy):
         self._bm25: BM25Okapi | None = None
         self._id_list: list[str] = []  # Ordered list for index-based access
         self._user_index: dict[str, set] = {}  # user_id → set of indices (pre-built)
+        # Boolean mask cache: True at positions belonging to the given user_id.
+        # Built once per (user_id, corpus) pair; invalidated on re-index.
+        self._user_mask_cache: dict[str, np.ndarray] = {}
 
     def index(self, memories: list[MemoryEvent]) -> None:
         """Index memories for BM25 retrieval.
@@ -62,6 +65,7 @@ class BM25Strategy(RetrievalStrategy):
             return
 
         self._id_list = [mem.id for mem in memories]
+        self._user_mask_cache = {}  # invalidate on corpus change
 
         # Build user index for O(1) user filtering
         self._user_index = {}
@@ -104,17 +108,18 @@ class BM25Strategy(RetrievalStrategy):
         query_tokens = query.lower().split()
         scores = self._bm25.get_scores(query_tokens)
 
-        # Apply user filter via numpy mask (O(1) set lookup for user indices)
+        # Apply user filter via cached boolean mask — built once per (user_id, corpus)
         if user_id:
             valid_indices = self._user_index.get(user_id)
             if not valid_indices:
                 return []
-            # Zero out scores for non-matching users
-            mask = np.ones(len(scores), dtype=bool)
-            for idx in valid_indices:
-                mask[idx] = False
+            if user_id not in self._user_mask_cache:
+                mask = np.zeros(len(self._id_list), dtype=bool)
+                for idx in valid_indices:
+                    mask[idx] = True
+                self._user_mask_cache[user_id] = mask
             scores_arr = np.array(scores, dtype=np.float32)
-            scores_arr[mask] = 0.0
+            scores_arr[~self._user_mask_cache[user_id]] = 0.0
         else:
             scores_arr = np.array(scores, dtype=np.float32)
 
@@ -149,6 +154,7 @@ class BM25Strategy(RetrievalStrategy):
         self._memories = {}
         self._id_list = []
         self._user_index = {}
+        self._user_mask_cache = {}
         self._bm25 = None
 
     @classmethod

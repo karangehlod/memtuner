@@ -1,17 +1,17 @@
 """Unified distributed memory system orchestrating all Phase 5 components."""
 
 import logging
-from typing import Any, Optional
 from dataclasses import dataclass
+from typing import Any
 
-from benchmark.memory.distributed.parallel_query_executor import ParallelQueryExecutor
 from benchmark.memory.distributed.distributed_benchmark_runner import (
-    DistributedBenchmarkRunner,
     BenchmarkConfig,
+    DistributedBenchmarkRunner,
 )
-from benchmark.memory.distributed.result_aggregator import ResultAggregator
-from benchmark.memory.distributed.progress_monitor import ProgressMonitor
 from benchmark.memory.distributed.fault_tolerance_manager import FaultToleranceManager
+from benchmark.memory.distributed.parallel_query_executor import ParallelQueryExecutor
+from benchmark.memory.distributed.progress_monitor import ProgressMonitor
+from benchmark.memory.distributed.result_aggregator import ResultAggregator
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class DistributedJobResult:
     total_time_sec: float
     throughput: float
     success: bool
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class DistributedMemorySystem:
@@ -46,7 +46,7 @@ class DistributedMemorySystem:
     def __init__(
         self,
         memory_system: Any,
-        config: Optional[DistributedJobConfig] = None,
+        config: DistributedJobConfig | None = None,
     ):
         """Initialize distributed memory system.
 
@@ -77,13 +77,13 @@ class DistributedMemorySystem:
             self._fault_tolerance = None
 
         # State
-        self._current_job_id: Optional[str] = None
-        self._last_result: Optional[DistributedJobResult] = None
+        self._current_job_id: str | None = None
+        self._last_result: DistributedJobResult | None = None
 
     def execute_queries_parallel(
         self,
         queries: list[str],
-        top_k: Optional[int] = None,
+        top_k: int | None = None,
     ) -> list[dict[str, Any]]:
         """Execute queries in parallel.
 
@@ -118,7 +118,7 @@ class DistributedMemorySystem:
     def run_distributed_benchmark(
         self,
         dataset: list[dict[str, Any]],
-        config: Optional[BenchmarkConfig] = None,
+        config: BenchmarkConfig | None = None,
     ) -> DistributedJobResult:
         """Run benchmark on distributed system.
 
@@ -192,7 +192,7 @@ class DistributedMemorySystem:
             if self.config.enable_progress_monitoring:
                 self._progress_monitor.clear_job(self._current_job_id)
 
-    def get_current_progress(self) -> Optional[dict[str, Any]]:
+    def get_current_progress(self) -> dict[str, Any] | None:
         """Get current job progress.
 
         Returns:
@@ -207,7 +207,7 @@ class DistributedMemorySystem:
 
         return None
 
-    def get_worker_health(self) -> Optional[dict[str, Any]]:
+    def get_worker_health(self) -> dict[str, Any] | None:
         """Get worker health status.
 
         Returns:
@@ -230,7 +230,7 @@ class DistributedMemorySystem:
 
         return None
 
-    def get_fault_tolerance_stats(self) -> Optional[dict[str, Any]]:
+    def get_fault_tolerance_stats(self) -> dict[str, Any] | None:
         """Get fault tolerance statistics.
 
         Returns:
@@ -241,7 +241,7 @@ class DistributedMemorySystem:
 
         return self._fault_tolerance.get_stats()
 
-    def get_last_result(self) -> Optional[DistributedJobResult]:
+    def get_last_result(self) -> DistributedJobResult | None:
         """Get result from last job.
 
         Returns:
@@ -339,7 +339,7 @@ class DistributedMemorySystem:
         """
         return self._progress_monitor
 
-    def get_fault_tolerance_manager(self) -> Optional[FaultToleranceManager]:
+    def get_fault_tolerance_manager(self) -> FaultToleranceManager | None:
         """Get fault tolerance manager.
 
         Returns:

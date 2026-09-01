@@ -1,9 +1,10 @@
 """Leaderboard generator for retrieval benchmark results."""
 
-from dataclasses import dataclass, field, asdict
-from typing import Any
 import json
-from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry, RetrievalMetrics
+from dataclasses import asdict, dataclass, field
+from typing import Any
+
+from benchmark.retrieval.strategies.base import RetrievalMetrics, RetrievalStrategyRegistry
 
 
 @dataclass

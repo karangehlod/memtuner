@@ -1,12 +1,11 @@
 """Orchestrator for retrieval benchmark execution."""
 
+import logging
 import time
 from typing import Any
-import logging
 
-from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
 from benchmark.retrieval.leaderboard_generator import LeaderboardGenerator
-
+from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
 
 logger = logging.getLogger(__name__)
 

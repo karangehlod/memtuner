@@ -1,8 +1,8 @@
 """Performance testing suite for retrieval strategies on larger datasets."""
 
-import time
 import random
 import string
+import time
 from typing import Any
 
 import numpy as np
@@ -77,7 +77,7 @@ class PerformanceTester:
                         f"perf_size_{size}",
                         top_k=10,
                     )
-                    elapsed = time.time() - start
+                    time.time() - start
 
                     if result["status"] == "success":
                         metrics = {
@@ -88,7 +88,7 @@ class PerformanceTester:
                         dataset_results[strategy] = metrics
                         print(f" OK ({result['query_latency_ms']:.2f}ms)")
                     else:
-                        print(f" FAILED")
+                        print(" FAILED")
                         dataset_results[strategy] = {"status": "failed"}
 
                 except Exception as e:
@@ -155,11 +155,11 @@ class PerformanceTester:
                         scenario_results[strategy] = metrics
                         print(f" OK ({result['recall_at_10']:.3f})")
                     else:
-                        print(f" FAILED")
+                        print(" FAILED")
                         scenario_results[strategy] = {"status": "failed"}
 
-                except Exception as e:
-                    print(f" ERROR")
+                except Exception:
+                    print(" ERROR")
                     scenario_results[strategy] = {"status": "error"}
 
             results[scenario] = scenario_results
@@ -211,13 +211,13 @@ class PerformanceTester:
                             "recall": result["recall_at_10"],
                         }
                         vocab_results[strategy] = metrics
-                        print(f" OK")
+                        print(" OK")
                     else:
-                        print(f" FAILED")
+                        print(" FAILED")
                         vocab_results[strategy] = {"status": "failed"}
 
-                except Exception as e:
-                    print(f" ERROR")
+                except Exception:
+                    print(" ERROR")
                     vocab_results[strategy] = {"status": "error"}
 
             results[vocab_name] = vocab_results
@@ -277,13 +277,13 @@ class PerformanceTester:
                             "recall": result["recall_at_10"],
                         }
                         complexity_results[strategy] = metrics
-                        print(f" OK")
+                        print(" OK")
                     else:
-                        print(f" FAILED")
+                        print(" FAILED")
                         complexity_results[strategy] = {"status": "failed"}
 
-                except Exception as e:
-                    print(f" ERROR")
+                except Exception:
+                    print(" ERROR")
                     complexity_results[strategy] = {"status": "error"}
 
             results[complexity] = complexity_results

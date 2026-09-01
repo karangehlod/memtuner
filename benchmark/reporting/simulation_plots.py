@@ -41,11 +41,16 @@ def _style(ax, title="", xlabel="", ylabel="", ylim=None, xlim=None):
     ax.spines["right"].set_visible(False)
     ax.yaxis.grid(True, linestyle="--", linewidth=0.5, alpha=0.6)
     ax.set_axisbelow(True)
-    if title:   ax.set_title(title, fontsize=_TITLE, fontweight="bold", pad=5)
-    if xlabel:  ax.set_xlabel(xlabel, fontsize=_LABEL)
-    if ylabel:  ax.set_ylabel(ylabel, fontsize=_LABEL)
-    if ylim:    ax.set_ylim(*ylim)
-    if xlim:    ax.set_xlim(*xlim)
+    if title:
+        ax.set_title(title, fontsize=_TITLE, fontweight="bold", pad=5)
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=_LABEL)
+    if ylabel:
+        ax.set_ylabel(ylabel, fontsize=_LABEL)
+    if ylim:
+        ax.set_ylim(*ylim)
+    if xlim:
+        ax.set_xlim(*xlim)
     ax.tick_params(labelsize=_TICK)
 
 
@@ -315,7 +320,9 @@ def plot_lambda_phase_space(output_dir: Path) -> str:
     )
 
     # Vectorised computation
-    def compute_grid(policy, L, T):
+    def compute_grid(policy, lambda_grid, time_grid):
+        L = lambda_grid
+        T = time_grid
         G = np.zeros_like(L)
         for i in range(L.shape[0]):
             for j in range(L.shape[1]):
@@ -379,13 +386,13 @@ def generate_all_simulation_plots(output_dir: str = "docs/figures") -> dict[str,
     paths = {}
     print("Generating simulation plots...")
     paths["decay_curves"]          = plot_decay_curves(out)
-    print(f"  ✓ fig1_decay_curves.png")
+    print("  ✓ fig1_decay_curves.png")
     paths["composite_sensitivity"]  = plot_composite_sensitivity(out)
-    print(f"  ✓ fig2_composite_sensitivity.png")
+    print("  ✓ fig2_composite_sensitivity.png")
     paths["hybrid_fusion"]          = plot_hybrid_fusion(out)
-    print(f"  ✓ fig3_hybrid_fusion.png")
+    print("  ✓ fig3_hybrid_fusion.png")
     paths["lambda_phase_space"]     = plot_lambda_phase_space(out)
-    print(f"  ✓ fig4_lambda_phase_space.png")
+    print("  ✓ fig4_lambda_phase_space.png")
     print(f"\nAll figures written to: {out}/")
     return paths
 

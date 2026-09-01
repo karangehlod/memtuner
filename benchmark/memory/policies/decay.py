@@ -173,15 +173,20 @@ class StepDecayPolicy(LifecyclePolicy, DecayPolicy):
         return initial_score
 
     def apply(self, day: int, memory_scores: dict[str, float]) -> list[str]:
-        """Apply step decay — flag all memories past lifespan.
+        """Apply step decay and return IDs whose decayed score falls below threshold.
+
+        A memory past lifespan has decayed score 0.0, which is below any positive
+        threshold. Memories before lifespan are checked against their raw score.
 
         Args:
             day: The current simulated day.
             memory_scores: Mapping of memory_id → current raw score.
 
         Returns:
-            List of memory IDs past their lifespan.
+            List of memory IDs whose decayed score is below the threshold.
         """
-        if day >= self._lifespan_days:
-            return list(memory_scores.keys())
-        return []
+        flagged: list[str] = []
+        for memory_id, score in memory_scores.items():
+            if self.compute_decay(score, day) < self._threshold:
+                flagged.append(memory_id)
+        return flagged

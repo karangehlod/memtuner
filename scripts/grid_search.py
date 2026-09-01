@@ -100,7 +100,7 @@ Examples:
     if not dataset_path_str:
         parser.error("--dataset is required")
 
-    project_root = str(Path(__file__).parent)
+    project_root = str(Path(__file__).resolve().parent.parent)
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 

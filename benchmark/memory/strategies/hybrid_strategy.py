@@ -8,6 +8,8 @@ Latency: 10-2000ms (adaptive) | Cost: Low-High | Accuracy: Best | Setup: 4 hours
 
 from __future__ import annotations
 
+import heapq
+
 from benchmark.memory.interfaces.retrieval_strategy import RetrievalStrategy
 from benchmark.models.memory_event import MemoryEvent
 
@@ -156,9 +158,8 @@ class HybridStrategy(RetrievalStrategy):
                 rrf_contribution = weight / (RRF_K + rank + 1)
                 rrf_scores[mem_id] = rrf_scores.get(mem_id, 0.0) + rrf_contribution
 
-        # Sort by RRF score and return top_k
-        fused = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
-        return fused[:top_k]
+        # heapq.nlargest is O(M log K) vs O(M log M) full sort; M≈80, K≤10 → ~2× faster
+        return heapq.nlargest(top_k, rrf_scores.items(), key=lambda x: x[1])
 
     def name(self) -> str:
         """Return strategy name."""

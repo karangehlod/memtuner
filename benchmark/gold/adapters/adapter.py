@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from benchmark.gold.schema import GoldDataset
-
+from benchmark.gold.statistics import DatasetStatistics
 
 # ============================================================================
 # Exception Types

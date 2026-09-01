@@ -103,7 +103,7 @@ class DatabaseStrategy(RetrievalStrategy):
             if psycopg2 and isinstance(e, (psycopg2.OperationalError, psycopg2.ProgrammingError)):
                 logger.warning(f"Database schema initialization failed (non-fatal): {e}")
             else:
-                logger.exception(f"Unexpected database error during schema initialization")
+                logger.exception("Unexpected database error during schema initialization")
         finally:
             cursor.close()
 
@@ -142,7 +142,7 @@ class DatabaseStrategy(RetrievalStrategy):
             if psycopg2 and isinstance(e, (psycopg2.OperationalError, psycopg2.ProgrammingError)):
                 logger.warning(f"Database indexing failed (non-fatal): {e}")
             else:
-                logger.exception(f"Unexpected error during memory indexing")
+                logger.exception("Unexpected error during memory indexing")
             self._conn.rollback()
         finally:
             cursor.close()
@@ -225,7 +225,7 @@ class DatabaseStrategy(RetrievalStrategy):
             if psycopg2 and isinstance(e, (psycopg2.OperationalError, psycopg2.ProgrammingError)):
                 logger.warning(f"Failed to clear memories from database (non-fatal): {e}")
             else:
-                logger.exception(f"Unexpected error during memory clear")
+                logger.exception("Unexpected error during memory clear")
         finally:
             cursor.close()
 

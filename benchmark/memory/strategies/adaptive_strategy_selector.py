@@ -1,9 +1,8 @@
 """Query-adaptive retrieval strategy selection engine."""
 
-from typing import Any, Literal, Optional
-from dataclasses import dataclass, field
 from collections import defaultdict
-
+from dataclasses import dataclass
+from typing import Literal
 
 QueryType = Literal["factual", "semantic", "exact", "complex"]
 

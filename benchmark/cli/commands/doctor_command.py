@@ -14,7 +14,6 @@ No configuration required. Run this first to know what to expect.
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
 
 
@@ -107,7 +106,7 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
 
     print()
     print("  ╔══════════════════════════════════════════════════════╗")
-    print("  ║        Agentic Memory Benchmark — Doctor             ║")
+    print("  ║             MemTuner — Doctor                        ║")
     print("  ║     Hardware analysis + ready-to-run commands         ║")
     print("  ╚══════════════════════════════════════════════════════╝")
 
@@ -129,7 +128,11 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
         ram_gb = 8.0  # conservative fallback
 
     from benchmark.resources.hw_probe import (
-        DEVICE, CUDA_AVAILABLE, MPS_AVAILABLE, GPU_VRAM_MB, GPU_SM_COUNT
+        CUDA_AVAILABLE,
+        DEVICE,
+        GPU_SM_COUNT,
+        GPU_VRAM_MB,
+        MPS_AVAILABLE,
     )
 
     if CUDA_AVAILABLE:
@@ -152,10 +155,10 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
     has_bm25  = _check_import("rank_bm25")
     has_st    = _check_import("sentence_transformers")
     has_torch = _check_import("torch")
-    has_np    = _check_import("numpy")
+    _check_import("numpy")
     has_mpl   = _check_import("matplotlib")
     has_httpx = _check_import("httpx")
-    has_psutil = _check_import("psutil")
+    _check_import("psutil")
 
     if has_bm25:
         _ok("rank-bm25", "Phase 1 (BM25 baseline) available")
@@ -328,9 +331,9 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
         print()
         print("  Run the benchmark now (settings from .env apply automatically):")
         if has_st and has_torch:
-            print(f"    python study_runner.py --mode full")
+            print("    python study_runner.py --mode full")
         else:
-            print(f"    python study_runner.py --mode full --phases 1 5")
+            print("    python study_runner.py --mode full --phases 1 5")
 
     else:
         _section("Commands for This Machine — Copy & Run")
@@ -364,6 +367,6 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
         print()
 
     print(f"  {'─' * 56}")
-    print(f"  Run with --apply to write this config to .env automatically.")
+    print("  Run with --apply to write this config to .env automatically.")
     print(f"  {'─' * 56}")
     print()

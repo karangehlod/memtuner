@@ -22,12 +22,22 @@ except ImportError:
     SentenceTransformer = None
     np = None
 
+import contextlib
+
+from benchmark.resources.hw_probe import (
+    CPU_CORES as _CPU_CORES,
+)
+from benchmark.resources.hw_probe import (
+    CUDA_AVAILABLE as _CUDA_AVAILABLE,
+)
 from benchmark.resources.hw_probe import (
     DEVICE as _EMBEDDING_DEVICE,
-    CUDA_AVAILABLE as _CUDA_AVAILABLE,
-    MPS_AVAILABLE as _MPS_AVAILABLE,
+)
+from benchmark.resources.hw_probe import (
     MLX_AVAILABLE as _MLX_AVAILABLE,
-    CPU_CORES as _CPU_CORES,
+)
+from benchmark.resources.hw_probe import (
+    MPS_AVAILABLE as _MPS_AVAILABLE,
 )
 from benchmark.resources.mlx_embedder import MLXEmbedder as _MLXEmbedder
 
@@ -35,10 +45,8 @@ try:
     import torch as _torch
     if _CUDA_AVAILABLE or _MPS_AVAILABLE:
         _cpu_cap = max(1, _CPU_CORES // 2)
-        try:
+        with contextlib.suppress(RuntimeError):
             _torch.set_num_threads(_cpu_cap)
-        except RuntimeError:
-            pass
 except ImportError:
     pass
 

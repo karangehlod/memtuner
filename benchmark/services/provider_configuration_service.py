@@ -5,7 +5,7 @@ environment variable parsing and config overrides.
 """
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 from benchmark.config.schema import BenchmarkConfig
 from benchmark.observability.logger import get_logger
@@ -30,7 +30,7 @@ class ProviderConfigurationService:
         """
         self.config = config
 
-    def build_api_embeddings_settings(self) -> Optional[dict[str, Any]]:
+    def build_api_embeddings_settings(self) -> dict[str, Any] | None:
         """Build API embeddings provider settings.
 
         Returns:
@@ -57,7 +57,7 @@ class ProviderConfigurationService:
 
         return settings
 
-    def build_reranker_settings(self) -> Optional[dict[str, Any]]:
+    def build_reranker_settings(self) -> dict[str, Any] | None:
         """Build reranker provider settings.
 
         Returns:
@@ -75,8 +75,8 @@ class ProviderConfigurationService:
     def build_strategy_overrides(
         self,
         strategy_name: str,
-        embedding_candidates: Optional[list[tuple[str, str]]] = None,
-    ) -> Optional[dict[str, Any]]:
+        embedding_candidates: list[tuple[str, str]] | None = None,
+    ) -> dict[str, Any] | None:
         """Build strategy-specific config overrides.
 
         Args:
@@ -98,17 +98,16 @@ class ProviderConfigurationService:
             if api_settings:
                 overrides["retrieval"] = {"api_embeddings": api_settings}
 
-        elif strategy_name == "hybrid":
-            if embedding_candidates:
-                first_model = embedding_candidates[0][0]
-                overrides["retrieval"] = {
-                    "embeddings": {"model_name": first_model},
-                }
-                overrides["hybrid"] = {
-                    "strategies": ["bm25", "embeddings"],
-                    "confidence_threshold": 0.5,
-                    "bm25_weight": 0.5,
-                }
+        elif strategy_name == "hybrid" and embedding_candidates:
+            first_model = embedding_candidates[0][0]
+            overrides["retrieval"] = {
+                "embeddings": {"model_name": first_model},
+            }
+            overrides["hybrid"] = {
+                "strategies": ["bm25", "embeddings"],
+                "confidence_threshold": 0.5,
+                "bm25_weight": 0.5,
+            }
 
         return overrides if overrides else None
 

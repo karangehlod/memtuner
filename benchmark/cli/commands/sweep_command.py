@@ -81,7 +81,7 @@ def sweep_benchmark(
     for your dataset. Like MATLAB parameter optimization for memory systems.
 
     Example:
-        benchmark sweep -d data/locomo10.json -s bm25 -s hybrid -k 5 -k 10 -l 0.0 -l 0.05
+        memtuner sweep -d data/input/locomo10.json -s bm25 -s hybrid -k 5 -k 10 -l 0.0 -l 0.05
     """
     import itertools
     import json

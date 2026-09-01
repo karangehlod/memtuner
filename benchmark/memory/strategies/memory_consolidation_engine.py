@@ -1,11 +1,10 @@
 """Hierarchical memory consolidation engine for tier management."""
 
-from datetime import datetime, timedelta
-from typing import Any, Literal, Optional
-from dataclasses import dataclass, field
-from enum import Enum
-import numpy as np
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Literal
 
+import numpy as np
 
 MemoryTier = Literal["working", "episodic", "semantic"]
 DecayStrategy = Literal["linear", "exponential", "power_law", "selective"]

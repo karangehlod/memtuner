@@ -24,10 +24,9 @@ from benchmark.cost.token_cost import TokenCostCalculator
 from benchmark.evaluation.context import EvaluationContext
 from benchmark.evaluation.reliability import ReliabilityCurveEvaluator
 from benchmark.memory.interfaces.optional_capabilities import (
-    LifecycleAwareWriter,
     CreationDayTracker,
+    LifecycleAwareWriter,
     MemoryScoreComputer,
-    StrategyContaining,
 )
 from benchmark.memory.interfaces.reader import MemoryReader
 from benchmark.memory.interfaces.writer import MemoryWriter
@@ -538,7 +537,7 @@ class ScenarioRunner:
             gold_query = result["gold_query"]
             retrieved_memories = result["retrieved_memories"]
             latency_ms = result["latency_ms"]
-            elapsed = result["elapsed"]
+            result["elapsed"]
 
             query_latencies_ms.append(latency_ms)
             expected_ids = gold_query.expected.memory_ids

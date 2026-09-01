@@ -105,7 +105,7 @@ class AdaptiveRetrievalStrategy(RetrievalStrategy):
         self._indexed = False
         self.routing_counts = {"bm25": 0, "embeddings": 0, "hybrid": 0}
 
-    def index(self, memories: list["MemoryEvent"]) -> None:
+    def index(self, memories: list[MemoryEvent]) -> None:
         bm25_inst = _get_bm25()
         embed_inst = _get_embed()
         hybrid_inst = _get_hybrid(bm25_inst=bm25_inst, embed_inst=embed_inst)

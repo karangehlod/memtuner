@@ -4,19 +4,18 @@ Runs all strategies, sweeps all parameters, generates comparison plots.
 This is the primary deliverable of the benchmark tool.
 
 Usage:
-    benchmark analyze -d data/locomo10.json
-    benchmark analyze -d data/locomo10.json --with-llm-judge
+    memtuner analyze -d data/input/locomo10.json
+    memtuner analyze -d data/input/locomo10.json --with-llm-judge
 """
 
 from __future__ import annotations
 
 import os
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 
 import click
-
-from importlib.util import find_spec
 
 from benchmark.analysis.multi_agent import run_interference_test
 from benchmark.application.composer import BenchmarkComposer
@@ -33,7 +32,6 @@ from benchmark.memory.long_term.preference_store import PreferenceStore
 from benchmark.memory.long_term.semantic_store import SemanticStore
 from benchmark.observability.logger import get_logger, log_decision
 from benchmark.resources.tracker import ResourceTracker
-
 
 logger = get_logger(__name__)
 
@@ -365,7 +363,7 @@ def analyze_benchmark(
                 output_dir,
                 "run_metadata",
                 build_run_metadata(
-                    command_name="benchmark analyze",
+                    command_name="memtuner analyze",
                     dataset_path=resolved_dataset_path,
                     output_dir=output_dir,
                     pack_name=pack,
@@ -686,7 +684,7 @@ def analyze_benchmark(
         local_embedding_skip = _is_truthy_env("BENCHMARK_ANALYZE_SKIP_LOCAL_EMBEDDING_COMPARISON")
         if not local_embedding_skip and find_spec("sentence_transformers") is not None:
             local_size_threshold_mb = (
-                analysis_defaults.benchmark.retrieval.embeddings.local_size_threshold_mb
+                analysis_defaults.benchmark.reranker.local_size_threshold_mb
             )
             embedding_models = _embedding_candidates(
                 local_size_threshold_mb=local_size_threshold_mb
@@ -1165,7 +1163,7 @@ def analyze_benchmark(
                     labels = [f"{provider}:{row['label']}" for provider, row in backend_rows]
                     recalls = [row["recall"] * 100 for _, row in backend_rows]
                     latency = [row["ms_per_query"] for _, row in backend_rows]
-                    scatter = ax.scatter(latency, recalls, s=80, c=range(len(labels)), cmap="viridis")
+                    ax.scatter(latency, recalls, s=80, c=range(len(labels)), cmap="viridis")
                     for idx, label in enumerate(labels):
                         ax.annotate(
                             label,
@@ -1291,7 +1289,7 @@ def analyze_benchmark(
             "artifact_manifest",
             {
                 "artifacts": artifact_manifest,
-                "summary": "Tagged images and JSON artifacts emitted by benchmark analyze.",
+                "summary": "Tagged images and JSON artifacts emitted by memtuner analyze.",
             },
         )
 

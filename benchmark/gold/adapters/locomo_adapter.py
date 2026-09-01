@@ -27,7 +27,6 @@ from benchmark.gold.adapters.adapter import (
     AdapterError,
     DatasetAdapter,
     FingerprintError,
-    MetadataError,
     StatisticsError,
     ValidationError,
     ValidationReport,
@@ -35,9 +34,9 @@ from benchmark.gold.adapters.adapter import (
 from benchmark.gold.schema import (
     GoldDataset,
     GoldDayEvents,
+    GoldExpectedResult,
     GoldMemoryEvent,
     GoldQuery,
-    GoldExpectedResult,
 )
 from benchmark.gold.statistics import DatasetStatistics, StatisticsComputer
 from benchmark.gold.validators import ValidationRegistry
@@ -77,7 +76,7 @@ class LoCoMoAdapter(DatasetAdapter):
             source_path = Path(source)
             with open(source_path) as f:
                 data = json.load(f)
-        except (FileNotFoundError, IOError) as e:
+        except (OSError, FileNotFoundError) as e:
             raise AdapterError(f"Cannot read LoCoMo file {source}: {e}")
         except json.JSONDecodeError as e:
             raise AdapterError(f"Invalid JSON in LoCoMo file: {e}")
@@ -341,7 +340,6 @@ class LoCoMoAdapter(DatasetAdapter):
 
         expected = GoldExpectedResult(memory_ids=relevant_memory_ids)
 
-        query_id = f"query_{day}_{qa_idx}"
 
         return GoldQuery(
             day=day,

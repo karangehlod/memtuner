@@ -79,7 +79,8 @@ def format_pareto_report(pareto_points: list[ParetoPoint], all_points: list[Pare
     lines.append("")
     lines.append("Points NOT on frontier (dominated):")
 
-    dominated = [p for p in all_points if p not in pareto_points]
+    pareto_set = set(pareto_points)
+    dominated = [p for p in all_points if p not in pareto_set]
     for p in sorted(dominated, key=lambda x: x.recall, reverse=True)[:10]:
         lines.append(
             f"    {p.label:<33} {p.recall:>7.1%} {p.precision:>7.1%} {p.latency_ms:>7.1f}ms"

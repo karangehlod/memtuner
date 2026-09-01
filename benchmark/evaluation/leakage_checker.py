@@ -6,7 +6,7 @@ memorization, not retrieval generalization.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -42,6 +42,9 @@ class LeakageChecker:
     - Build a set of all min_n-grams from memory contents (one pass).
     - For each query, slide a window of width min_n over it and probe the set.
     This replaces the O(queries × memories × query_len²) nested loop.
+
+    For repeated calls over the same corpus, call build_index() once and
+    check() will reuse the cached index automatically.
     """
 
     def __init__(self, min_overlap_chars: int = 20):
@@ -49,9 +52,35 @@ class LeakageChecker:
         self.leaked_queries: list[dict] = []
         self.total_queries: int = 0
         self.total_memories: int = 0
+        self._ngram_index: dict[str, str] | None = None
+        self._indexed_memory_ids: frozenset[str] = frozenset()
+
+    def build_index(self, memory_contents: dict[str, str]) -> None:
+        """Pre-build the n-gram index over memory contents.
+
+        Call once per corpus to avoid rebuilding on every check() call.
+        check() will use the cached index if the corpus hasn't changed.
+
+        Args:
+            memory_contents: Dict mapping memory_id -> content string.
+        """
+        min_n = self.min_overlap_chars
+        ngram_to_memory: dict[str, str] = {}
+        for memory_id, content in memory_contents.items():
+            nc = _normalize(content)
+            for i in range(len(nc) - min_n + 1):
+                ng = nc[i:i + min_n]
+                if ng not in ngram_to_memory:
+                    ngram_to_memory[ng] = memory_id
+        self._ngram_index = ngram_to_memory
+        self._indexed_memory_ids = frozenset(memory_contents.keys())
+        self.total_memories = len(memory_contents)
 
     def check(self, queries: list[str], memory_contents: dict[str, str]) -> "LeakageReport":
         """Check for leakage between queries and memory contents.
+
+        Reuses a pre-built index if build_index() was called with the same
+        corpus. Rebuilds automatically when the corpus changes.
 
         Args:
             queries: List of query strings to check.
@@ -65,15 +94,11 @@ class LeakageChecker:
         self.total_memories = len(memory_contents)
         self.leaked_queries = []
 
-        # Build ngram → memory_id index in a single pass over all memory content.
-        # Using the first memory_id that contains each ngram is enough for reporting.
-        ngram_to_memory: dict[str, str] = {}
-        for memory_id, content in memory_contents.items():
-            nc = _normalize(content)
-            for i in range(len(nc) - min_n + 1):
-                ng = nc[i:i + min_n]
-                if ng not in ngram_to_memory:
-                    ngram_to_memory[ng] = memory_id
+        # Rebuild index only when corpus has changed
+        current_ids = frozenset(memory_contents.keys())
+        if self._ngram_index is None or current_ids != self._indexed_memory_ids:
+            self.build_index(memory_contents)
+        ngram_to_memory = self._ngram_index  # type: ignore[assignment]
 
         # For each query, probe the ngram set with a sliding window.
         for query in queries:
