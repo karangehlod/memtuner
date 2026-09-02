@@ -153,6 +153,7 @@ class StudyVisualizer:
         paths["decay_heatmap"]         = self._plot_decay_heatmap(plt, np)
         paths["per_dataset"]           = self._plot_per_dataset(plt, np)
         paths["leaderboard"]           = self._plot_leaderboard(plt, np)
+        paths["composite_breakdown"]   = self._plot_composite_breakdown(plt, np)
         paths["full_report"]           = self._plot_full_report(plt, gridspec, np)
         plt.close("all")
         return paths
@@ -402,7 +403,7 @@ class StudyVisualizer:
         mem_types = sorted({r.memory_type for r in hybrid})
         weights   = sorted({r.bm25_weight for r in hybrid})
 
-        fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
         fig.suptitle(
             "Phase 3 — Hybrid Strategy BM25 Weight Sweep\n"
             "BM25 weight 0 = pure semantic  ·  1 = pure BM25",
@@ -434,9 +435,38 @@ class StudyVisualizer:
             for w in weights:
                 ax.axvline(w, color="grey", linestyle=":", linewidth=0.5, alpha=0.5)
             ax.legend(title="Memory Type", fontsize=_LEGEND_SIZE, framealpha=0.9)
-            _style_ax(ax, f"{ylabel} vs BM25 Weight", "BM25 Weight", ylabel)
+            _style_ax(ax, f"{ylabel} vs BM25 Weight", "BM25 Weight", ylabel,
+                      ylim=(0, 1.0))
             ax.set_xlim(-0.05, 1.05)
-            ax.set_ylim(bottom=0)
+
+        # ── Right: Composite score vs BM25 weight (macro-avg across memory types) ──
+        ax3 = axes[2]
+        comp_pts = []
+        for w in weights:
+            vals = [r.composite_score() for r in hybrid if abs(r.bm25_weight - w) < 1e-9]
+            if vals:
+                m, s = _mean_std(vals)
+                comp_pts.append((w, m, s))
+        if comp_pts:
+            ws, ms, ss = zip(*comp_pts)
+            ax3.plot(ws, ms, "s-", color=_PALETTE[3], linewidth=2.5, markersize=9,
+                     label="Composite")
+            ax3.fill_between(ws, [m - s for m, s in zip(ms, ss)],
+                             [m + s for m, s in zip(ms, ss)],
+                             color=_PALETTE[3], alpha=0.15)
+            # Mark best weight
+            best_w, best_m = max(zip(ws, ms), key=lambda t: t[1])
+            ax3.axvline(best_w, color="red", linestyle="--", linewidth=1.5,
+                        label=f"Best: {best_w:.2f}")
+            ax3.annotate(f"★ {best_m:.4f}", xy=(best_w, best_m),
+                         xytext=(best_w + 0.05, best_m - 0.015),
+                         fontsize=_ANNOT_SIZE, color="red", fontweight="bold")
+        for w in weights:
+            ax3.axvline(w, color="grey", linestyle=":", linewidth=0.5, alpha=0.5)
+        ax3.legend(fontsize=_LEGEND_SIZE, framealpha=0.9)
+        _style_ax(ax3, "Composite Score vs BM25 Weight",
+                  "BM25 Weight", "Composite Score", ylim=(0, 1.0))
+        ax3.set_xlim(-0.05, 1.05)
 
         plt.tight_layout()
         path = str(self._out / "phase3_hybrid_weight.png")
@@ -483,7 +513,6 @@ class StudyVisualizer:
 
         # Lift annotation: delta vs baseline (none)
         baseline_recall = vals_map.get(("none", "recall_at_k"), 0.0)
-        range(len(rerankers))
         for xi, rr in enumerate(rerankers):
             rv = vals_map.get((rr, "recall_at_k"), 0.0)
             delta = rv - baseline_recall
@@ -495,23 +524,28 @@ class StudyVisualizer:
                     ha="center", fontsize=_ANNOT_SIZE, color=colour, fontweight="bold",
                 )
 
-        # ── Right: Latency comparison ─────────────────────────────────────────
-        lat_vals = []
-        lat_stds = []
-        for rr in rerankers:
-            vs = [r.latency_p50_ms for r in rerank if r.reranker_model == rr]
-            m, s = _mean_std(vs)
-            lat_vals.append(m)
-            lat_stds.append(s)
-
+        # ── Right: Latency P50 / P90 / P99 comparison ───────────────────────
+        # Tail latency matters for rerankers: CrossEncoder has long P99 due to batch processing.
+        lat_percs = [
+            ("latency_p50_ms", "P50", _PALETTE[3]),
+            ("latency_p90_ms", "P90", _PALETTE[0]),
+            ("latency_p99_ms", "P99", _PALETTE[2]),
+        ]
         x = np.arange(len(rerankers))
-        bars = axes[1].bar(x, lat_vals, color=_PALETTE[3], alpha=0.88,
-                           yerr=lat_stds, capsize=4,
-                           error_kw={"elinewidth": 1.2, "ecolor": "black"})
+        w = 0.25
+        for pi, (field, plabel, colour) in enumerate(lat_percs):
+            vals = [
+                _mean_std([getattr(r, field) for r in rerank if r.reranker_model == rr])[0]
+                for rr in rerankers
+            ]
+            bars = axes[1].bar(x + (pi - 1) * w, vals, w * 0.88,
+                               label=plabel, color=colour, alpha=0.88)
+            if pi == 0:
+                _annotate_bars(axes[1], bars, fmt="{:.0f}ms", fontsize=_ANNOT_SIZE - 1)
         axes[1].set_xticks(x)
         axes[1].set_xticklabels(short_names, rotation=20, ha="right", fontsize=_TICK_SIZE)
-        _annotate_bars(axes[1], bars, fmt="{:.0f}ms")
-        _style_ax(axes[1], "Query Latency P50 by Reranker", "Reranker", "Latency P50 (ms)")
+        axes[1].legend(title="Percentile", fontsize=_LEGEND_SIZE, framealpha=0.9)
+        _style_ax(axes[1], "Query Latency P50 / P90 / P99 by Reranker", "Reranker", "Latency (ms)")
 
         plt.tight_layout()
         path = str(self._out / "phase4_reranker_comparison.png")
@@ -688,23 +722,25 @@ class StudyVisualizer:
                 f"λ={r.lambda_value:.3f}  bm25w={r.bm25_weight:.1f}  {r.memory_type[:4]}"
             )
 
-        metrics      = ["recall_at_k", "precision_at_k", "mrr", "ndcg"]
-        metric_labels = ["Recall@K", "Precision@K", "MRR", "NDCG"]
-        composite     = [r.composite_score() for r in ranked]
+        # Composite score weights (must match scheduler.py COMPOSITE_WEIGHTS)
+        _W = {"recall": 0.40, "precision": 0.25, "mrr": 0.20, "temporal": 0.15}
+        composite = [r.composite_score() for r in ranked]
 
-        fig, axes = plt.subplots(1, 2, figsize=(17, 7))
+        fig, axes = plt.subplots(1, 3, figsize=(24, 7))
         fig.suptitle("Top-15 Configurations — Leaderboard",
                      fontsize=_TITLE_SIZE + 1, fontweight="bold")
 
-        # ── Left: horizontal composite score bars ────────────────────────────
         y = np.arange(len(ranked))
+
+        # ── Panel 1: Composite score horizontal bars ──────────────────────────
         axes[0].barh(y, composite,
                      color=[_PALETTE[i % len(_PALETTE)] for i in range(len(ranked))],
                      alpha=0.88, height=0.72)
         axes[0].set_yticks(y)
         axes[0].set_yticklabels(labels, fontsize=_ANNOT_SIZE - 1)
         axes[0].invert_yaxis()
-        axes[0].set_xlabel("Composite Score", fontsize=_LABEL_SIZE)
+        axes[0].set_xlabel("Composite Score  (0.40×R + 0.25×P + 0.20×MRR + 0.15×T)",
+                            fontsize=_LABEL_SIZE - 1)
         axes[0].set_xlim(0, 1.05)
         axes[0].spines["top"].set_visible(False)
         axes[0].spines["right"].set_visible(False)
@@ -715,28 +751,131 @@ class StudyVisualizer:
             axes[0].text(score + 0.008, xi, f"{score:.3f}",
                          va="center", fontsize=_ANNOT_SIZE, fontweight="bold")
 
-        # ── Right: full metric table as grouped horizontal bars ───────────────
-        w = 0.18
-        for mi, (metric, mlabel) in enumerate(zip(metrics, metric_labels)):
-            vals = [getattr(r, metric) for r in ranked]
-            offset = (mi - 1.5) * w
-            axes[1].barh(y + offset, vals, w * 0.88,
-                         label=mlabel, color=_PALETTE[mi], alpha=0.85)
-
+        # ── Panel 2: Composite score breakdown — stacked horizontal bars ──────
+        # Shows the 4 weighted components so you can see WHICH metric drives the score.
+        components = [
+            ("recall_at_k",       _W["recall"],    "Recall×0.40",    _PALETTE[0]),
+            ("precision_at_k",    _W["precision"], "Precision×0.25", _PALETTE[1]),
+            ("mrr",               _W["mrr"],       "MRR×0.20",       _PALETTE[2]),
+            ("temporal_accuracy", _W["temporal"],  "Temporal×0.15",  _PALETTE[4]),
+        ]
+        lefts = np.zeros(len(ranked))
+        for field, weight, clabel, colour in components:
+            widths = np.array([getattr(r, field) * weight for r in ranked])
+            axes[1].barh(y, widths, left=lefts, height=0.72,
+                         label=clabel, color=colour, alpha=0.88)
+            lefts += widths
         axes[1].set_yticks(y)
-        axes[1].set_yticklabels(labels, fontsize=_ANNOT_SIZE - 1)
+        axes[1].set_yticklabels([""] * len(ranked))  # y-labels on panel 1 already
         axes[1].invert_yaxis()
-        axes[1].set_xlabel("Score", fontsize=_LABEL_SIZE)
+        axes[1].set_xlabel("Weighted Component Value", fontsize=_LABEL_SIZE)
         axes[1].set_xlim(0, 1.05)
         axes[1].legend(fontsize=_LEGEND_SIZE, loc="lower right", framealpha=0.9)
         axes[1].spines["top"].set_visible(False)
         axes[1].spines["right"].set_visible(False)
         axes[1].xaxis.grid(True, linestyle="--", linewidth=0.5, alpha=0.6)
         axes[1].set_axisbelow(True)
-        axes[1].set_title("Recall / Precision / MRR / NDCG", fontsize=_TITLE_SIZE, fontweight="bold")
+        axes[1].set_title("Composite Breakdown — Weighted Components",
+                          fontsize=_TITLE_SIZE, fontweight="bold")
+
+        # ── Panel 3: Latency P50 / P90 / P99 per configuration ───────────────
+        # Tail latency (P99) reveals configurations that look good on recall but are slow.
+        lat_fields = [
+            ("latency_p50_ms", "P50", _PALETTE[3]),
+            ("latency_p90_ms", "P90", _PALETTE[5]),
+            ("latency_p99_ms", "P99", _PALETTE[7]),
+        ]
+        w_lat = 0.22
+        for pi, (field, plabel, colour) in enumerate(lat_fields):
+            vals = np.array([getattr(r, field, 0.0) for r in ranked])
+            axes[2].barh(y + (pi - 1) * w_lat, vals, w_lat * 0.88,
+                         label=plabel, color=colour, alpha=0.88)
+        axes[2].set_yticks(y)
+        axes[2].set_yticklabels([""] * len(ranked))
+        axes[2].invert_yaxis()
+        axes[2].set_xlabel("Latency (ms)", fontsize=_LABEL_SIZE)
+        axes[2].legend(title="Percentile", fontsize=_LEGEND_SIZE, framealpha=0.9)
+        axes[2].spines["top"].set_visible(False)
+        axes[2].spines["right"].set_visible(False)
+        axes[2].xaxis.grid(True, linestyle="--", linewidth=0.5, alpha=0.6)
+        axes[2].set_axisbelow(True)
+        axes[2].set_title("Query Latency — P50 / P90 / P99",
+                          fontsize=_TITLE_SIZE, fontweight="bold")
 
         plt.tight_layout()
         path = str(self._out / "phase7_leaderboard.png")
+        fig.savefig(path, dpi=_DPI, bbox_inches="tight")
+        plt.close(fig)
+        return path
+
+    # ─── Composite Score Breakdown & Latency Sensitivity ─────────────────────
+
+    def _plot_composite_breakdown(self, plt, np) -> str:
+        """Two-panel chart showing composite score variation across all configurations.
+
+        Panel 1 — Scatter: composite score vs Recall@K for every cell.
+          Each point is coloured by strategy. Shows how recall drives composite
+          and which non-recall components lift or drag specific configs.
+
+        Panel 2 — Latency P50/P90/P99 per strategy.
+          Shows typical and tail latency so a config isn't chosen for recall
+          alone without seeing its 99th-percentile cost.
+        """
+        if not self._results:
+            return ""
+
+        fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+        fig.suptitle(
+            "Composite Score Analysis — Variation, Recall Driver, Latency Tail",
+            fontsize=_TITLE_SIZE + 1, fontweight="bold",
+        )
+
+        # ── Panel 1: Composite vs Recall@K scatter (coloured by strategy) ────
+        strategies = sorted({r.retrieval_strategy for r in self._results})
+        for i, strat in enumerate(strategies):
+            pts = [(r.recall_at_k, r.composite_score()) for r in self._results
+                   if r.retrieval_strategy == strat]
+            if pts:
+                xs, ys = zip(*pts)
+                axes[0].scatter(xs, ys, label=strat, color=_PALETTE[i % len(_PALETTE)],
+                                s=28, alpha=0.75, edgecolors="none")
+
+        # Reference line: composite ≈ recall (if precision=MRR=temporal ≈ recall)
+        axes[0].plot([0, 1], [0, 1], "--", color="grey", linewidth=1, alpha=0.5,
+                     label="composite = recall")
+        axes[0].set_xlim(0, 1.0)
+        axes[0].set_ylim(0, 1.0)
+        axes[0].legend(title="Strategy", fontsize=_LEGEND_SIZE, framealpha=0.9,
+                       loc="upper left")
+        _style_ax(axes[0],
+                  "Composite Score vs Recall@K (each point = one cell)",
+                  "Recall@K", "Composite Score")
+
+        # ── Panel 2: Latency P50 / P90 / P99 grouped bars per strategy ───────
+        lat_percs = [
+            ("latency_p50_ms", "P50", _PALETTE[0]),
+            ("latency_p90_ms", "P90", _PALETTE[1]),
+            ("latency_p99_ms", "P99", _PALETTE[3]),
+        ]
+        x = np.arange(len(strategies))
+        w = 0.24
+        for pi, (field, plabel, colour) in enumerate(lat_percs):
+            vals = [
+                _mean_std([getattr(r, field, 0.0) for r in self._results
+                           if r.retrieval_strategy == strat])[0]
+                for strat in strategies
+            ]
+            axes[1].bar(x + (pi - 1) * w, vals, w * 0.88,
+                        label=plabel, color=colour, alpha=0.88)
+        axes[1].set_xticks(x)
+        axes[1].set_xticklabels(strategies, rotation=20, ha="right", fontsize=_TICK_SIZE)
+        axes[1].legend(title="Percentile", fontsize=_LEGEND_SIZE, framealpha=0.9)
+        _style_ax(axes[1],
+                  "Query Latency P50 / P90 / P99 by Strategy",
+                  "Strategy", "Latency (ms)")
+
+        plt.tight_layout()
+        path = str(self._out / "composite_breakdown.png")
         fig.savefig(path, dpi=_DPI, bbox_inches="tight")
         plt.close(fig)
         return path
@@ -746,17 +885,17 @@ class StudyVisualizer:
     def _plot_full_report(self, plt, gridspec, np) -> str:
         fig = plt.figure(figsize=(22, 26))
         fig.suptitle(
-            "Agentic Memory Benchmark — Comprehensive Study Report",
+            "MemTuner — Comprehensive Study Report",
             fontsize=16, fontweight="bold", y=0.995
         )
         fig.text(
             0.5, 0.988,
-            "BM25 Baseline  ·  Embedding Models  ·  Hybrid Weights  ·  "
-            "Rerankers  ·  Decay Sweep  ·  Leaderboard",
+            "BM25 Baseline  ·  Embedding Models  ·  Hybrid Weights + Composite  ·  "
+            "Rerankers P50/P90/P99  ·  Decay Sweep  ·  Composite Breakdown  ·  Leaderboard",
             ha="center", fontsize=10, style="italic",
         )
 
-        gs = gridspec.GridSpec(4, 2, figure=fig, hspace=0.52, wspace=0.38)
+        gs = gridspec.GridSpec(4, 2, figure=fig, hspace=0.55, wspace=0.40)
 
         self._render_bm25_panel(        fig.add_subplot(gs[0, 0]), plt, np)
         self._render_embedding_panel(   fig.add_subplot(gs[0, 1]), plt, np)
@@ -934,12 +1073,18 @@ class StudyVisualizer:
         _style_ax(ax, "Recall@K by Strategy — Per Dataset", "Dataset", "Recall@K", ylim=(0, 1.0))
 
     def _render_leaderboard_panel(self, ax, plt, np):
+        """Leaderboard in the composite full-report panel.
+
+        Splits the provided axes area into two side-by-side sub-plots:
+        left = composite score bars, right = stacked component breakdown.
+        Uses the figure's transAxes to create a divider line between them.
+        """
         if not self._results:
             ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
             _style_ax(ax, "Leaderboard")
             return
 
-        ranked = sorted(self._results, key=lambda r: r.composite_score(), reverse=True)[:12]
+        ranked = sorted(self._results, key=lambda r: r.composite_score(), reverse=True)[:10]
         labels = [
             f"{r.retrieval_strategy[:8]}|{(r.embedding_model or '—').split('/')[-1][:10]}|"
             f"λ={r.lambda_value:.3f}|{r.memory_type[:4]}"
@@ -947,6 +1092,8 @@ class StudyVisualizer:
         ]
         composite = [r.composite_score() for r in ranked]
         y = np.arange(len(ranked))
+
+        # ── Left half: composite score bars with P50 latency twin axis ───────
         ax.barh(y, composite,
                 color=[_PALETTE[i % len(_PALETTE)] for i in range(len(ranked))],
                 alpha=0.88, height=0.65)
@@ -959,11 +1106,15 @@ class StudyVisualizer:
         ax.set_axisbelow(True)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.set_title("Leaderboard — Top-12 Configurations by Composite Score",
+        ax.set_title("Leaderboard — Top-10  (composite = 0.40R + 0.25P + 0.20MRR + 0.15T)",
                      fontsize=_TITLE_SIZE, fontweight="bold")
-        for xi, score in zip(y, composite):
-            ax.text(score + 0.008, xi, f"{score:.3f}", va="center",
-                    fontsize=_ANNOT_SIZE, fontweight="bold")
+
+        # Score annotation + P50 latency in brackets
+        for xi, (score, r) in enumerate(zip(composite, ranked)):
+            lat = getattr(r, "latency_p50_ms", 0.0)
+            ax.text(score + 0.008, xi,
+                    f"{score:.3f}  [{lat:.0f}ms P50]",
+                    va="center", fontsize=_ANNOT_SIZE, fontweight="bold")
 
 
 # ─── Global style ─────────────────────────────────────────────────────────────

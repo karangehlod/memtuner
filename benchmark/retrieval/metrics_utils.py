@@ -406,12 +406,28 @@ def compute_metric_summary(
             # No relevance information, estimate all results as relevant
             relevant = {r["doc_id"] for r in results[:10]}
 
-        # Compute metrics
-        recalls_1.append(compute_recall_at_k(results, relevant, k=1))
-        recalls_5.append(compute_recall_at_k(results, relevant, k=5))
-        recalls_10.append(compute_recall_at_k(results, relevant, k=10))
-        recalls_100.append(compute_recall_at_k(results, relevant, k=100))
-        precisions_10.append(compute_precision_at_k(results, relevant, k=10))
+        # Compute recall@{1,5,10,100} and precision@10 in one pass over the top-100 list.
+        # Single pass eliminates 5 separate set constructions per query (9885 → 1977 per cell).
+        ids_100 = [r["doc_id"] for r in results[:100]]
+        gold_set = relevant if isinstance(relevant, set) else set(relevant)
+        seen: set[str] = set()
+        r1 = r5 = r10 = r100 = 0
+        denom = len(gold_set) or 1
+        for rank_i, doc_id in enumerate(ids_100, 1):
+            if doc_id not in seen and doc_id in gold_set:
+                seen.add(doc_id)
+                r100 += 1
+                if rank_i <= 10:
+                    r10 += 1
+                if rank_i <= 5:
+                    r5 += 1
+                if rank_i == 1:
+                    r1 = 1
+        recalls_1.append(r1 / denom)
+        recalls_5.append(r5 / denom)
+        recalls_10.append(r10 / denom)
+        recalls_100.append(r100 / denom)
+        precisions_10.append(r10 / 10)  # reuse r10 — no extra set needed
         mrrs.append(compute_mrr(results, relevant))
         ndcgs.append(compute_ndcg(results, relevant, k=10))
 

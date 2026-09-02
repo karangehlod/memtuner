@@ -10,6 +10,7 @@ Aggregates MatrixRunResults into:
 from __future__ import annotations
 
 import csv
+import heapq
 import json
 import statistics
 from collections import defaultdict
@@ -186,9 +187,9 @@ class MatrixAggregator:
         return rows
 
     def top_n(self, n: int = 10) -> list[dict]:
-        """Top N cells by composite score."""
-        ranked = sorted(self._successful, key=lambda r: r.composite_score(), reverse=True)
-        return [r.to_dict() for r in ranked[:n]]
+        """Top N cells by composite score — O(N log n) heap instead of O(N log N) sort."""
+        top = heapq.nlargest(n, self._successful, key=lambda r: r.composite_score())
+        return [r.to_dict() for r in top]
 
     def build_grid_table(self) -> list[dict]:
         """Build a flat table of all cells suitable for CSV export.
@@ -196,10 +197,16 @@ class MatrixAggregator:
         Column order is intentional: configuration dimensions first, then
         metrics. Every row fully describes its configuration — no dimension
         is implicit or recoverable only from context.
+
+        For large runs (10K+ cells), use iter_grid_rows() to stream rows
+        directly to a writer without materializing the full list.
         """
+        return list(self.iter_grid_rows())
+
+    def iter_grid_rows(self):
+        """Generator version of build_grid_table() — O(1) peak memory regardless of N cells."""
         import os as _os
         top_k = int(_os.environ.get("BENCHMARK_RECALL_K", "10"))
-        rows = []
         for r in self._results:
             row = {
                 # ── Configuration dimensions (fully self-describing) ───────
@@ -248,8 +255,7 @@ class MatrixAggregator:
                 "error": r.error_message[:100] if r.error_message else "",
                 "platform": r.platform,
             }
-            rows.append(row)
-        return rows
+            yield row
 
     def summary(self) -> dict:
         """High-level summary of the full matrix run."""
@@ -394,28 +400,53 @@ class MatrixReporter:
         if not successful:
             return []
 
-        scores = [r.composite_score() for r in successful]
-        if len(scores) < 2:
+        # Single Welford pass: composite mean/variance + recall/temporal min/max
+        # in one loop instead of 4 separate list comprehensions + min/max scans.
+        n = 0
+        _mean = 0.0
+        _m2 = 0.0
+        _score_min = float("inf")
+        _score_max = float("-inf")
+        _recall_min = float("inf")
+        _recall_max = float("-inf")
+        _temporal_min = float("inf")
+        _temporal_max = float("-inf")
+        for r in successful:
+            s = r.composite_score()
+            n += 1
+            delta = s - _mean
+            _mean += delta / n
+            _m2 += delta * (s - _mean)
+            if s < _score_min:
+                _score_min = s
+            if s > _score_max:
+                _score_max = s
+            rec = r.recall_at_k
+            if rec < _recall_min:
+                _recall_min = rec
+            if rec > _recall_max:
+                _recall_max = rec
+            tmp = r.temporal_accuracy
+            if tmp < _temporal_min:
+                _temporal_min = tmp
+            if tmp > _temporal_max:
+                _temporal_max = tmp
+
+        if n < 2:
             return []
 
-        mean = sum(scores) / len(scores)
-        variance = sum((s - mean) ** 2 for s in scores) / len(scores)
-        std_dev = variance**0.5
-        score_range = max(scores) - min(scores)
+        mean = _mean
+        std_dev = (_m2 / n) ** 0.5
+        score_range = _score_max - _score_min
+        recall_range = _recall_max - _recall_min
+        temporal_range = _temporal_max - _temporal_min
 
         lines = ["", "VARIANCE DIAGNOSTICS"]
         lines.append(f"  Composite score mean:    {mean:.4f}")
         lines.append(f"  Composite score std dev: {std_dev:.4f}")
         lines.append(f"  Composite score range:   {score_range:.4f} (max - min)")
-
-        # Recall variance
-        recalls = [r.recall_at_k for r in successful]
-        recall_range = max(recalls) - min(recalls)
         lines.append(f"  Recall@K range:          {recall_range:.4f}")
 
-        # Temporal variance
-        temporals = [r.temporal_accuracy for r in successful]
-        temporal_range = max(temporals) - min(temporals)
         lines.append(f"  Temporal accuracy range: {temporal_range:.4f}")
 
         # Warnings

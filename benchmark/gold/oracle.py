@@ -149,7 +149,12 @@ class GoldOracle:
         return list(self._day_index.get(scenario_name, {}).get(day, []))
 
     def _build_indices(self, dataset: GoldDataset) -> None:
-        """Build O(1) lookup indices for a loaded dataset."""
+        """Build O(1) lookup indices for a loaded dataset.
+
+        Replaces O(N) linear scan in get_expected_result() and get_queries_for_day()
+        with O(1) dict lookups keyed on (day, query_text) and day respectively.
+        """
+        import logging as _logging
         q_idx: dict[tuple[int, str], GoldExpectedResult] = {}
         d_idx: dict[int, list[GoldQuery]] = defaultdict(list)
         for q in dataset.queries:
@@ -157,6 +162,10 @@ class GoldOracle:
             d_idx[q.day].append(q)
         self._query_index[dataset.scenario] = q_idx
         self._day_index[dataset.scenario] = dict(d_idx)
+        _logging.getLogger(__name__).debug(
+            "[ORACLE] Built query index for '%s': %d queries across %d days",
+            dataset.scenario, len(q_idx), len(d_idx),
+        )
 
     def list_loaded_scenarios(self) -> list[str]:
         """List all loaded scenario names.

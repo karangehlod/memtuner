@@ -111,8 +111,10 @@ def normalize_timestamps(
     if not dataset.events or not dataset.queries:
         return dataset, _meta_not_applied("empty dataset")
 
-    max_event_day: int = max(de.day for de in dataset.events)
-    min_event_day: int = min(de.day for de in dataset.events)
+    # Materialize once — three separate generator scans over the same list is 3× work.
+    event_days = [de.day for de in dataset.events]
+    max_event_day: int = max(event_days)
+    min_event_day: int = min(event_days)
     min_query_day: int = min(q.day for q in dataset.queries)
 
     current_gap: int = min_query_day - max_event_day

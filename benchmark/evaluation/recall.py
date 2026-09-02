@@ -1,4 +1,4 @@
-"""Recall@K evaluator for the Agenticmemory benchmark pipeline.
+"""Recall@K evaluator for the MemTuner benchmark pipeline.
 
 Recall@K = |retrieved[:K] ∩ gold| / |gold|
 

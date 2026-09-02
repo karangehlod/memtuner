@@ -94,10 +94,21 @@ class LeakageChecker:
         self.total_memories = len(memory_contents)
         self.leaked_queries = []
 
-        # Rebuild index only when corpus has changed
+        # Rebuild index only when corpus has changed; reuse cached index otherwise.
         current_ids = frozenset(memory_contents.keys())
         if self._ngram_index is None or current_ids != self._indexed_memory_ids:
+            import logging as _logging
+            _logging.getLogger(__name__).debug(
+                "[LEAKAGE] %s ngram index for %d memories",
+                "Building" if self._ngram_index is None else "Rebuilding (corpus changed)",
+                len(memory_contents),
+            )
             self.build_index(memory_contents)
+        else:
+            import logging as _logging
+            _logging.getLogger(__name__).debug(
+                "[LEAKAGE] Reusing cached ngram index (%d memories)", len(memory_contents)
+            )
         ngram_to_memory = self._ngram_index  # type: ignore[assignment]
 
         # For each query, probe the ngram set with a sliding window.

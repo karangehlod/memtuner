@@ -13,6 +13,8 @@ from __future__ import annotations
 import hashlib
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from benchmark.memory.interfaces.retrieval_strategy import RetrievalStrategy
 
 if TYPE_CHECKING:
@@ -44,6 +46,8 @@ class BM25LStrategy(RetrievalStrategy):
         self._bm25: _BM25L | None = None
         self._id_list: list[str] = []
         self._user_index: dict[str, set] = {}
+        # Boolean mask cache: same pattern as BM25Strategy — built once per (user_id, corpus).
+        self._user_mask_cache: dict[str, np.ndarray] = {}
 
     def index(self, memories: list[MemoryEvent]) -> None:
         self._memories = {m.id: m for m in memories}
@@ -60,6 +64,7 @@ class BM25LStrategy(RetrievalStrategy):
 
         if _key in _CACHE:
             self._bm25, self._id_list, self._user_index = _CACHE[_key]
+            self._user_mask_cache = {}  # invalidate mask cache on corpus change
             return
 
         self._id_list = [m.id for m in memories]
@@ -84,6 +89,7 @@ class BM25LStrategy(RetrievalStrategy):
         self._bm25 = None
         self._id_list = []
         self._user_index = {}
+        self._user_mask_cache = {}
 
     def retrieve(
         self,
@@ -97,21 +103,31 @@ class BM25LStrategy(RetrievalStrategy):
         tokens = query.lower().split()
         scores = self._bm25.get_scores(tokens)
 
-        if user_id:
-            allowed = (
-                self._user_index.get(user_id, set())
-                | self._user_index.get("__none__", set())
-            )
-            scored = [
-                (self._id_list[i], float(scores[i]))
-                for i in allowed
-                if i < len(scores)
-            ]
-        else:
-            scored = [
-                (self._id_list[i], float(scores[i]))
-                for i in range(len(self._id_list))
-            ]
+        scores_arr = np.array(scores, dtype=np.float32)
 
-        scored.sort(key=lambda x: x[1], reverse=True)
-        return scored[:top_k]
+        # Apply user filter via cached boolean mask — built once per (user_id, corpus).
+        if user_id:
+            if user_id not in self._user_mask_cache:
+                valid = (
+                    self._user_index.get(user_id, set())
+                    | self._user_index.get("__none__", set())
+                )
+                mask = np.zeros(len(self._id_list), dtype=bool)
+                for idx in valid:
+                    if idx < len(mask):
+                        mask[idx] = True
+                self._user_mask_cache[user_id] = mask
+            scores_arr[~self._user_mask_cache[user_id]] = 0.0
+
+        # heapq.nlargest is O(N log K) vs O(N log N) for a full sort; K is typically 5-10.
+        if top_k < len(scores_arr):
+            top_indices = np.argpartition(scores_arr, -top_k)[-top_k:]
+            top_indices = top_indices[np.argsort(scores_arr[top_indices])[::-1]]
+        else:
+            top_indices = np.argsort(scores_arr)[::-1]
+
+        return [
+            (self._id_list[idx], float(scores_arr[idx]))
+            for idx in top_indices
+            if scores_arr[idx] > 0
+        ][:top_k]

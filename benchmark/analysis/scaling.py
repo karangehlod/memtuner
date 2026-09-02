@@ -116,8 +116,16 @@ def run_scaling_test(
             precisions.append(precision)
 
         latencies.sort()
-        p50 = latencies[len(latencies) // 2] if latencies else 0
-        p99 = latencies[int(len(latencies) * 0.99)] if latencies else 0
+        # Nearest-rank percentile: ceil(p/100 * N) - 1 (0-indexed).
+        # Matches the formula used in _build_scenario_metrics; floor-division
+        # underestimates tail latency (e.g. N=100 → p99 index 98 vs correct 99).
+        if latencies:
+            n_lat = len(latencies)
+            import math as _math
+            p50 = latencies[min(n_lat - 1, _math.ceil(0.50 * n_lat) - 1)]
+            p99 = latencies[min(n_lat - 1, _math.ceil(0.99 * n_lat) - 1)]
+        else:
+            p50 = p99 = 0
 
         results.append(
             ScalingPoint(

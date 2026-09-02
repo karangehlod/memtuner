@@ -231,13 +231,24 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
         if has_gpu:
             _ok("Phase 2 — Embedding model sweep", "GPU accelerated")
             _ok("Phase 3 — Hybrid weight sweep",   "GPU accelerated")
-            _ok("Phase 4 — Reranker comparison",   "GPU accelerated")
+            _ok("Phase 4 — Decay × lambda sweep",  "GPU accelerated")
+            # Phase 5 (CrossEncoder reranker) only runs on CUDA — MPS/CPU hang
+            if CUDA_AVAILABLE:
+                phases_available.append(5)
+                _ok("Phase 5 — Reranker comparison", "CUDA required — CrossEncoder runs on NVIDIA GPU")
+            else:
+                _warn(
+                    "Phase 5 — Reranker comparison",
+                    "CUDA required — CrossEncoder predict() hangs on MPS/CPU. "
+                    "Only 'none' baseline will run. Use a machine with an NVIDIA GPU for full reranker results."
+                )
         else:
-            _warn("Phase 2–4 — Embedding/reranker", "CPU only — ~10× slower, expect long runtimes")
+            _warn("Phase 2–4 — Embedding/decay", "CPU only — ~10× slower, expect long runtimes")
+            _warn("Phase 5 — Reranker", "CUDA required — skipped on CPU")
 
-    if has_bm25:
-        phases_available.append(5)
-        _ok("Phase 5 — Decay sweep", "CPU + BM25 (no GPU needed for this phase)")
+    if has_bm25 and 5 not in phases_available:
+        # Decay sweep (Phase 4) runs without GPU; already added above if has_st
+        pass
 
     if not has_bm25:
         _warn("Phase 1 skipped — rank-bm25 not installed")

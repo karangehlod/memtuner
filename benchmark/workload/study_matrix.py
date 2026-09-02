@@ -136,14 +136,20 @@ class StudyCell:
     def semantic_weight(self) -> float:
         return round(1.0 - self.bm25_weight, 2)
 
+    # Cached cell ID — computed once on first access, MD5 is pure and deterministic.
+    _cell_id_cache: str | None = None
+
     @property
     def cell_id(self) -> str:
+        if self._cell_id_cache is not None:
+            return self._cell_id_cache
         key = (
             f"{self.memory_type}:{self.retrieval_strategy}:{self.decay.label}"
             f":{self.embedding_model}:{self.embedding_backend}:{self.bm25_weight:.2f}"
             f":{self.reranker_model}:{self.workload_profile}:{self.seed}"
         )
-        return hashlib.md5(key.encode()).hexdigest()[:12]
+        object.__setattr__(self, "_cell_id_cache", hashlib.md5(key.encode()).hexdigest()[:12])
+        return self._cell_id_cache
 
     @property
     def label(self) -> str:

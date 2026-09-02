@@ -52,9 +52,7 @@ class MetricAggregator:
         """
         grouped: dict[str, list[EvaluationResult]] = {}
         for result in results:
-            if result.metric_name not in grouped:
-                grouped[result.metric_name] = []
-            grouped[result.metric_name].append(result)
+            grouped.setdefault(result.metric_name, []).append(result)
         return grouped
 
     def _weighted_average(self, results: list[EvaluationResult]) -> float:

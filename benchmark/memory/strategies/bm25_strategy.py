@@ -61,7 +61,12 @@ class BM25Strategy(RetrievalStrategy):
         _cache_key = f"bm25:{_corpus_hash}"
 
         if _cache_key in _BM25_CORPUS_CACHE:
+            import logging as _logging
+            _logging.getLogger(__name__).debug(
+                "[BM25_CACHE] Hit — skipping tokenisation of %d memories (hash=%s)", len(memories), _corpus_hash
+            )
             self._bm25, self._id_list, self._user_index = _BM25_CORPUS_CACHE[_cache_key]
+            self._user_mask_cache = {}
             return
 
         self._id_list = [mem.id for mem in memories]

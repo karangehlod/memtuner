@@ -89,6 +89,62 @@ class StudyAggregator(MatrixAggregator):
                     continue
         return cls(results)
 
+    # ─── Strategy axis (override to exclude Phase 4 decay cells) ────────────
+
+    def rank_by_retrieval_strategy(self) -> list[dict]:
+        """Rank strategies by recall, excluding Phase 4 decay-sweep cells.
+
+        Phase 4 uses the winning hybrid strategy across many sub-optimal
+        (λ, decay-policy) combinations. Including those cells in the strategy
+        ranking would unfairly penalise hybrid by averaging in high-decay
+        variants — the same contamination bug as rank_by_bm25_weight().
+
+        Strategy quality should be judged from Phase 1 and Phase 2 cells,
+        which measure each strategy at default decay with equal footing.
+        """
+        _decay_phase_tags = {
+            "phase4_decay_broad", "phase4_decay_fine", "phase4_decay_sweep",
+            "phase4b_archival_floor",
+        }
+        strategy_cells = [
+            r for r in self._study_results
+            if getattr(r, "study_phase", "general") not in _decay_phase_tags
+        ]
+        if not strategy_cells:
+            # Fallback: if all cells are decay-phase (shouldn't happen) use all
+            return super().rank_by_retrieval_strategy()
+        # Temporarily swap _successful so the parent method sees only strategy cells.
+        # try/finally guarantees restoration even if super() raises (e.g. empty group).
+        original = self._successful
+        try:
+            self._successful = [r for r in strategy_cells if r.success]
+            return super().rank_by_retrieval_strategy()
+        finally:
+            self._successful = original
+
+    # ─── Per-memory-type breakdown ───────────────────────────────────────────
+
+    def rank_by_memory_type(self) -> list[dict]:
+        """Rank memory types by recall, excluding Phase 4 decay-sweep cells.
+
+        Same contamination concern as rank_by_retrieval_strategy — Phase 4
+        cells vary decay policy, not memory type.
+        """
+        _decay_phase_tags = {
+            "phase4_decay_broad", "phase4_decay_fine", "phase4_decay_sweep",
+            "phase4b_archival_floor",
+        }
+        strategy_cells = [
+            r for r in self._study_results
+            if getattr(r, "study_phase", "general") not in _decay_phase_tags
+        ]
+        original = self._successful
+        try:
+            self._successful = [r for r in strategy_cells if r.success] if strategy_cells else original
+            return super().rank_by_memory_type()
+        finally:
+            self._successful = original
+
     # ─── Embedding model axis ────────────────────────────────────────────────
 
     def rank_by_embedding_model(self) -> list[dict]:
@@ -196,7 +252,19 @@ class StudyAggregator(MatrixAggregator):
               avg_noise       (float) — macro-avg contamination_rate
               runs            (int)   — number of hybrid benchmark cells
         """
-        hybrid = [r for r in self._study_results if r.retrieval_strategy == "hybrid"]
+        # Only Phase 3 cells measure the BM25 weight tradeoff in isolation.
+        # Phase 4 (decay sweep) also uses hybrid at bm25_weight=0.35 (the Phase 3 winner),
+        # but those cells vary decay policy — averaging them into the weight ranking
+        # would corrupt the recommendation by pulling the winner's recall down.
+        phase3_tags = {"phase3_hybrid_broad", "phase3_hybrid_fine", "phase3_hybrid_weight"}
+        hybrid = [
+            r for r in self._study_results
+            if r.retrieval_strategy == "hybrid"
+            and getattr(r, "study_phase", "general") in phase3_tags
+        ]
+        if not hybrid:
+            # Fallback: include all hybrid cells when no Phase 3 label is present
+            hybrid = [r for r in self._study_results if r.retrieval_strategy == "hybrid"]
         if not hybrid:
             return []
 
@@ -392,14 +460,19 @@ class StudyAggregator(MatrixAggregator):
         out = []
         for i, (group, stats) in enumerate(rows):
             sig = False
-            if i + 1 < len(rows):
+            n = stats.get("n", 0)
+            # Non-overlapping CIs are only meaningful with enough observations.
+            # N < 10 gives CIs that span most of [0, 1] — flag them instead of
+            # marking significance (which would be a false positive).
+            if i + 1 < len(rows) and n >= 10:
                 _, next_stats = rows[i + 1]
-                # Non-overlapping CIs: our ci_low > next ci_high
-                sig = stats["ci_low"] > next_stats["ci_high"]
+                if next_stats.get("n", 0) >= 10:
+                    sig = stats["ci_low"] > next_stats["ci_high"]
             out.append({
                 "group": group,
                 **stats,
                 "sig_vs_next": sig,
+                "ci_reliable": n >= 10,  # callers can display a warning when False
             })
         return out
 

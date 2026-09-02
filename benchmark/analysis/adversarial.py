@@ -183,14 +183,11 @@ def run_adversarial_test(store, scenarios: list[ContradictionScenario]) -> dict:
         response = store.read(query)
         retrieved_ids = [m.memory_id for m in response.retrieved_memories]
 
-        # Check: is the NEW memory ranked above the OLD one?
-        new_rank = (
-            retrieved_ids.index(scenario.expected_id)
-            if scenario.expected_id in retrieved_ids
-            else -1
-        )
+        # Build a rank dict once — O(K) — instead of two O(K) list.index() scans.
+        rank_of = {mid: rank for rank, mid in enumerate(retrieved_ids)}
+        new_rank = rank_of.get(scenario.expected_id, -1)
         old_id = scenario.old_memory.id
-        old_rank = retrieved_ids.index(old_id) if old_id in retrieved_ids else -1
+        old_rank = rank_of.get(old_id, -1)
 
         is_correct = new_rank != -1 and (old_rank == -1 or new_rank < old_rank)
         if is_correct:

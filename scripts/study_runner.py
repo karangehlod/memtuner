@@ -34,7 +34,6 @@ Outputs (inside --output-dir):
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 import time
@@ -53,12 +52,12 @@ if _PROJECT_ROOT not in sys.path:
 # but not the pyc mtime, so Python may silently run old bytecode that doesn't
 # reflect recent source changes (e.g. EMBEDDING_MODELS_OLLAMA = []).
 def _purge_pycache(root: str) -> None:
-    import glob, os as _os
+    import contextlib
+    import glob
+    import os as _os
     for pyc in glob.glob(f"{root}/**/__pycache__/*.pyc", recursive=True):
-        try:
+        with contextlib.suppress(OSError):
             _os.remove(pyc)
-        except OSError:
-            pass
 
 _purge_pycache(str(Path(_PROJECT_ROOT) / "benchmark"))
 
@@ -73,6 +72,24 @@ os.environ.setdefault("OMP_NUM_THREADS", _thread_cap)
 os.environ.setdefault("MKL_NUM_THREADS", _thread_cap)
 os.environ.setdefault("OPENBLAS_NUM_THREADS", _thread_cap)
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")  # disables HF tokenizer fork warning + excess threads
+
+# ── HuggingFace Hub offline-mode noise suppression ────────────────────────────
+# sentence-transformers makes HEAD requests for adapter_config.json,
+# processor_config.json, etc. on huggingface.co AFTER loading from cache,
+# even when no internet is available.  Each check retries 5× with backoff,
+# adding 60-120s of red noise per model with no functional effect.
+#
+# Strategy: suppress the retry warnings at the logging level (preserves
+# downloads for first-time users) while keeping actual errors visible.
+# If HF_TOKEN is set the user explicitly wants hub access — don't suppress.
+if not os.environ.get("HF_TOKEN"):
+    import logging as _logging
+    _logging.getLogger("huggingface_hub.utils._http").setLevel(_logging.ERROR)
+    _logging.getLogger("huggingface_hub.file_download").setLevel(_logging.ERROR)
+    _logging.getLogger("filelock").setLevel(_logging.ERROR)
+    # Tell sentence-transformers to skip optional-file probes when offline.
+    # This does NOT block downloads — only suppresses "not found" retries.
+    os.environ.setdefault("HF_HUB_VERBOSITY", "error")
 
 
 def main():
@@ -395,9 +412,6 @@ Examples:
         print(f"  Found {len(gold_paths)} dataset(s): {[p.name for p in gold_paths]}\n")
 
     from benchmark.workload.profile import get_profile
-    from benchmark.workload.study_matrix import StudyExpander, DEFAULT_EMBEDDING_MODEL
-    from benchmark.workload.study_scheduler import StudyScheduler
-    from benchmark.workload.study_aggregator import StudyAggregator, StudyReporter
 
     # Resolve phases
     mode_phases = {
@@ -423,7 +437,8 @@ Examples:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Hardware / dependency diagnostics ────────────────────────────────────
-    from benchmark.resources.hw_probe import DEVICE as _HW_DEVICE, GPU_VRAM_MB as _HW_VRAM
+    from benchmark.resources.hw_probe import DEVICE as _HW_DEVICE
+    from benchmark.resources.hw_probe import GPU_VRAM_MB as _HW_VRAM
     try:
         import torch as _t
         _torch_threads = _t.get_num_threads()
@@ -437,7 +452,7 @@ Examples:
     _rank_ok    = _check_import("rank_bm25",             "rank-bm25")
     _httpx_ok   = _check_import("httpx",                 "httpx")
 
-    print(f"\nMemTuner — Comprehensive Study Runner")
+    print("\nMemTuner — Comprehensive Study Runner")
     print(f"{'=' * 60}")
     print(f"  Run ID:         {run_id}")
     print(f"  Mode:           {args.mode}")
@@ -462,13 +477,15 @@ Examples:
 
     # Warn before spending time on cells that will immediately fail
     if 2 in phases and not _st_ok:
-        print(f"  [warn] Phase 2-4 (embedding/reranker) skipped — sentence-transformers not installed.")
-        print(f"         Install: pip install sentence-transformers")
+        print("  [warn] Phase 2-4 (embedding/reranker) skipped — sentence-transformers not installed.")
+        print("         Install: pip install sentence-transformers")
         phases = [p for p in phases if p == 1 or p == 5]
     print()
 
-    # Single-dataset path
-    _run_single_dataset(args, gold_path, phases, project_root)
+    # Single-dataset path — pass the run_id and output_dir generated above so
+    # the banner and the actual output files use the same identifier.
+    _run_single_dataset(args, gold_path, phases, project_root,
+                        run_id=run_id, output_dir=output_dir)
 
 
 def _print_phase_desc(desc: dict):
@@ -496,7 +513,7 @@ def _dataset_label_from_csv(csv_path: Path) -> str:
             for row in reader:
                 # Look for a dataset name in any column
                 for col in ("dataset_name", "dataset", "gold_dataset"):
-                    if col in row and row[col]:
+                    if row.get(col):
                         import re
                         name = row[col].lower()
                         name = re.sub(r".*[/\\]", "", name)
@@ -564,8 +581,8 @@ def _rename_csv_descriptively(csv_path: Path) -> Path:
     from datetime import datetime as _dt
     try:
         import sys as _sys
-        from pathlib import Path as _P
-        _sys.path.insert(0, str(_P(__file__).parent / "scripts"))
+        from pathlib import Path as _PathCls
+        _sys.path.insert(0, str(_PathCls(__file__).parent / "scripts"))
         from config import cfg as _cfg
         _PHASE_SHORT = _cfg.phase_abbreviations
         _DS_NAMES    = {k: v.lower().replace(" ", "_") for k, v in _cfg.datasets.query_count_to_name.items()}
@@ -609,7 +626,7 @@ def _rename_csv_descriptively(csv_path: Path) -> Path:
 def _trigger_report_generation(project_root: str) -> None:
     """Regenerate master CSV, formula doc, and reports_data.js after a run."""
     try:
-        import importlib.util, sys as _sys
+        import importlib.util
         script = Path(project_root) / "scripts" / "generate_reports.py"
         if not script.exists():
             return
@@ -621,7 +638,7 @@ def _trigger_report_generation(project_root: str) -> None:
         print(f"  [warn] Report generation skipped: {_e}")
 
 
-def _write_leaderboards_json(agg, dataset_label: str, run_id: str) -> "Path | None":
+def _write_leaderboards_json(agg, dataset_label: str, run_id: str) -> Path | None:
     """Write benchmark_results/leaderboards.json from study_aggregator output.
 
     This is the canonical output file — always reflects the most recent real run.
@@ -743,9 +760,9 @@ def _write_leaderboards_json(agg, dataset_label: str, run_id: str) -> "Path | No
       recall_ci_high  — 97.5th percentile of the bootstrap distribution
     (These are also referred to as ci_low / ci_high inside significance_table().)
     """
-    from pathlib import Path as _Path
     import json as _json
     from datetime import datetime as _dt
+    from pathlib import Path as _Path
 
     summary = agg.study_summary()
     strat_ranks = agg.rank_by_retrieval_strategy()
@@ -886,10 +903,31 @@ def _print_summary(agg):
     import os as _os
     _k = int(_os.environ.get("BENCHMARK_RECALL_K", "10"))
     print()
-    print(f"  STRATEGY RANKING  (Recall@{_k}):")
-    for i, row in enumerate(agg.rank_by_retrieval_strategy(), 1):
+    print(f"  STRATEGY RANKING  (Recall@{_k}, macro-avg across memory types):")
+    strat_rows = agg.rank_by_retrieval_strategy()
+    for i, row in enumerate(strat_rows, 1):
         print(f"    {i}. {row['retrieval_strategy']:20s}  "
               f"recall@{_k}={row['avg_recall']:.4f}  composite={row['avg_composite']:.4f}")
+
+    # Per-memory-type breakdown — shows why the macro-avg can look low
+    # (e.g. episodic=0.68 + preference=0.08 → macro-avg=0.38)
+    if hasattr(agg, "_study_results") and agg._study_results:
+        mem_types = sorted({getattr(r, "memory_type", "") for r in agg._study_results if r.success and r.memory_type})
+        if len(mem_types) > 1:
+            print(f"  NOTE: mean recall is averaged over {len(mem_types)} memory types: {', '.join(mem_types)}")
+            print(f"        Per-memory-type recall for the top strategy ({strat_rows[0]['retrieval_strategy'] if strat_rows else '—'}):")
+            top_strat = strat_rows[0]["retrieval_strategy"] if strat_rows else None
+            if top_strat:
+                from collections import defaultdict as _dd
+                by_type = _dd(list)
+                _decay_tags = {"phase4_decay_broad","phase4_decay_fine","phase4_decay_sweep","phase4b_archival_floor"}
+                for r in agg._study_results:
+                    if (r.success and r.retrieval_strategy == top_strat
+                            and getattr(r, "study_phase", "general") not in _decay_tags):
+                        by_type[r.memory_type].append(r.recall_at_k)
+                import statistics as _st
+                for mt, vals in sorted(by_type.items()):
+                    print(f"          {mt:<20s}  recall={_st.mean(vals):.4f}  (N={len(vals)})")
 
     print()
     print("  EMBEDDING MODEL RANKING:")
@@ -944,14 +982,19 @@ def _print_summary(agg):
         print(f"    {'Strategy':<22s}  {'Mean':>6s}  {'95% CI':>17s}  {'Std':>6s}  {'N':>4s}  Sig")
         print("    " + "-" * 68)
         sig_table = agg.significance_table(metric="recall_at_k", n_bootstrap=1000)
+        has_unreliable = any(not row.get("ci_reliable", True) for row in sig_table)
         for row in sig_table:
             sig_marker = "★" if row["sig_vs_next"] else " "
+            reliable = row.get("ci_reliable", True)
+            ci_note = "  ⚠ N<10" if not reliable else ""
             print(
                 f"    {row['group']:<22s}  {row['mean']:>6.4f}  "
                 f"[{row['ci_low']:.4f}, {row['ci_high']:.4f}]  "
-                f"{row['std']:>6.4f}  {row['n']:>4d}  {sig_marker}"
+                f"{row['std']:>6.4f}  {row['n']:>4d}  {sig_marker}{ci_note}"
             )
         print("    ★ = CI does not overlap with next-lower group (p < 0.05 approx.)")
+        if has_unreliable:
+            print("    ⚠ = N < 10: bootstrap CI spans most of [0, 1] — not meaningful. Run --seeds for reliable CIs.")
 
 
 def _detect_memory_types(gold_path: Path, requested: list[str]) -> list[str]:
@@ -1032,27 +1075,28 @@ def _ensure_all_datasets(data_dir: Path, project_root: str) -> None:
                 print(f"  ✗ {name}: {e}")
     except Exception as e:
         print(f"  [warn] Auto-download failed: {e}")
-        print(f"  Run manually: python scripts/prepare_datasets.py --download --convert")
+        print("  Run manually: python scripts/prepare_datasets.py --download --convert")
 
 
 def _run_multi_dataset(args, gold_paths: list, phases: list, project_root: str) -> None:
     """Run benchmark on multiple datasets sequentially, then auto-merge into one report."""
-    import glob as _glob
     from datetime import datetime
+
     from benchmark.workload.study_aggregator import StudyAggregator, StudyReporter
 
     t0 = time.monotonic()
     n = len(gold_paths)
     written_csvs: list[Path] = []
 
-    print(f"\nMemTuner — Multi-Dataset Run")
+    print("\nMemTuner — Multi-Dataset Run")
     print(f"{'=' * 60}")
     print(f"  Datasets ({n}):")
     for i, p in enumerate(gold_paths, 1):
         print(f"    {i}. {p.name}  ({p.stat().st_size / 1024 / 1024:.1f} MB)")
     print(f"  Mode:    {args.mode}  |  Phases: {phases}")
-    from benchmark.resources.hw_probe import DEVICE as _d, GPU_VRAM_MB as _v
-    print(f"  GPU:     {_describe_gpu(_d, _v)}")
+    from benchmark.resources.hw_probe import DEVICE as _HW_DEVICE
+    from benchmark.resources.hw_probe import GPU_VRAM_MB as _HW_VRAM
+    print(f"  GPU:     {_describe_gpu(_HW_DEVICE, _HW_VRAM)}")
     _st_ok   = _check_import("sentence_transformers", "sentence-transformers")
     _rank_ok = _check_import("rank_bm25", "rank-bm25")
     print(f"  Deps:    rank-bm25={'✓' if _rank_ok else '✗'}  "
@@ -1121,7 +1165,7 @@ def _run_multi_dataset(args, gold_paths: list, phases: list, project_root: str) 
             narrative_path = output_dir / "narrative_report.txt"
             NarrativeReportGenerator().generate(per_dataset_summaries, narrative_path)
             paths["narrative_report"] = str(narrative_path)
-            print(f"\n  NARRATIVE REPORT — cross-dataset story:")
+            print("\n  NARRATIVE REPORT — cross-dataset story:")
             # Print a condensed version of the winner matrix
             _print_narrative_summary(per_dataset_summaries)
         except Exception as _e:
@@ -1140,19 +1184,28 @@ def _run_multi_dataset(args, gold_paths: list, phases: list, project_root: str) 
         _trigger_report_generation(project_root)
 
 
-def _run_single_dataset(args, gold_path: Path, phases: list, project_root: str) -> "Path | None":
+def _run_single_dataset(
+    args, gold_path: Path, phases: list, project_root: str,
+    run_id: str | None = None,
+    output_dir: Path | None = None,
+) -> Path | None:
     """Run benchmark on one dataset and return path to the written grid CSV."""
     from benchmark.workload.profile import get_profile
-    from benchmark.workload.study_matrix import StudyExpander, DEFAULT_EMBEDDING_MODEL
-    from benchmark.workload.study_scheduler import StudyScheduler
     from benchmark.workload.study_aggregator import StudyAggregator, StudyReporter
+    from benchmark.workload.study_matrix import DEFAULT_EMBEDDING_MODEL, StudyExpander
+    from benchmark.workload.study_scheduler import StudyScheduler
 
     profile = get_profile(args.workload)
     evaluation_horizon = args.evaluation_horizon or profile.evaluation_horizon
 
-    run_id = uuid.uuid4().hex[:12]
-    output_dir = Path(args.output_dir) / f"study_{run_id}"
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # Use caller-provided run_id/output_dir when available so the banner and
+    # the actual output files share the same identifier. Generate fresh values
+    # only when called directly (e.g. from _run_multi_dataset).
+    if run_id is None:
+        run_id = uuid.uuid4().hex[:12]
+    if output_dir is None:
+        output_dir = Path(args.output_dir) / f"study_{run_id}"
+        output_dir.mkdir(parents=True, exist_ok=True)
 
     scheduler = StudyScheduler(max_workers=args.workers, output_dir=str(output_dir), run_id=run_id)
 
@@ -1183,7 +1236,7 @@ def _run_single_dataset(args, gold_path: Path, phases: list, project_root: str) 
         print(f"  [leakage] {_leakage_symbol}: {_leakage.leaked_count}/{_leakage.total_queries} "
               f"queries overlap corpus ({_leakage.leakage_rate*100:.1f}%)")
         if not _leakage.is_clean:
-            print(f"  [leakage] > 1% leakage — results may reflect memorisation, not retrieval quality.")
+            print("  [leakage] > 1% leakage — results may reflect memorisation, not retrieval quality.")
     except Exception as _le:
         print(f"  [leakage] check skipped: {_le}")
 
@@ -1251,15 +1304,15 @@ def _run_single_dataset(args, gold_path: Path, phases: list, project_root: str) 
     # CrossEncoder reranking requires CUDA — MPS and CPU hang on macOS ARM.
     # Auto-remove neural rerankers when CUDA is unavailable; keep "none" baseline.
     try:
-        from benchmark.memory.strategies.llm_rerank_strategy import _CE_AVAILABLE as _ce_ok
-        from benchmark.resources.hw_probe import DEVICE as _ce_device
+        from benchmark.memory.strategies.llm_rerank_strategy import _CE_AVAILABLE as _CE_OK
+        from benchmark.resources.hw_probe import DEVICE as _CE_DEVICE
     except Exception:
-        _ce_ok, _ce_device = False, "unknown"
-    if not _ce_ok:
+        _CE_OK, _CE_DEVICE = False, "unknown"
+    if not _CE_OK:
         _neural = [r for r in effective_rerankers if r.lower() != "none"]
         if _neural:
-            print(f"  [skip] CrossEncoder rerankers {_neural} require CUDA — not available on {_ce_device}.")
-            print(f"         Phase 5 will run the 'none' baseline only.")
+            print(f"  [skip] CrossEncoder rerankers {_neural} require CUDA — not available on {_CE_DEVICE}.")
+            print("         Phase 5 will run the 'none' baseline only.")
             effective_rerankers = [r for r in effective_rerankers if r.lower() == "none"]
 
     all_effective = effective_local_models + effective_api_models
@@ -1366,8 +1419,8 @@ def _run_single_dataset(args, gold_path: Path, phases: list, project_root: str) 
         ok = sum(1 for r in phase_results if r.success)
 
         try:
-            from benchmark.memory.strategies.embeddings_strategy import _INDEX_CACHE
             from benchmark.memory.strategies.bm25_strategy import _BM25_CORPUS_CACHE
+            from benchmark.memory.strategies.embeddings_strategy import _INDEX_CACHE
             cache_info = (f"  embed-cache={len(_INDEX_CACHE)} entries  "
                           f"bm25-cache={len(_BM25_CORPUS_CACHE)} entries")
         except Exception:
@@ -1446,7 +1499,7 @@ def _get_phase_cells(
     expander,
     best_embed: str,
     best_backend: str,
-    best_bm25w: "float | None",
+    best_bm25w: float | None,
     best_strategy: str,
     local_models: list | None = None,
     ollama_models: list | None = None,
@@ -1485,8 +1538,8 @@ def _get_phase_cells(
 def _response_curve(
     label: str,
     param_name: str,
-    points: "list[tuple[float, float]]",
-    per_type: "dict[str, list[tuple[float, float]]] | None" = None,
+    points: list[tuple[float, float]],
+    per_type: dict[str, list[tuple[float, float]]] | None = None,
 ) -> None:
     """Print an ASCII response curve for a parameter sweep.
 
@@ -1510,7 +1563,7 @@ def _response_curve(
         elif row == 0:
             print(f"  {lo:.4f} |", end="")
         else:
-            print(f"         |", end="")
+            print("         |", end="")
         for _, recall in points:
             dot = "●" if recall >= threshold - span / height / 2 else " "
             print(f" {dot}", end="")
@@ -1538,7 +1591,7 @@ def _response_curve(
                 print(f"    {mem_type:15s}  recall={r:.4f}")
 
 
-def _best_param_from_results(results: list, param_attr: str) -> "float | None":
+def _best_param_from_results(results: list, param_attr: str) -> float | None:
     """Return the param value of the single highest-recall successful result."""
     ok = [r for r in results if r.success]
     if not ok:
@@ -1565,7 +1618,7 @@ def _run_phase3_two_stage(
     all_results = []
 
     # ── Stage 1: broad ───────────────────────────────────────────────────────
-    print(f"  Stage 1 (broad): BM25 weight 0.0…1.0 step 0.1")
+    print("  Stage 1 (broad): BM25 weight 0.0…1.0 step 0.1")
     broad_cells = expander.phase_hybrid_weight_sweep(
         best_embedding_model=best_embed,
         best_embedding_backend=best_backend,
@@ -1579,8 +1632,8 @@ def _run_phase3_two_stage(
     all_results.extend(broad_results)
 
     # Aggregate by bm25_weight → mean recall for the response curve
-    from collections import defaultdict
     import statistics as _stats
+    from collections import defaultdict
     by_w: dict[float, list[float]] = defaultdict(list)
     by_w_per_type: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
     for r in broad_results:
@@ -1643,7 +1696,7 @@ def _run_phase4_two_stage(
     best_backend: str,
     gold_path,
     evaluation_horizon: int,
-    best_bm25_weight: "float | None" = None,
+    best_bm25_weight: float | None = None,
 ) -> list:
     """Phase 4: broad λ sweep (0.0005…0.10, 8 points) → response curve → fine zoom.
 
@@ -1657,8 +1710,8 @@ def _run_phase4_two_stage(
       - how sharp/flat the optimum is (sensitivity)
       - whether adding decay helps at all vs no-decay
     """
-    from collections import defaultdict
     import statistics as _stats
+    from collections import defaultdict
     all_results = []
 
     policies = ["exponential", "logarithmic", "linear", "tiered"]
@@ -1764,13 +1817,24 @@ def _run_phase4_two_stage(
     # Uses the best policy + best λ from the broad sweep above.
     # Varies archival_floor across [0.0, 0.25, 0.50, 0.65, 0.75, 0.90] to test
     # whether the 0.65 default distorts comparisons of old-memory retrieval.
+    #
+    # Guard: the archival floor only activates for memories older than
+    # archival_day_threshold (default: 90 days). If evaluation_horizon < 90,
+    # no memory ever crosses that threshold so all floor values give identical
+    # results — 12 cells would run and produce a flat line, wasting ~20 minutes.
+    _archival_day_threshold = 90  # must match base_store.py default
     ok_results = [r for r in all_results if r.success and r.lambda_value > 0]
-    if ok_results:
+    if evaluation_horizon < _archival_day_threshold and ok_results:
+        print(f"\n  [skip] Phase 4b archival floor sweep — evaluation_horizon ({evaluation_horizon}d) "
+              f"< archival_day_threshold ({_archival_day_threshold}d). "
+              f"The floor never activates; all values would give identical results.")
+        print(f"         Re-run with --evaluation-horizon {_archival_day_threshold} or more to test archival floors.")
+    elif ok_results:
         best_4b = max(ok_results, key=lambda r: r.recall_at_k)
         best_policy_4b = best_4b.decay_policy
         best_lam_4b = best_4b.lambda_value
         print(f"\n  Phase 4b (archival floor): policy={best_policy_4b} λ={best_lam_4b:.4f}")
-        print(f"  Floors: [0.0, 0.25, 0.50, 0.65, 0.75, 0.90]")
+        print("  Floors: [0.0, 0.25, 0.50, 0.65, 0.75, 0.90]")
 
         floor_cells = expander.phase_archival_floor_sweep(
             best_strategy=best_strategy,
@@ -1812,6 +1876,7 @@ def _run_merge(args) -> None:
     """Merge multiple grid CSVs into one unified report."""
     import glob as _glob
     from datetime import datetime
+
     from benchmark.workload.study_aggregator import StudyAggregator, StudyReporter
 
     # Expand globs (Windows PowerShell doesn't expand them automatically)

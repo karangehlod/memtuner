@@ -150,6 +150,11 @@ class MatrixRunResult:
     # Annotation omitted: Python 3.13 + PEP 563 bug treats ClassVar as instance field.
     COMPOSITE_WEIGHTS = _load_composite_weights()
 
+    # Internal cache: composite_score() is a pure function of 4 immutable metric fields.
+    # Called 6+ times per result per study_summary() (888 calls at 148 cells).
+    # Stored as a regular field so the () call syntax is preserved across all call sites.
+    _composite_cache: float | None = None
+
     def composite_score(self) -> float:
         """Weighted composite score for ranking using COMPOSITE_WEIGHTS.
 
@@ -162,15 +167,19 @@ class MatrixRunResult:
         Range: [0.0, 1.0]. Higher is better.
         Use composite_score_weighted() for sensitivity analysis.
         """
+        if self._composite_cache is not None:
+            return self._composite_cache
         if self.recall_at_k < 0.01:
-            return 0.0
-        w = self.COMPOSITE_WEIGHTS
-        return (
-            w["recall"]    * self.recall_at_k
-            + w["precision"] * self.precision_at_k
-            + w["mrr"]       * self.mrr
-            + w["temporal"]  * self.temporal_accuracy
-        )
+            self._composite_cache = 0.0
+        else:
+            w = self.COMPOSITE_WEIGHTS
+            self._composite_cache = (
+                w["recall"]    * self.recall_at_k
+                + w["precision"] * self.precision_at_k
+                + w["mrr"]       * self.mrr
+                + w["temporal"]  * self.temporal_accuracy
+            )
+        return self._composite_cache
 
     def composite_score_weighted(self, weights: dict) -> float:
         """Composite score with caller-supplied weights for sensitivity analysis.
@@ -470,6 +479,22 @@ class MatrixScheduler:
                         if norm.get("applied", False):
                             self.normalization_meta = norm
                     result = self._dict_to_result(result_dict)
+                except TimeoutError as e:
+                    # Worker hung past 5 min — cancel the future to avoid zombie subprocess.
+                    future.cancel()
+                    result = MatrixRunResult(
+                        cell_id=cell_dict.get("cell_id", "unknown"),
+                        run_id=uuid.uuid4().hex[:12],
+                        memory_type=cell_dict.get("memory_type", "?"),
+                        retrieval_strategy=cell_dict.get("retrieval_strategy", "?"),
+                        decay_policy=cell_dict.get("decay_policy", "?"),
+                        lambda_value=cell_dict.get("lambda", 0.0),
+                        pruning_threshold=cell_dict.get("pruning_threshold", 0.3),
+                        workload_profile=cell_dict.get("workload_profile", "?"),
+                        seed=cell_dict.get("seed", 42),
+                        success=False,
+                        error_message=f"Cell timed out after 300s: {e}",
+                    )
                 except Exception as e:
                     # Worker crashed entirely
                     result = MatrixRunResult(

@@ -66,14 +66,11 @@ class RecencyStrategy(RetrievalStrategy):
             return []
 
         n = len(candidates)
-        # Score: higher insertion index = more recent = higher score
-        scored = [
-            (mem.id, (self._id_to_pos.get(mem.id, 0) + 1) / n)
-            for mem in candidates
-        ]
-        # Sort most-recent first (descending score)
-        scored.sort(key=lambda x: x[1], reverse=True)
-        return scored[:top_k]
+        # Recency score = insertion_position / n is a monotone-increasing function of index.
+        # The most recent top_k memories are always the LAST top_k elements of `candidates`
+        # (oldest-first ordering). No sort needed — O(top_k) slice instead of O(N log N) sort.
+        recent = candidates[max(0, n - top_k):][::-1]  # last top_k, reversed → newest first
+        return [(mem.id, (self._id_to_pos.get(mem.id, 0) + 1) / n) for mem in recent]
 
     def name(self) -> str:
         return "recency"

@@ -88,8 +88,12 @@ _INDEX_CACHE_MAX = 16  # 16 × ~17MB bge-base matrices ≈ 272MB; well within 64
 
 
 def _evict_index_cache_if_needed() -> None:
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
     while len(_INDEX_CACHE) >= _INDEX_CACHE_MAX:
-        _INDEX_CACHE.pop(_INDEX_CACHE_ORDER.popleft(), None)
+        evicted_key = _INDEX_CACHE_ORDER.popleft()
+        _INDEX_CACHE.pop(evicted_key, None)
+        _log.debug("[INDEX_CACHE] Evicted %r (%d → %d entries)", evicted_key, _INDEX_CACHE_MAX, len(_INDEX_CACHE))
 
 
 from benchmark.memory.interfaces.retrieval_strategy import RetrievalStrategy
@@ -321,6 +325,10 @@ class EmbeddingsStrategy(RetrievalStrategy):
         _corpus_hash = hashlib.md5("|".join(sorted(ids)).encode()).hexdigest()[:16]
         _index_key = f"{self._model_name}:{self._backend}:{_corpus_hash}"
         if _index_key in _INDEX_CACHE:
+            import logging as _log
+            _log.getLogger(__name__).debug(
+                "[INDEX_CACHE] Hit — skipping encode of %d memories (key=%r)", len(ids), _index_key
+            )
             cached_matrix, cached_ids, cached_norms = _INDEX_CACHE[_index_key]
             self._embedding_matrix = cached_matrix
             self._embedding_ids = list(cached_ids)  # copy — incremental appends must not mutate the cache
