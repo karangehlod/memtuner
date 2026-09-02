@@ -407,11 +407,12 @@ def generate(project_root: Path | None = None) -> None:
     # Generate PNG plots and recommendations doc
     try:
         import importlib.util
+        _proj_root = project_root or Path(__file__).resolve().parent.parent
         plot_script = Path(__file__).parent / "plot_benchmark.py"
         spec = importlib.util.spec_from_file_location("plot_benchmark", plot_script)
         mod  = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
         spec.loader.exec_module(mod)                  # type: ignore[union-attr]
-        mod.generate_plots(root)
+        mod.generate_plots(_proj_root)
     except Exception as exc:
         print(f"  [warn] Plot generation skipped: {exc}", file=sys.stderr)
 
