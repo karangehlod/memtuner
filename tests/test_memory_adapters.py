@@ -1,16 +1,18 @@
 """Comprehensive tests for all memory adapters."""
 
-import pytest
 import time
+
+import pytest
+
 from benchmark.memory.adapters import (
-    MemoryRegistry,
-    EpisodicStoreAdapter,
-    SemanticStoreAdapter,
-    EntityStoreAdapter,
-    PreferenceStoreAdapter,
-    EpisodicBufferAdapter,
     ContextBufferAdapter,
+    EntityStoreAdapter,
+    EpisodicBufferAdapter,
+    EpisodicStoreAdapter,
+    MemoryRegistry,
+    PreferenceStoreAdapter,
     ScratchpadAdapter,
+    SemanticStoreAdapter,
 )
 
 
@@ -359,7 +361,7 @@ class TestScratchpadAdapter:
         assert adapter.write_times[0] < 1.0  # < 1ms
 
         # Query should be very fast
-        results = adapter.query_memories(sample_query)
+        adapter.query_memories(sample_query)
         assert len(adapter.query_times) > 0
         assert adapter.query_times[0] < 1.0  # < 1ms
 

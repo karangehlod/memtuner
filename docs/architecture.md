@@ -1,6 +1,6 @@
 # Architecture & Design Guide
 
-> Complete technical documentation for the Agentic Memory Benchmark.
+> Complete technical documentation for MemTuner.
 > Covers storage design, user isolation, memory type comparison, extensibility,
 > and the data behind every benchmark run.
 
@@ -27,7 +27,7 @@
 
 ## 1. What This Project Is
 
-The Agentic Memory Benchmark is a **framework for measuring how well AI agent
+MemTuner is a **framework for measuring how well AI agent
 memory systems work**. It is NOT a memory system itself — it is a **test harness**
 with pluggable reference implementations.
 
@@ -943,6 +943,6 @@ same report. This is enforced by:
 
 ---
 
-*This document is the authoritative reference for the Agentic Memory Benchmark
+*This document is the authoritative reference for MemTuner
 architecture. For code-level API docs, see [api_reference.md](api_reference.md).
 For the original system blueprint, see [docs/architecture.md](architecture.md).*

@@ -61,8 +61,11 @@ class PersonaChatAdapter(DatasetAdapter):
                 if day not in all_memories:
                     all_memories[day] = []
 
-                # Extract personas as memories
-                personas = dialogue.get("personas", [])
+                # Support both format variants:
+                #   bavard/personachat_truecased: {"personality": [...], "utterances": [...]}
+                #   older format:                 {"personas": [...], "history": [...]}
+                personas = dialogue.get("personality", dialogue.get("personas", []))
+
                 for persona_idx, persona_text in enumerate(personas):
                     memory = GoldMemoryEvent(
                         id=f"persona_{dialogue_idx}_{persona_idx}",
@@ -77,25 +80,40 @@ class PersonaChatAdapter(DatasetAdapter):
                     all_memories[day].append(memory)
                     user_ids.add(f"user_{dialogue_idx}")
 
-                # Extract dialogue turns as queries
-                history = dialogue.get("history", [])
-                for _turn_idx, turn in enumerate(history):
-                    if isinstance(turn, list) and len(turn) >= 2:
-                        query_text = turn[0]
-                        relevant_memories = [
-                            f"persona_{dialogue_idx}_{i}" for i in range(len(personas))
-                        ]
+                relevant_memories = [
+                    f"persona_{dialogue_idx}_{i}" for i in range(len(personas))
+                ]
 
-                        expected = GoldExpectedResult(memory_ids=relevant_memories)
-
-                        query = GoldQuery(
-                            day=day,
-                            query=query_text,
-                            task_id=f"dialogue_{dialogue_idx}",
-                            user_id=f"user_{dialogue_idx}",
-                            expected=expected,
-                        )
-                        all_queries.append(query)
+                # bavard format: utterances is a list of {history, candidates} dicts
+                utterances = dialogue.get("utterances", [])
+                if utterances:
+                    for utt in utterances:
+                        # history[-1] is the most recent user turn (query to retrieve persona)
+                        utt_history = utt.get("history", [])
+                        if utt_history:
+                            query_text = utt_history[-1]
+                            expected = GoldExpectedResult(memory_ids=relevant_memories)
+                            all_queries.append(GoldQuery(
+                                day=day,
+                                query=query_text,
+                                task_id=f"dialogue_{dialogue_idx}",
+                                user_id=f"user_{dialogue_idx}",
+                                expected=expected,
+                            ))
+                else:
+                    # Older format: history is a flat list of [query, response] pairs
+                    history = dialogue.get("history", [])
+                    for turn in history:
+                        if isinstance(turn, list) and len(turn) >= 2:
+                            query_text = turn[0]
+                            expected = GoldExpectedResult(memory_ids=relevant_memories)
+                            all_queries.append(GoldQuery(
+                                day=day,
+                                query=query_text,
+                                task_id=f"dialogue_{dialogue_idx}",
+                                user_id=f"user_{dialogue_idx}",
+                                expected=expected,
+                            ))
 
             except Exception as e:
                 raise ValidationError(

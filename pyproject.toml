@@ -52,7 +52,7 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/karangehlod/memtuner"
 Repository = "https://github.com/karangehlod/memtuner"
-Documentation = "https://memtuner.readthedocs.io"
+Documentation = "https://github.com/karangehlod/memtuner/tree/main/docs"
 "Bug Tracker" = "https://github.com/karangehlod/memtuner/issues"
 
 [project.scripts]

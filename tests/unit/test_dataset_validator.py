@@ -102,7 +102,7 @@ class TestDatasetValidatorDuplicateIds:
         ]
         dataset = _dataset(events=events)
 
-        with pytest.raises(DatasetValidationError, match="Duplicate memory ID.*M-001"):
+        with pytest.raises(DatasetValidationError, match="Duplicate memory ID.*M-001"):  # noqa: RUF043
             DatasetValidator().validate(dataset)
 
     def test_duplicate_within_same_day_raises(self) -> None:
@@ -126,7 +126,7 @@ class TestDatasetValidatorOrphanedIds:
         queries = [_query("test", ["M-001", "M-999"])]
         dataset = _dataset(events=events, queries=queries)
 
-        with pytest.raises(DatasetValidationError, match="M-999.*does not exist"):
+        with pytest.raises(DatasetValidationError, match="M-999.*does not exist"):  # noqa: RUF043
             DatasetValidator().validate(dataset)
 
 
@@ -168,7 +168,7 @@ class TestDatasetValidatorInvalidUsers:
         queries = [_query("test", ["M-001"], user_id="user-ghost")]
         dataset = _dataset(events=events, queries=queries)
 
-        with pytest.raises(DatasetValidationError, match="user-ghost.*has no events"):
+        with pytest.raises(DatasetValidationError, match="user-ghost.*has no events"):  # noqa: RUF043
             DatasetValidator().validate(dataset)
 
 

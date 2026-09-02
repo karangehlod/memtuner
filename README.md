@@ -190,14 +190,17 @@ python -c "import torch; print('ROCm CUDA:', torch.cuda.is_available())"
 All datasets live under `data/input/`. Download the ones you need:
 
 ```bash
-# Download LongMemEval, SQuAD 2.0, CoQA (LoCoMo is already included)
+# Download LoCoMo, LongMemEval, SQuAD 2.0, CoQA and convert to gold format
 python scripts/prepare_datasets.py --download --convert
 ```
+
+Datasets are **not** committed to this repo — they are fetched from their original
+sources (Snap Research, HuggingFace, Stanford NLP) to respect their licenses.
 
 After this, `data/input/` should contain:
 ```
 data/input/
-├── locomo10.json                    # included in repo
+├── locomo10.json
 ├── longmemeval_oracle_gold.json
 ├── squad_gold.json
 ├── coqa_gold.json
@@ -543,19 +546,20 @@ completes. If a run crashes at cell 50 of 100, the first 50 results are already 
 
 | Dataset | Path | Queries | Memories | Notes |
 |---------|------|---------|----------|-------|
-| **LoCoMo** | `data/input/locomo10.json` | 1,977 | 5,879 | Included. Long-horizon episodic memory, 10 conversations |
-| **LongMemEval** | `data/input/longmemeval_oracle_gold.json` | 470 | 10,288 | Download required. Temporal reasoning + knowledge updates |
-| **SQuAD 2.0** | `data/input/squad_gold.json` | 11,873 | — | Download required. Reading comprehension |
-| **CoQA** | `data/input/coqa_gold.json` | 7,983 | — | Download required. Conversational QA |
-| **Synthetic** | `data/input/synthetic_gold.json` | 200 | — | Generated. Controlled experiments with known ground truth |
+| **LoCoMo** | `data/input/locomo10.json` | 1,977 | 5,879 | CC BY-NC 4.0 (Snap Research). Long-horizon episodic memory, 10 conversations |
+| **LongMemEval** | `data/input/longmemeval_oracle_gold.json` | 470 | 10,288 | Temporal reasoning + knowledge updates |
+| **SQuAD 2.0** | `data/input/squad_gold.json` | 11,873 | — | CC BY-SA 4.0. Reading comprehension |
+| **CoQA** | `data/input/coqa_gold.json` | 7,983 | — | Conversational QA |
+| **Synthetic** | `data/input/synthetic_gold.json` | 200 | — | Generated locally. Controlled experiments with known ground truth |
 
 **Download all datasets:**
 ```bash
 python scripts/prepare_datasets.py --download --convert
 ```
 
-This downloads from their original sources (Stanford NLP, HuggingFace) and converts to the
-gold format. LoCoMo is already included — only the others need downloading (~50 MB total).
+Datasets are downloaded from their original sources (Snap Research, Stanford NLP,
+HuggingFace) and converted to the gold format (~60 MB total). They are not
+redistributed in this repository; each remains under its original license.
 
 > **Leakage note (LoCoMo):** 57.6% of LoCoMo queries overlap the memory corpus verbatim.
 > The benchmark warns about this at startup. Results are valid for model selection and

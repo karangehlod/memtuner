@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines how to design, run, review, and archive experiments for AgentMemoryBench.
+This document defines how to design, run, review, and archive experiments for MemTuner.
 
 The goal is to keep experiments reproducible, interpretable, and usable in benchmark reports and paper artifacts.
 

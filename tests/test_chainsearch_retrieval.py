@@ -1,8 +1,9 @@
 """Tests for ChainSearch retrieval strategy."""
 
 import pytest
-from benchmark.retrieval.strategies.chainsearch_adapter import ChainSearchAdapter
+
 from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
+from benchmark.retrieval.strategies.chainsearch_adapter import ChainSearchAdapter
 
 
 @pytest.fixture

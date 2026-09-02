@@ -19,7 +19,6 @@ from benchmark.gold.locomo_loader import (
     create_test_subset,
 )
 
-
 # ============================================================
 # Synthetic LoCoMo test data matching real format
 # ============================================================

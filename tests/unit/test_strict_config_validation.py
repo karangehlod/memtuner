@@ -11,12 +11,7 @@ from pydantic import ValidationError
 
 from benchmark.config.schema import (
     BenchmarkConfig,
-    BenchmarkScopeConfig,
     DecayConfig,
-    MemoryConfig,
-    MemorySelectionConfig,
-    ObservabilityConfig,
-    PoliciesConfig,
     PruningConfig,
 )
 

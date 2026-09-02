@@ -318,7 +318,7 @@ class MatrixReporter:
         sep = "=" * 72
         lines = [
             sep,
-            "AGENTIC MEMORY BENCHMARK — MATRIX RESULTS",
+            "MemTuner — MATRIX RESULTS",
             f"Run ID:       {run_id}",
             f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"Cells:        {agg.success_count}/{agg.total} successful",

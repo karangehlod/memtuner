@@ -16,24 +16,22 @@ from pathlib import Path
 import pytest
 
 from benchmark.gold.adapters import ValidationIssue, ValidationReport, ValidationSeverity
+from benchmark.gold.reports import (
+    DatasetReport,
+    HTMLReporter,
+    JSONReporter,
+    ReportGenerator,
+    TextReporter,
+)
 from benchmark.gold.schema import (
     GoldDataset,
     GoldDayEvents,
+    GoldExpectedResult,
     GoldMemoryEvent,
     GoldQuery,
-    GoldExpectedResult,
 )
 from benchmark.gold.statistics import StatisticsComputer
-from benchmark.gold.reports import (
-    DatasetReport,
-    Reporter,
-    JSONReporter,
-    HTMLReporter,
-    TextReporter,
-    ReportGenerator,
-)
 from benchmark.models.memory_event import MemoryType
-
 
 # ============================================================================
 # Test Helpers

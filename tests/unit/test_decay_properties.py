@@ -9,7 +9,8 @@ Tests invariants about decay behavior:
 from __future__ import annotations
 
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from benchmark.memory.policies.decay import ExponentialDecayPolicy
 

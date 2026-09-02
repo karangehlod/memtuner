@@ -16,7 +16,7 @@ Security guarantee tested here:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -24,12 +24,11 @@ from benchmark.memory.long_term.episodic_store import EpisodicStore
 from benchmark.models.memory_event import MemoryEvent, MemoryType
 from benchmark.models.query import ReadQuery, ReadQueryContext, ReadQueryFilters
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-_NOW = datetime(2024, 1, 1, tzinfo=timezone.utc)
+_NOW = datetime(2024, 1, 1, tzinfo=UTC)
 
 
 def _event(
@@ -208,7 +207,6 @@ class TestUserIsolationFilterCandidates:
 
     def test_filter_candidates_type_filter_within_user_scope(self):
         """Type filter narrows within user's memories only."""
-        from benchmark.models.memory_event import MemoryType as MT
 
         store = self._store()
         ep = MemoryEvent(

@@ -1,4 +1,4 @@
-# Agentic Memory Benchmark — Runbook
+# MemTuner — Runbook
 
 Step-by-step instructions to install, configure, run, and interpret results
 on **macOS**, **Linux**, and **Windows**. Every command is given for both platforms.
@@ -361,7 +361,7 @@ python grid_search.py `
 ### What you will see
 
 ```
-Agentic Memory Benchmark — Full Grid Search
+MemTuner — Full Grid Search
 ================================================================
   Run ID:          3fb35528afba
   Dataset:         data/locomo10.json

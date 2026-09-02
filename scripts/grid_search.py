@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Agentic Memory Benchmark — Full Grid Search
+MemTuner — Full Grid Search
 
 Runs ALL memory types × ALL retrieval strategies × ALL decay policies on the
 SAME dataset. Lambda sweeps from 0.05 → 0.30 in steps of 0.05.
@@ -128,7 +128,7 @@ Examples:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path(args.output_dir) / f"grid_{ts}_{run_id}"
 
-    print("\nAgentic Memory Benchmark — Full Grid Search")
+    print("\nMemTuner — Full Grid Search")
     print("=" * 64)
     print(f"  Run ID:          {run_id}")
     print(f"  Dataset:         {dataset_path}")

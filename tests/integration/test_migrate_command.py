@@ -11,7 +11,6 @@ from click.testing import CliRunner
 from benchmark.cli.main import cli
 from benchmark.config.loader import load_config_from_path
 
-
 LEGACY_CONFIG = {
     "benchmark": {
         "name": "Legacy Test",

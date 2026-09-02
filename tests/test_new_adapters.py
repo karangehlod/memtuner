@@ -2,9 +2,9 @@
 
 import pytest
 
+from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
 from benchmark.retrieval.strategies.bm25l_adapter import BM25LAdapter
 from benchmark.retrieval.strategies.colbert_adapter import ColBERTAdapter
-from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
 
 
 @pytest.fixture
@@ -125,7 +125,7 @@ class TestBM25LAdapter:
 
         # Rare terms should have higher IDF
         rare_term_idf = adapter.idf_scores.get("fox", 0)
-        common_term_idf = adapter.idf_scores.get("the", 0)
+        adapter.idf_scores.get("the", 0)
 
         # "fox" appears less frequently than "the"
         assert rare_term_idf > 0
@@ -212,7 +212,7 @@ class TestColBERTAdapter:
         adapter.initialize(sample_documents)
 
         # Check that each document has token embeddings
-        for doc_id, embeddings in adapter.doc_token_embeddings.items():
+        for _doc_id, embeddings in adapter.doc_token_embeddings.items():
             assert len(embeddings) > 0
             # Each embedding should be a vector
             assert all(isinstance(e, (int, float, list)) for e in embeddings)

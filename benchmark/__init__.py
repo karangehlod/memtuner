@@ -1,4 +1,4 @@
-"""Agentic Memory Benchmarking Tool.
+"""MemTuner.
 
 A production-grade benchmarking tool that evaluates agent memory systems
 across accuracy, reliability, temporal correctness, efficiency, and cost.

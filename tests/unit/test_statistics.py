@@ -9,26 +9,21 @@ SOLID principles tested:
   - Dependency Inversion: Tests depend on DatasetStatistics dataclass
 """
 
+
 import pytest
-import math
 
 from benchmark.gold.schema import (
     GoldDataset,
     GoldDayEvents,
+    GoldExpectedResult,
     GoldMemoryEvent,
     GoldQuery,
-    GoldExpectedResult,
 )
 from benchmark.gold.statistics import (
-    CountStatistics,
-    DistributionStatistics,
-    QualityStatistics,
-    DatasetStatistics,
     StatisticsComputer,
     StatisticsFormatter,
 )
 from benchmark.models.memory_event import MemoryType
-
 
 # ============================================================================
 # Test Helpers

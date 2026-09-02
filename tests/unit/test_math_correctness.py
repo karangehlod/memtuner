@@ -17,8 +17,8 @@ from typing import Any
 
 import pytest
 
-from benchmark.memory.long_term.episodic_store import EpisodicStore
 from benchmark.memory.interfaces.retrieval_strategy import RetrievalStrategy
+from benchmark.memory.long_term.episodic_store import EpisodicStore
 from benchmark.memory.strategies.hybrid_strategy import HybridStrategy
 from benchmark.memory.strategies.recency_strategy import RecencyStrategy
 from benchmark.models.memory_event import MemoryEvent, MemoryType
@@ -434,7 +434,7 @@ class _FixedStrategy(RetrievalStrategy):
         self._ranked = ranked
         self._name = strategy_name
 
-    def index(self, memories: list[MemoryEvent]) -> None:  # noqa: D401
+    def index(self, memories: list[MemoryEvent]) -> None:
         """No-op index for mock."""
 
     def retrieve(self, query: str, top_k: int = 5, user_id: str | None = None) -> list[tuple[str, float]]:

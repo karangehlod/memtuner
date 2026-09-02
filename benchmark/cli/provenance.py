@@ -1,6 +1,6 @@
 """Helpers for emitting benchmark protocol provenance artifacts.
 
-These helpers keep `benchmark analyze` focused on orchestration while making
+These helpers keep `memtuner analyze` focused on orchestration while making
 protocol metadata emission consistent and auditable.
 """
 

@@ -16,13 +16,11 @@ from datetime import UTC, datetime
 
 import pytest
 
-from benchmark.evaluation.base import EvaluationResult
 from benchmark.evaluation.context import EvaluationContext
 from benchmark.evaluation.false_positive import FalsePositiveEvaluator
 from benchmark.evaluation.module_accuracy import ModuleAccuracyEvaluator
 from benchmark.evaluation.recall import RecallEvaluator
 from benchmark.evaluation.temporal import TemporalAccuracyEvaluator
-from benchmark.memory.interfaces.lifecycle import LifecyclePolicy
 from benchmark.memory.long_term.base_store import BaseLongTermStore
 from benchmark.memory.long_term.entity_store import EntityStore
 from benchmark.memory.long_term.episodic_store import EpisodicStore

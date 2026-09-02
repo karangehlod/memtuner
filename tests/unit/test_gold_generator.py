@@ -1,11 +1,10 @@
 import json
-import tempfile
 
 import pytest
 
 from benchmark.gold.generator import GoldGenerator, GoldGeneratorConfig, write_dataset_to_file
-from benchmark.time.simulated_clock import SimulatedClock
 from benchmark.gold.schema import GoldDataset
+from benchmark.time.simulated_clock import SimulatedClock
 
 
 @pytest.mark.unit

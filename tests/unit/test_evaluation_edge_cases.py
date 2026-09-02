@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from benchmark.evaluation.contradiction_resolution import ContradictionResolutionEvaluator
 from benchmark.evaluation.context import EvaluationContext
+from benchmark.evaluation.contradiction_resolution import ContradictionResolutionEvaluator
 from benchmark.evaluation.false_positive import FalsePositiveEvaluator
 from benchmark.evaluation.recall import RecallEvaluator
 from benchmark.evaluation.temporal import TemporalAccuracyEvaluator

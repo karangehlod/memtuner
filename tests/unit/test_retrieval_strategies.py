@@ -320,8 +320,8 @@ class TestHybridStrategy:
 @pytest.mark.unit
 class TestStrategyBootstrap:
     def test_bootstrap_registers_available_strategies(self):
-        from benchmark.factory.registry import RetrievalStrategyRegistry
         from benchmark.factory.bootstrap import bootstrap_retrieval_strategies
+        from benchmark.factory.registry import RetrievalStrategyRegistry
 
         registry = RetrievalStrategyRegistry()
         bootstrap_retrieval_strategies(registry)
@@ -333,8 +333,8 @@ class TestStrategyBootstrap:
         assert "hybrid" in names
 
     def test_registry_resolve_bm25(self):
-        from benchmark.factory.registry import RetrievalStrategyRegistry
         from benchmark.factory.bootstrap import bootstrap_retrieval_strategies
+        from benchmark.factory.registry import RetrievalStrategyRegistry
 
         registry = RetrievalStrategyRegistry()
         bootstrap_retrieval_strategies(registry)
@@ -343,8 +343,8 @@ class TestStrategyBootstrap:
         assert strategy.name() == "bm25"
 
     def test_registry_resolve_embeddings(self):
-        from benchmark.factory.registry import RetrievalStrategyRegistry
         from benchmark.factory.bootstrap import bootstrap_retrieval_strategies
+        from benchmark.factory.registry import RetrievalStrategyRegistry
 
         registry = RetrievalStrategyRegistry()
         bootstrap_retrieval_strategies(registry)
@@ -356,8 +356,8 @@ class TestStrategyBootstrap:
 @pytest.mark.unit
 class TestRegistry:
     def test_registry_unknown_strategy_raises(self):
-        from benchmark.factory.registry import RetrievalStrategyRegistry
         from benchmark.exceptions.memory_errors import RegistryResolutionError
+        from benchmark.factory.registry import RetrievalStrategyRegistry
 
         registry = RetrievalStrategyRegistry()
         with pytest.raises(RegistryResolutionError):
@@ -435,8 +435,8 @@ class TestRetrievalStrategyContract:
 
     @pytest.fixture(params=["bm25", "embeddings"])
     def strategy(self, request):
-        from benchmark.factory.registry import RetrievalStrategyRegistry
         from benchmark.factory.bootstrap import bootstrap_retrieval_strategies
+        from benchmark.factory.registry import RetrievalStrategyRegistry
 
         registry = RetrievalStrategyRegistry()
         bootstrap_retrieval_strategies(registry)

@@ -1,7 +1,9 @@
 """Integration tests for full memory benchmarking pipeline."""
 
-import pytest
 import time
+
+import pytest
+
 from benchmark.memory.adapters import MemoryRegistry
 from benchmark.memory.leaderboards import LeaderboardGenerator
 
@@ -105,7 +107,7 @@ class TestMemoryAdapterBenchmark:
         assert len(all_metrics) == len(adapter_names)
 
         # Verify metrics are valid
-        for adapter_name, metrics in all_metrics.items():
+        for _adapter_name, metrics in all_metrics.items():
             assert metrics.num_memories > 0
             assert 0.0 <= metrics.recall_at_10 <= 1.0
             assert metrics.write_latency_ms >= 0.0
@@ -142,7 +144,7 @@ class TestMemoryAdapterBenchmark:
         accuracy_board = gen.accuracy_leaderboard()
         efficiency_board = gen.efficiency_leaderboard()
         balanced_board = gen.balanced_leaderboard()
-        analysis = gen.cross_dataset_analysis()
+        gen.cross_dataset_analysis()
 
         # Verify leaderboards
         assert len(accuracy_board["entries"]) == len(adapter_names)
@@ -234,7 +236,7 @@ class TestMemoryAdapterBenchmark:
             adapter.teardown()
 
         # Verify all adapters have profiled latencies
-        for adapter_name, profile in efficiency_profiles.items():
+        for _adapter_name, profile in efficiency_profiles.items():
             assert "write_latency" in profile
             assert "query_latency" in profile
             assert "storage_mb" in profile

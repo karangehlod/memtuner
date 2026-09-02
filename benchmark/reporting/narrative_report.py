@@ -126,7 +126,7 @@ class NarrativeReportGenerator:
     def _header(self) -> list[str]:
         return [
             "=" * 72,
-            "  AGENTIC MEMORY BENCHMARK — CROSS-DATASET RESULTS REPORT",
+            "  MemTuner — CROSS-DATASET RESULTS REPORT",
             "=" * 72,
             "",
             "  This report presents measured results across datasets.",

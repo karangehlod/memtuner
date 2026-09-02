@@ -7,11 +7,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from benchmark.config.loader import load_config_from_dict, load_config_from_path
 from benchmark.cli.commands.analyze_command import (
     _api_embeddings_models,
     _validated_provider_settings,
 )
+from benchmark.config.loader import load_config_from_dict, load_config_from_path
 from benchmark.config.schema import (
     BenchmarkConfig,
     BenchmarkScopeConfig,
@@ -53,11 +53,11 @@ class TestBenchmarkConfig:
         assert pruning.threshold == 0.35
 
     def test_invalid_evaluation_horizon_rejected(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             BenchmarkScopeConfig(evaluation_horizon=0)
 
     def test_invalid_seed_type_rejected(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             BenchmarkScopeConfig(seed="not_a_number")  # type: ignore[arg-type]
 
 

@@ -14,7 +14,6 @@ import pytest
 
 from benchmark.packs.longmemeval.adapter import LongMemEvalPack, _generate_memory_id
 
-
 # ============================================================
 # Synthetic LongMemEval test data
 # ============================================================

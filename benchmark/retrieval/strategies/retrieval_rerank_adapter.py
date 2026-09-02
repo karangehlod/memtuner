@@ -80,9 +80,20 @@ class RetrievalRerankAdapter(RetrievalStrategy):
     def _rerank_candidates(
         self, query: str, candidates: list[dict[str, Any]], top_k: int
     ) -> list[dict[str, Any]]:
-        """Rerank candidates using neural scoring."""
+        """Rerank candidates using neural scoring.
+
+        CrossEncoder.predict() hangs indefinitely on MPS (Apple Silicon) and
+        CPU in some environments. Only attempt neural reranking on CUDA.
+        Falls back to BM25 order on non-CUDA platforms.
+        """
         try:
             from sentence_transformers import CrossEncoder
+
+            from benchmark.resources.hw_probe import DEVICE as _HW_DEVICE
+
+            # CrossEncoder.predict() hangs on MPS/CPU — skip neural reranking
+            if _HW_DEVICE != "cuda":
+                return sorted(candidates, key=lambda c: c.get("score", 0.0), reverse=True)[:top_k]
 
             try:
                 # Use cross-encoder for reranking (more sophisticated than bi-encoder)

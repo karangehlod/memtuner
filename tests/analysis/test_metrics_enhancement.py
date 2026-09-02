@@ -7,17 +7,15 @@ integrated into benchmark reports.
 from __future__ import annotations
 
 import json
+
 import pytest
 
 from benchmark.analysis.metrics_enhancement import (
-    DecayOptimization,
     EmbeddingModelComparison,
-    LatencyBreakdown,
     MemoryTypeEfficiency,
     MetricsEnhancer,
     RerankerComparison,
     ResourceMetrics,
-    StrategyEfficiency,
     enhance_report,
 )
 

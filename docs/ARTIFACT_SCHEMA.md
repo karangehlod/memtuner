@@ -438,7 +438,7 @@ These gaps should be treated as active Phase 1 protocol work.
 
 ## Protocol Interpretation Guidance
 
-When writing reports, roadmap status, or paper materials, use the following rule:
+When writing reports or paper materials, use the following rule:
 
 - cite currently emitted artifacts as current guarantees
 - cite richer provenance and schema separation as Phase 1 targets unless they are implemented and verified

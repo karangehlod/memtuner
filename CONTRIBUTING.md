@@ -98,10 +98,10 @@ Before opening a PR, verify:
 
 ## Where to ask questions
 
-Use [GitHub Discussions](https://github.com/karangehlod/Agenticmemory_benchmark/discussions) for:
+Use [GitHub Discussions](https://github.com/karangehlod/memtuner/discussions) for:
 
 - Design questions before opening a large PR
 - Help understanding the codebase
 - Proposing new dataset integrations or strategies
 
-For confirmed bugs, open a [GitHub Issue](https://github.com/karangehlod/Agenticmemory_benchmark/issues) with a minimal reproduction case.
+For confirmed bugs, open a [GitHub Issue](https://github.com/karangehlod/memtuner/issues) with a minimal reproduction case.

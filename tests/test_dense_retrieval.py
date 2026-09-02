@@ -1,11 +1,12 @@
 """Tests for dense retrieval strategies."""
 
 import pytest
+
+from benchmark.retrieval.strategies.ann_adapter import ANNAdapter
+from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
 from benchmark.retrieval.strategies.dense_vector_adapter import DenseVectorAdapter
 from benchmark.retrieval.strategies.learned_dense_adapter import LearnedDenseAdapter
-from benchmark.retrieval.strategies.ann_adapter import ANNAdapter
 from benchmark.retrieval.strategies.quantized_adapter import QuantizedAdapter
-from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
 
 
 @pytest.fixture
@@ -343,7 +344,7 @@ class TestQuantizedAdapter:
         adapter = QuantizedAdapter()
         adapter.initialize(sample_documents)
 
-        for doc_id, emb in adapter.embeddings.items():
+        for _doc_id, emb in adapter.embeddings.items():
             # All values should be small integers (int8 range)
             assert all(isinstance(v, (int, float)) for v in emb)
             # Values should be in reasonable range

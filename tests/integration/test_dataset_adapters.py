@@ -13,13 +13,9 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-
-from benchmark.gold.adapters import AdapterRegistry
-from benchmark.gold.adapters.synthetic_adapter import SyntheticAdapter
 from benchmark.gold.adapters.locomo_adapter import LoCoMoAdapter
 from benchmark.gold.adapters.longmemeval_adapter import LongMemEvalAdapter
-
+from benchmark.gold.adapters.synthetic_adapter import SyntheticAdapter
 
 # ============================================================================
 # Synthetic Adapter Tests

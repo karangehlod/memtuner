@@ -12,8 +12,8 @@ from types import SimpleNamespace
 import pytest
 from click.testing import CliRunner
 
-from benchmark.cli.main import cli
 import benchmark.cli.commands.analyze_command as analyze_module
+from benchmark.cli.main import cli
 
 CONFIGS_DIR = Path(__file__).resolve().parents[2] / "configs"
 
@@ -232,7 +232,7 @@ class TestCliAnalyze:
         assert report["dataset"]["memories"] == 1
         assert report["run_plan"]["dataset"]["fingerprint"] == "abc123def4567890"
         assert report["artifact_manifest"] == manifest["artifacts"]
-        assert manifest["summary"] == "Tagged images and JSON artifacts emitted by benchmark analyze."
+        assert manifest["summary"] == "Tagged images and JSON artifacts emitted by memtuner analyze."
         assert any(item["tag"] == "environment" for item in manifest["artifacts"])
         assert any(item["tag"] == "run_metadata" for item in manifest["artifacts"])
         assert any(item["tag"] == "effective_config" for item in manifest["artifacts"])
@@ -508,7 +508,7 @@ class TestCliReport:
             cli, ["report", "--input", str(result_file), "--format", "json"]
         )
         assert result.exit_code == 0
-        parsed = json.loads(result.output.split("📄")[0] + result.output.split("\n", 1)[1])
+        json.loads(result.output.split("📄")[0] + result.output.split("\n", 1)[1])
 
     def test_report_csv_format(self, tmp_path: Path) -> None:
         if not (CONFIGS_DIR / "default.yaml").exists():
@@ -583,7 +583,7 @@ class TestCliHelp:
         runner = CliRunner()
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-        assert "Agentic Memory Benchmarking Tool" in result.output
+        assert "MemTuner" in result.output
 
     def test_run_help(self) -> None:
         runner = CliRunner()

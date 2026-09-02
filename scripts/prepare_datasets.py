@@ -7,29 +7,29 @@ Usage:
     python scripts/prepare_datasets.py --convert        # convert downloaded files
     python scripts/prepare_datasets.py --download --convert  # do both
 
-Datasets:
-    locomo       Already works natively — no conversion needed.
-    longmemeval  Needs download + convert.
-    squad        Download from Stanford NLP (public, no auth).
-    coqa         Download from Stanford NLP (public, no auth).
-    personachat  Download from HuggingFace (public, no auth).
-    hotpotqa     Download from HuggingFace (public, no auth).
-    synthetic    No download — generated on demand, zero setup.
+AUTO-DOWNLOADABLE datasets (set HF_TOKEN in .env for HuggingFace datasets):
+    locomo       GitHub snap-research (~3 MB) — no auth needed.
+    longmemeval  HuggingFace (~30 MB) — HF_TOKEN recommended.
+    squad        Stanford NLP (~36 MB) — no auth needed.
+    coqa         Stanford NLP (~55 MB) — no auth needed.
+    personachat  HuggingFace (~20 MB) — set HF_TOKEN in .env; skipped if unavailable.
+    hotpotqa     CMU (~54 MB) — no auth needed.
+    synthetic    No download — generated on demand (200 queries, zero setup).
 
-Not currently downloadable automatically (require HF auth or large size):
-    fever        185k claims — requires manual download from ai.facebook.com
-    msmarco      100k+ queries — use official MS MARCO tools
-    multiwoz     10k dialogues — requires manual download
-    narrativeqa  31k questions — requires manual download
-    naturalquestions  320k questions — requires manual download
-    wizard       18k dialogues — requires manual download
-    webquestions 5k questions — requires manual download
+MANUAL download required (large size or special tools):
+    fever        185k claims — https://fever.ai/dataset/fever.html
+    msmarco      100k+ queries — https://microsoft.github.io/msmarco/
+    multiwoz     10k dialogues — https://github.com/budzianowski/multiwoz
+    narrativeqa  31k questions — https://github.com/deepmind/narrativeqa
+    naturalquestions  320k questions — https://ai.google.com/research/NaturalQuestions
+    wizard       18k dialogues — https://parl.ai/projects/wizard_of_wikipedia/
+    webquestions 5k questions — https://github.com/brmson/dataset-factoid-webquestions
 """
 
 from __future__ import annotations
 
 import argparse
-import json
+import os
 import sys
 import urllib.request
 from pathlib import Path
@@ -41,7 +41,13 @@ DATA_DIR = project_root / "data" / "input"
 
 # ── Download specs ──────────────────────────────────────────────────────────
 # Each entry: (local_path, url, description)
+# HuggingFace URLs automatically include Authorization header when HF_TOKEN is set.
 DOWNLOADS: list[tuple[Path, str, str]] = [
+    (
+        DATA_DIR / "locomo10.json",
+        "https://raw.githubusercontent.com/snap-research/locomo/main/data/locomo10.json",
+        "LoCoMo (10 long conversations, ~3 MB, CC BY-NC 4.0 — Snap Research)",
+    ),
     (
         DATA_DIR / "longmemeval" / "longmemeval_oracle.json",
         "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/main/longmemeval_oracle.json",
@@ -56,6 +62,18 @@ DOWNLOADS: list[tuple[Path, str, str]] = [
         DATA_DIR / "coqa" / "coqa-dev-v1.0.json",
         "https://nlp.stanford.edu/data/coqa/coqa-dev-v1.0.json",
         "CoQA dev set (~55 MB)",
+    ),
+    (
+        DATA_DIR / "personachat" / "personachat_truecased_full_train.json",
+        "https://huggingface.co/datasets/bavard/personachat_truecased/resolve/main/personachat_truecased_full_train.json",
+        "PersonaChat truecased full train (~20 MB) — HF_TOKEN recommended",
+    ),
+    (
+        DATA_DIR / "hotpotqa" / "hotpot_dev_distractor_v1.json",
+        # Primary: CMU server (may be slow/down — retry if 504)
+        # Fallback: download manually from https://hotpotqa.github.io/
+        "http://curtis.ml.cmu.edu/datasets/hotpot/hotpot_dev_distractor_v1.json",
+        "HotpotQA distractor dev (~54 MB) — CMU server; retry if 504",
     ),
 ]
 
@@ -86,6 +104,34 @@ def _convert_coqa() -> Path:
     return out
 
 
+def _convert_personachat() -> Path:
+    import json as _json
+
+    from benchmark.gold.adapters.personachat_adapter import PersonaChatAdapter
+    src = DATA_DIR / "personachat" / "personachat_truecased_full_train.json"
+    out = DATA_DIR / "personachat_gold.json"
+    # Use first 500 dialogues (~3,675 queries) — comparable to other benchmark splits.
+    # Full train has 17,878 dialogues (88 MB gold) which is too large to commit.
+    with open(src) as _f:
+        full = _json.load(_f)
+    subset_path = src.parent / "_subset_500.json"
+    with open(subset_path, "w") as _f:
+        _json.dump(full[:500], _f)
+    dataset = PersonaChatAdapter().load(subset_path)
+    subset_path.unlink()
+    out.write_text(dataset.model_dump_json(indent=2))
+    return out
+
+
+def _convert_hotpotqa() -> Path:
+    from benchmark.gold.adapters.hotpotqa_adapter import HotpotQAAdapter
+    src = DATA_DIR / "hotpotqa" / "hotpot_dev_distractor_v1.json"
+    out = DATA_DIR / "hotpotqa_gold.json"
+    dataset = HotpotQAAdapter().load(src)
+    out.write_text(dataset.model_dump_json(indent=2))
+    return out
+
+
 def _generate_synthetic() -> Path:
     from benchmark.gold.adapters.synthetic_adapter import SyntheticAdapter
     out = DATA_DIR / "synthetic_gold.json"
@@ -99,10 +145,12 @@ CONVERSIONS: list[tuple[str, Path, callable, Path]] = [
     ("longmemeval", DATA_DIR / "longmemeval" / "longmemeval_oracle.json", _convert_longmemeval, DATA_DIR / "longmemeval_oracle_gold.json"),
     ("squad",       DATA_DIR / "squad" / "squad_dev-v2.0.json",          _convert_squad,        DATA_DIR / "squad_gold.json"),
     ("coqa",        DATA_DIR / "coqa" / "coqa-dev-v1.0.json",            _convert_coqa,         DATA_DIR / "coqa_gold.json"),
+    ("personachat", DATA_DIR / "personachat" / "personachat_truecased_full_train.json",  _convert_personachat,  DATA_DIR / "personachat_gold.json"),
+    ("hotpotqa",    DATA_DIR / "hotpotqa" / "hotpot_dev_distractor_v1.json", _convert_hotpotqa, DATA_DIR / "hotpotqa_gold.json"),
     ("synthetic",   None,                                                  _generate_synthetic,   DATA_DIR / "synthetic_gold.json"),
 ]
 
-# ── Manual-download datasets (can't be auto-fetched) ───────────────────────
+# ── Manual-download datasets (require auth, large size, or special tools) ──
 MANUAL_DOWNLOADS = [
     ("fever",           "https://fever.ai/dataset/fever.html",                           "train.jsonl → data/fever/"),
     ("msmarco",         "https://microsoft.github.io/msmarco/",                          "queries.jsonl + passages.jsonl → data/msmarco/"),
@@ -111,16 +159,27 @@ MANUAL_DOWNLOADS = [
     ("naturalquestions","https://ai.google.com/research/NaturalQuestions",               "nq-dev-*.jsonl.gz → data/naturalquestions/"),
     ("webquestions",    "https://github.com/brmson/dataset-factoid-webquestions",        "webquestions.examples.train.json → data/webquestions/"),
     ("wizard",          "https://parl.ai/projects/wizard_of_wikipedia/",                 "train.json → data/wizard/"),
-    ("personachat",     "https://huggingface.co/datasets/bavard/personachat_truecased",  "train.json → data/personachat/"),
-    ("hotpotqa",        "https://hotpotqa.github.io/",                                   "hotpot_dev_distractor_v1.json → data/hotpotqa/"),
 ]
 
 
 def _download_file(url: str, dest: Path, description: str) -> bool:
+    """Download url to dest with progress display.
+
+    Automatically injects Authorization: Bearer {HF_TOKEN} for huggingface.co
+    URLs when the env var is set. If auth fails or token is absent, logs a
+    clear message and returns False without crashing the rest of the pipeline.
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
     print(f"  Downloading {description}...")
+
+    headers: dict[str, str] = {"User-Agent": "MemTuner/0.0.1"}
+    hf_token = os.environ.get("HF_TOKEN", "").strip()
+    is_hf_url = "huggingface.co" in url
+    if is_hf_url and hf_token and not hf_token.startswith("hf_your"):
+        headers["Authorization"] = f"Bearer {hf_token}"
+
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=120) as resp, open(dest, "wb") as f:
             total = int(resp.headers.get("Content-Length", 0))
             downloaded = 0
@@ -136,8 +195,18 @@ def _download_file(url: str, dest: Path, description: str) -> bool:
                     print(f"\r    {pct:3d}%  {downloaded // 1024 // 1024} MB / {total // 1024 // 1024} MB", end="", flush=True)
         print(f"\r    ✓ Saved to {dest}")
         return True
+    except urllib.error.HTTPError as e:
+        if e.code == 401 and is_hf_url:
+            print("\r    ✗ Auth required — set HF_TOKEN in .env to download from HuggingFace")
+        elif e.code == 403 and is_hf_url:
+            print("\r    ✗ Access denied — check HF_TOKEN permissions for this dataset")
+        else:
+            print(f"\r    ✗ HTTP {e.code}: {e.reason} — skipping, continuing with other datasets")
+        if dest.exists():
+            dest.unlink()
+        return False
     except Exception as e:
-        print(f"\r    ✗ Failed: {e}")
+        print(f"\r    ✗ Failed: {e} — skipping, continuing with other datasets")
         if dest.exists():
             dest.unlink()
         return False
@@ -146,12 +215,12 @@ def _download_file(url: str, dest: Path, description: str) -> bool:
 def print_status() -> None:
     print("\n=== Dataset Status ===\n")
 
-    print("AUTO (locomo — no conversion needed):")
+    print("AUTO (locomo — included in repo, no download needed):")
     f = DATA_DIR / "locomo10.json"
     status = f"✓ {f.stat().st_size // 1024 // 1024} MB" if f.exists() else "✗ missing"
     print(f"  locomo10.json       {status}")
     if f.exists():
-        print(f"    → Run: python study_runner.py --gold-dataset data/locomo10.json --mode full")
+        print("    → Run: python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode full")
 
     print("\nAUTO-DOWNLOAD + CONVERT:")
     for name, src, _, out in CONVERSIONS:
@@ -163,7 +232,7 @@ def print_status() -> None:
             out_status = f"✓ {out.stat().st_size // 1024 // 1024} MB" if out.exists() else "✗ not converted"
         print(f"  {name:15s}  source={src_status:25s}  gold={out_status}")
         if out.exists():
-            print(f"    → Run: python study_runner.py --gold-dataset {out.relative_to(project_root)} --mode full")
+            print(f"    → Run: python scripts/study_runner.py --gold-dataset {out.relative_to(project_root)} --mode full")
 
     print("\nMANUAL DOWNLOAD REQUIRED:")
     for name, url, instructions in MANUAL_DOWNLOADS:

@@ -58,10 +58,14 @@ tmp/
 data/output/
 benchmark_results/
 
-# Dataset files (downloaded by scripts/prepare_datasets.py)
-# Exception: locomo10.json is included in the repo as the default dataset
-data/input/longmemeval_oracle*.json
-data/input/squad_gold*.json
-data/input/coqa_gold*.json
-data/input/synthetic_gold*.json
+# Raw dataset source files (large, can be re-downloaded).
+# Gold format files (*_gold.json, locomo10.json) ARE committed — they pin the
+# exact evaluation data so benchmark results remain reproducible over time.
+# Re-generate with: python scripts/prepare_datasets.py --download --convert
+data/input/longmemeval/
+data/input/squad/
+data/input/coqa/
+data/input/personachat/
+data/input/hotpotqa/
+data/input/hotpotqa_gold*.json
 data/generated/

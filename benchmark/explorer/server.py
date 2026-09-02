@@ -43,7 +43,7 @@ def create_explorer_app(results_directory: Path) -> Any:
         yield
 
     app = FastAPI(
-        title="Agentic Memory Benchmark Explorer",
+        title="MemTuner Explorer",
         description="Read-only dashboard for benchmark results",
         version="0.1.0",
         lifespan=lifespan,

@@ -10,7 +10,8 @@ Tests invariants about temporal accuracy:
 from __future__ import annotations
 
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from benchmark.evaluation.temporal import TemporalAccuracyEvaluator
 
@@ -30,7 +31,7 @@ class TestTemporalAccuracyProperties:
         """Temporal accuracy must always be in [0, 1]."""
         evaluator = TemporalAccuracyEvaluator(temporal_tolerance_days=tolerance)
 
-        context = {
+        {
             "retrieved_ids": ["M1"],
             "expected_ids": ["M1"],
             "retrieved_creation_days": {"M1": retrieved_day},

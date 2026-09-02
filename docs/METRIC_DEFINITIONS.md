@@ -1,4 +1,4 @@
-# Agentic Memory Benchmark — Metric Definitions
+# MemTuner — Metric Definitions
 
 Single source of truth for every reported metric: formula, implementation pointer,
 data provenance, and extension guide.

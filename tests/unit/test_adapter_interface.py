@@ -9,8 +9,8 @@ SOLID principles tested:
   - Open/Closed: New adapters can be added without modifying this test
 """
 
+
 import pytest
-from abc import ABC
 
 from benchmark.gold.adapters import (
     AdapterError,

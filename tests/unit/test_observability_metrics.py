@@ -6,8 +6,8 @@ import pytest
 
 from benchmark.observability.metrics import initialize_metrics, record_metric
 from benchmark.observability.schemas import (
-    METRIC_COST_PER_CORRECT_RECALL,
     METRIC_CONTAMINATION_RATE,
+    METRIC_COST_PER_CORRECT_RECALL,
     METRIC_LATENCY_MS,
     METRIC_MEMORY_SURVIVAL_RATE,
     METRIC_RECALL_AT_K,

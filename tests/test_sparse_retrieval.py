@@ -1,10 +1,11 @@
 """Tests for sparse retrieval strategies."""
 
 import pytest
-from benchmark.retrieval.strategies.bm25_adapter import BM25Adapter
-from benchmark.retrieval.strategies.tfidf_adapter import TFIDFAdapter
-from benchmark.retrieval.strategies.boolean_adapter import BooleanAdapter
+
 from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
+from benchmark.retrieval.strategies.bm25_adapter import BM25Adapter
+from benchmark.retrieval.strategies.boolean_adapter import BooleanAdapter
+from benchmark.retrieval.strategies.tfidf_adapter import TFIDFAdapter
 
 
 @pytest.fixture

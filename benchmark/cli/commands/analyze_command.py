@@ -993,7 +993,7 @@ def analyze_benchmark(
 
                 fig, axes = plt.subplots(4, 2, figsize=(16, 20))
                 fig.suptitle(
-                    f"Agentic Memory Benchmark Analysis\n"
+                    f"MemTuner Analysis\n"
                     f"({len(gold_dataset.queries)} queries, "
                     f"{gold_dataset.total_conversation_turns} memories)",
                     fontsize=13,

@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+import benchmark.cli.commands.validate_command as validate_module
+from benchmark.cli.commands.validate_command import validate_config
 from benchmark.config.validation import (
     ALLOWED_CONFIG_EXTENSIONS,
     MAX_CONFIG_FILE_SIZE_BYTES,
@@ -17,9 +19,6 @@ from benchmark.config.validation import (
     validate_output_directory,
 )
 from benchmark.exceptions.config_errors import ConfigValidationError
-import benchmark.cli.commands.validate_command as validate_module
-
-from benchmark.cli.commands.validate_command import validate_config
 
 
 @pytest.mark.unit

@@ -1,6 +1,6 @@
-from benchmark.tokenizer.bpe import SimpleBPETokenizer
 from benchmark.cost.token_cost import TokenCostCalculator
 from benchmark.models.answer import TokenUsage
+from benchmark.tokenizer.bpe import SimpleBPETokenizer
 
 
 def test_simple_bpe_counts_and_token_cost():

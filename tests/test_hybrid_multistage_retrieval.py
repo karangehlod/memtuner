@@ -1,10 +1,11 @@
 """Tests for hybrid and multi-stage retrieval strategies."""
 
 import pytest
-from benchmark.retrieval.strategies.hybrid_fusion_adapter import HybridFusionAdapter
-from benchmark.retrieval.strategies.cascading_adapter import CascadingAdapter
-from benchmark.retrieval.strategies.retrieval_rerank_adapter import RetrievalRerankAdapter
+
 from benchmark.retrieval.strategies.base import RetrievalStrategyRegistry
+from benchmark.retrieval.strategies.cascading_adapter import CascadingAdapter
+from benchmark.retrieval.strategies.hybrid_fusion_adapter import HybridFusionAdapter
+from benchmark.retrieval.strategies.retrieval_rerank_adapter import RetrievalRerankAdapter
 
 
 @pytest.fixture
@@ -376,7 +377,6 @@ class TestHybridMultistageComparison:
 
     def test_cascading_more_efficient_than_hybrid(self, sample_documents):
         """Test that cascading (smaller index) is more efficient than hybrid."""
-        import time
 
         # Build both
         hybrid = HybridFusionAdapter()

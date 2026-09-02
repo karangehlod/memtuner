@@ -1,6 +1,7 @@
 """Comprehensive tests for AdaptiveStrategySelector."""
 
 import pytest
+
 from benchmark.memory.strategies.adaptive_strategy_selector import (
     AdaptiveStrategySelector,
 )
@@ -247,7 +248,7 @@ class TestStrategyStats:
         selector.learn_from_feedback("query", "bm25", successful=True)
 
         stats = selector.get_strategy_stats()
-        for strategy, strategy_stats in stats.items():
+        for _strategy, strategy_stats in stats.items():
             assert "success_rate" in strategy_stats
             assert "attempts" in strategy_stats
             assert "successes" in strategy_stats

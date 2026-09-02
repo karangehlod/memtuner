@@ -41,11 +41,11 @@ class TestMemoryEvent:
             importance=0.5,
             task_id="test",
         )
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             event.importance = 0.9  # type: ignore[misc]
 
     def test_memory_event_rejects_invalid_importance(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             MemoryEvent(
                 id="M-001",
                 type=MemoryType.EPISODIC,
@@ -56,7 +56,7 @@ class TestMemoryEvent:
             )
 
     def test_memory_event_rejects_empty_content(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             MemoryEvent(
                 id="M-001",
                 type=MemoryType.EPISODIC,
@@ -96,7 +96,7 @@ class TestReadQuery:
         assert query.filters.min_importance == 0.0
 
     def test_read_query_rejects_empty_query(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             ReadQuery(
                 query="",
                 context=ReadQueryContext(dataset_day=0, task_id="test"),

@@ -1,7 +1,6 @@
 # API Reference
 
-This document provides a reference for the key public APIs in the Agentic Memory
-Benchmark tool.
+This document provides a reference for the key public APIs in MemTuner.
 
 ## Table of Contents
 

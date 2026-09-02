@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 
-from benchmark.evaluation.false_positive import FalsePositiveEvaluator
 from benchmark.evaluation.ranking import (
     MRREvaluator,
     NDCGEvaluator,
@@ -24,9 +23,7 @@ from benchmark.evaluation.ranking import (
 )
 from benchmark.evaluation.recall import RecallEvaluator
 from benchmark.evaluation.temporal import TemporalAccuracyEvaluator
-from benchmark.evaluation.context import EvaluationContext
 from benchmark.gold.longmemeval_adapter import LongMemEvalAdapter
-
 
 # Synthetic dataset matching LongMemEval format
 INTEGRATION_DATA = [

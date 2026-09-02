@@ -11,24 +11,23 @@ SOLID principles tested:
 
 import pytest
 
+from benchmark.gold.adapters import ValidationReport, ValidationSeverity
 from benchmark.gold.schema import (
     GoldDataset,
     GoldDayEvents,
+    GoldExpectedResult,
     GoldMemoryEvent,
     GoldQuery,
-    GoldExpectedResult,
 )
 from benchmark.gold.validators import (
-    Validator,
-    SchemaValidator,
-    TemporalValidator,
     IntegrityValidator,
+    SchemaValidator,
     StatisticsValidator,
+    TemporalValidator,
     ValidationRegistry,
+    Validator,
 )
 from benchmark.models.memory_event import MemoryType
-from benchmark.gold.adapters import ValidationSeverity, ValidationReport
-
 
 # ============================================================================
 # Test Data Helpers

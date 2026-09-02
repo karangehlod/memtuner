@@ -10,11 +10,11 @@ from pathlib import Path
 
 import pytest
 
+from benchmark.cli.commands.analyze_command import _artifact_entry, _write_tagged_json
 from benchmark.models.run_result import BenchmarkRunResult, CostSummary, ScenarioMetrics
 from benchmark.reporting.csv_report import CsvReportWriter
 from benchmark.reporting.json_report import JsonReportWriter
 from benchmark.reporting.summary import SummaryReportGenerator
-from benchmark.cli.commands.analyze_command import _artifact_entry, _write_tagged_json
 
 
 def _make_run_result() -> BenchmarkRunResult:

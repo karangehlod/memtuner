@@ -5,10 +5,7 @@ from __future__ import annotations
 import pytest
 
 from benchmark.workload.matrix import (
-    DECAY_POLICIES,
     LAMBDA_STEPS,
-    MEMORY_TYPES,
-    RETRIEVAL_STRATEGIES,
     DecaySpec,
     MatrixCell,
     MatrixExpander,

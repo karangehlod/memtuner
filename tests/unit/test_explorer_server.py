@@ -64,7 +64,7 @@ class TestExplorerServerFactory:
         from benchmark.explorer.server import create_explorer_app
         app = create_explorer_app(results_directory_with_data)
         assert app is not None
-        assert app.title == "Agentic Memory Benchmark Explorer"
+        assert app.title == "MemTuner Explorer"
 
     def test_api_list_runs(self, results_directory_with_data: Path) -> None:
         try:

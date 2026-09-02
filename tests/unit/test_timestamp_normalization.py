@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
-
-import pytest
 
 from benchmark.gold.normalizer import TARGET_GAP_DAYS, normalize_timestamps
 from benchmark.gold.schema import (
@@ -17,7 +13,6 @@ from benchmark.gold.schema import (
     GoldMemoryEvent,
     GoldQuery,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -110,8 +105,8 @@ class TestNormalizeTimestamps:
         """Calling normalize_timestamps twice produces the same result (idempotent).
         - First call: shifts from 100 to make gap = TARGET_GAP_DAYS (applied=True)
         - Second call: gap is now at target, no shift needed (applied=False)
-        
-        The key property: calling normalize_timestamps(normalize_timestamps(ds)) 
+
+        The key property: calling normalize_timestamps(normalize_timestamps(ds))
         produces the same events."""
         ds = _make_dataset(event_days=[0, 50, 100], query_days=[291])
         first_ds, first_meta = normalize_timestamps(ds)
@@ -129,7 +124,7 @@ class TestNormalizeTimestamps:
         # Latest event on day 100, first query on day 104 → gap = 4 < TARGET_GAP = 5
         ds = _make_dataset(event_days=[0, 100], query_days=[104])
         norm_ds, meta = normalize_timestamps(ds)
-        
+
         # Not applied — gap is already acceptable
         assert meta["applied"] is False
         # Events unchanged
@@ -139,7 +134,7 @@ class TestNormalizeTimestamps:
         """Gap exactly equal to TARGET_GAP_DAYS: no shift needed."""
         ds = _make_dataset(event_days=[0, 100], query_days=[100 + TARGET_GAP_DAYS])
         norm_ds, meta = normalize_timestamps(ds)
-        
+
         # Not applied — gap equals target exactly
         assert meta["applied"] is False
         # Events unchanged
@@ -151,7 +146,7 @@ class TestNormalizeTimestamps:
         # Gap = 3 < TARGET_GAP_DAYS=5
         ds = _make_dataset(event_days=[0, 100], query_days=[103])
         returned_ds, meta = normalize_timestamps(ds)
-        
+
         # Not applied — gap is within target
         assert meta["applied"] is False
         # Events unchanged (no destructive shift)

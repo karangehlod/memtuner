@@ -111,7 +111,7 @@ class TestTemporalBoundaryConditions:
 
     def test_temporal_query_at_boundary_day_0(self) -> None:
         """Query on day 0 should work."""
-        from benchmark.gold.schema import GoldQuery, GoldExpectedResult, TemporalWindow
+        from benchmark.gold.schema import GoldExpectedResult, GoldQuery, TemporalWindow
 
         query = GoldQuery(
             day=0,

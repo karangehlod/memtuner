@@ -21,7 +21,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Agentic Memory Benchmark — Matrix Runner (Memory × Strategy × Decay)",
+        description="MemTuner — Matrix Runner (Memory × Strategy × Decay)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Grid Modes:
@@ -138,7 +138,7 @@ Examples:
     run_id = uuid.uuid4().hex[:12]
     output_dir = Path(args.output_dir) / f"matrix_{run_id}"
 
-    print(f"\nAgentic Memory Benchmark — Matrix Runner")
+    print(f"\nMemTuner — Matrix Runner")
     print(f"{'='*56}")
     print(f"  Run ID:          {run_id}")
     print(f"  Mode:            {args.mode}")

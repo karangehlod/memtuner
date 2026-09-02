@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from benchmark.resources.tracker import ResourceReport, ResourceTracker, ResourceSnapshot
+from benchmark.resources.tracker import ResourceReport, ResourceSnapshot, ResourceTracker
 
 
 @pytest.mark.unit
@@ -90,7 +90,7 @@ class TestResourceTracker:
     def test_multiple_samples_collected(self):
         """With psutil installed, multiple samples should be collected."""
         try:
-            import psutil
+            import psutil  # noqa: F401
         except ImportError:
             pytest.skip("psutil not installed")
 

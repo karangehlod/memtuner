@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the protocol requirements for running AgentMemoryBench in a reproducible, fair, and auditable way.
+This document defines the protocol requirements for running MemTuner in a reproducible, fair, and auditable way.
 
 The protocol specifies what must be recorded, what must remain controlled, and which artifacts are required for benchmark claims.
 

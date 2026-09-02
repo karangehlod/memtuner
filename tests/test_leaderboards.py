@@ -1,9 +1,11 @@
 """Tests for leaderboard generation."""
 
-import pytest
 import json
-from benchmark.memory.leaderboards import LeaderboardGenerator, LeaderboardEntry
+
+import pytest
+
 from benchmark.memory.adapters import MemoryMetrics
+from benchmark.memory.leaderboards import LeaderboardEntry, LeaderboardGenerator
 
 
 @pytest.fixture
@@ -155,7 +157,7 @@ class TestLeaderboardGenerator:
         assert "analysis_matrix" in analysis
 
         # Check specializations for each adapter
-        for adapter, spec in analysis["specializations"].items():
+        for _adapter, spec in analysis["specializations"].items():
             assert "best_dataset" in spec
             assert "best_score" in spec
             assert "worst_dataset" in spec
