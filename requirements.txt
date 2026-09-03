@@ -29,6 +29,12 @@ httpx[socks]==0.28.1
 # LLM Integration
 openai>=1.0,<2.0
 
+# Numerics, Plotting & Dataset Handling
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
+pyarrow>=14.0    # parquet dataset sources (MS MARCO, WebQuestions, HotpotQA mirror)
+
 # Development (optional)
 # pytest>=7.4,<8.0
 # pytest-cov>=4.1,<5.0

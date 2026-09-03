@@ -54,6 +54,7 @@ MemTuner answers: *"Which combination of memory type, retrieval strategy, embedd
 - [Statistical Analysis](#statistical-analysis)
 - [Simulation Figures](#simulation-figures)
 - [Architecture](#architecture)
+- [Documentation](#documentation)
 - [Development](#development)
 - [Contributing](#contributing)
 - [Citation](#citation)
@@ -1013,6 +1014,24 @@ graph LR
 | Thread pool (BM25/Recency) | `StudyScheduler` | Up to `cpu_count-1` true-parallel workers via threads |
 | Hard worker cap | `StudyScheduler` | `min(requested, cpu_count-1, n_parallel_cells)` — no idle threads |
 | OMP/MKL thread cap | startup env | GPU kernel threads not starved by numpy/blas threads |
+
+---
+
+## Documentation
+
+Deeper reference material lives in [docs/](docs/):
+
+| Document | Contents |
+|---|---|
+| [architecture.md](docs/architecture.md) | Full technical architecture — module map, data flow, design decisions |
+| [RUNBOOK.md](docs/RUNBOOK.md) | Operational guide — advanced/legacy CLI commands, long-run tips |
+| [METRIC_DEFINITIONS.md](docs/METRIC_DEFINITIONS.md) | Formal definition of every reported metric |
+| [api_reference.md](docs/api_reference.md) | Public API reference for the key classes |
+| [EVALUATION_PROTOCOL.md](docs/EVALUATION_PROTOCOL.md) | Reproducibility and fairness protocol for runs |
+| [EXPERIMENT_GUIDELINES.md](docs/EXPERIMENT_GUIDELINES.md) | How to design, run, review, and archive experiments |
+| [CUSTOM_DATA.md](docs/CUSTOM_DATA.md) | Bringing your own dataset (gold format + adapters) |
+| [DECAY_CONFIGURATION_GUIDE.md](docs/DECAY_CONFIGURATION_GUIDE.md) | Tuning temporal decay policies |
+| [ARTIFACT_SCHEMA.md](docs/ARTIFACT_SCHEMA.md) | Schema of every output file a run produces |
 
 ---
 

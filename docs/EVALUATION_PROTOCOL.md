@@ -200,4 +200,4 @@ Before using a run in a report or paper, verify:
 
 This protocol document satisfies a Phase 0 benchmark-documentation requirement and is the primary input to Phase 1 benchmark-protocol work.
 
-It is intentionally concrete about the current CLI artifact surface so that roadmap claims remain aligned with the codebase as it exists today.
+It is intentionally concrete about the current CLI artifact surface so that documentation claims remain aligned with the codebase as it exists today.

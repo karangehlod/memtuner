@@ -25,6 +25,7 @@ dependencies = [
     "matplotlib>=3.7",
     "numpy>=1.24",
     "pandas>=2.0",
+    "pyarrow>=14.0",  # parquet dataset sources (MS MARCO, WebQuestions, HotpotQA mirror)
 ]
 
 [project.optional-dependencies]
