@@ -56,6 +56,7 @@ class MultiWOZAdapter(DatasetAdapter):
 
                 # Dialogue state as memories
                 turns = dialogue.get("turns", dialogue.get("messages", []))
+                created_ids: list[str] = []
                 for turn_idx, turn in enumerate(turns):
                     # Extract user utterance
                     if isinstance(turn, dict):
@@ -81,6 +82,7 @@ class MultiWOZAdapter(DatasetAdapter):
                         conversation_turn=turn_idx,
                     )
                     all_memories[day].append(memory)
+                    created_ids.append(memory.id)
 
                     # Next turn is query
                     if turn_idx + 1 < len(turns):
@@ -91,8 +93,10 @@ class MultiWOZAdapter(DatasetAdapter):
                             next_utterance = str(next_turn)
 
                         if next_utterance:
-                            memory_ids = [f"turn_{d_idx}_{i}" for i in range(turn_idx + 1)]
-                            expected = GoldExpectedResult(memory_ids=memory_ids)
+                            # Only user turns become memories, so expected ids
+                            # must reference created memories — not raw turn
+                            # indices (system turns are skipped above).
+                            expected = GoldExpectedResult(memory_ids=list(created_ids))
 
                             query = GoldQuery(
                                 day=day,

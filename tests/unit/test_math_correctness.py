@@ -1,4 +1,4 @@
-"""Mathematical correctness tests for the Agentic Memory Benchmark.
+"""Mathematical correctness tests for MemTuner.
 
 Covers all numerical formulas used in scoring, ranking, and statistical
 analysis:

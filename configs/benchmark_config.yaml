@@ -15,7 +15,17 @@
 datasets:
   query_count_to_name:
     11873: "SQuAD"
+    10557: "NarrativeQA"
+    10000: "MS MARCO"
     7983:  "CoQA"
+    6666:  "FEVER"
+    5000:  "HotpotQA"
+    3939:  "Wizard"
+    3845:  "MultiWOZ"
+    3681:  "PersonaChat"
+    2032:  "WebQuestions"
+    2000:  "NaturalQuestions"
+    1986:  "LoCoMo"
     1977:  "LoCoMo"
     470:   "LongMemEval"
     200:   "Synthetic"
@@ -23,7 +33,16 @@ datasets:
   # Display order in cross-dataset plots and tables
   display_order:
     - SQuAD
+    - NarrativeQA
+    - MS MARCO
     - CoQA
+    - FEVER
+    - HotpotQA
+    - Wizard
+    - MultiWOZ
+    - PersonaChat
+    - WebQuestions
+    - NaturalQuestions
     - LoCoMo
     - LongMemEval
     - Synthetic

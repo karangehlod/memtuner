@@ -55,31 +55,39 @@ class FEVERAdapter(DatasetAdapter):
                 if not claim_text:
                     continue
 
-                # Evidence facts as memories
+                # Evidence facts as memories. Each raw evidence entry is
+                # [annotation_id, evidence_id, wiki_page, sentence_id]; only
+                # ev[2] (the wiki page) is available without the wiki dump.
                 evidence = claim.get("evidence", [])
+                memory_ids: list[str] = []
                 for e_idx, evidence_set in enumerate(evidence[:5]):
-                    if isinstance(evidence_set, list):
-                        for ev in evidence_set[:2]:
-                            if isinstance(ev, (list, tuple)) and len(ev) >= 3:
-                                _, _, ev_text = ev[0], ev[1], ev[2]
-                            else:
-                                ev_text = str(ev)
+                    if not isinstance(evidence_set, list):
+                        continue
+                    for s_idx, ev in enumerate(evidence_set[:2]):
+                        if isinstance(ev, (list, tuple)) and len(ev) >= 3:
+                            ev_text = ev[2]
+                        else:
+                            ev_text = str(ev)
 
-                            if ev_text:
-                                memory = GoldMemoryEvent(
-                                    id=f"fact_{c_idx}_{e_idx}",
-                                    user_id="user-default",
-                                    type=MemoryType.EPISODIC,
-                                    content=ev_text[:300],
-                                    importance=0.9,
-                                    entities=[],
-                                    task_id=f"claim_{c_idx}",
-                                    conversation_turn=e_idx,
-                                )
-                                all_memories[day].append(memory)
-                    break
+                        if ev_text:
+                            mem_id = f"fact_{c_idx}_{e_idx}_{s_idx}"
+                            memory = GoldMemoryEvent(
+                                id=mem_id,
+                                user_id="user-default",
+                                type=MemoryType.EPISODIC,
+                                content=str(ev_text)[:300],
+                                importance=0.9,
+                                entities=[],
+                                task_id=f"claim_{c_idx}",
+                                conversation_turn=e_idx,
+                            )
+                            all_memories[day].append(memory)
+                            memory_ids.append(mem_id)
 
-                memory_ids = [f"fact_{c_idx}_{i}" for i in range(min(len(evidence), 5))] or ["fact_0"]
+                # NOT ENOUGH INFO claims have no evidence — nothing to retrieve.
+                if not memory_ids:
+                    continue
+
                 expected = GoldExpectedResult(memory_ids=memory_ids)
 
                 query = GoldQuery(

@@ -55,6 +55,7 @@ class BM25LStrategy(RetrievalStrategy):
             self._bm25 = None
             self._id_list = []
             self._user_index = {}
+            self._user_mask_cache = {}
             return
 
         _hash = hashlib.md5(
@@ -68,6 +69,7 @@ class BM25LStrategy(RetrievalStrategy):
             return
 
         self._id_list = [m.id for m in memories]
+        self._user_mask_cache = {}  # invalidate on corpus change
         self._user_index = {}
         for i, m in enumerate(memories):
             uid = m.user_id or "__none__"

@@ -73,23 +73,33 @@ os.environ.setdefault("MKL_NUM_THREADS", _thread_cap)
 os.environ.setdefault("OPENBLAS_NUM_THREADS", _thread_cap)
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")  # disables HF tokenizer fork warning + excess threads
 
-# ── HuggingFace Hub offline-mode noise suppression ────────────────────────────
-# sentence-transformers makes HEAD requests for adapter_config.json,
-# processor_config.json, etc. on huggingface.co AFTER loading from cache,
-# even when no internet is available.  Each check retries 5× with backoff,
-# adding 60-120s of red noise per model with no functional effect.
+# ── HuggingFace Hub retry-noise suppression ──────────────────────────────────
+# After loading a model from cache, sentence-transformers probes huggingface.co
+# for optional config files (adapter_config.json, preprocessor_config.json,
+# video_preprocessor_config.json, …). Each probe retries 5× with exponential
+# backoff. On machines without direct HTTPS access, or with self-signed
+# corporate proxies (SSL: CERTIFICATE_VERIFY_FAILED), these retries fill the
+# terminal with hundreds of red lines that have zero functional impact —
+# models load correctly from cache regardless.
 #
-# Strategy: suppress the retry warnings at the logging level (preserves
-# downloads for first-time users) while keeping actual errors visible.
-# If HF_TOKEN is set the user explicitly wants hub access — don't suppress.
-if not os.environ.get("HF_TOKEN"):
-    import logging as _logging
-    _logging.getLogger("huggingface_hub.utils._http").setLevel(_logging.ERROR)
-    _logging.getLogger("huggingface_hub.file_download").setLevel(_logging.ERROR)
-    _logging.getLogger("filelock").setLevel(_logging.ERROR)
-    # Tell sentence-transformers to skip optional-file probes when offline.
-    # This does NOT block downloads — only suppresses "not found" retries.
-    os.environ.setdefault("HF_HUB_VERBOSITY", "error")
+# Fix: suppress the retry-WARNING level at the logging layer unconditionally.
+# This does NOT block actual model downloads or first-time cache population.
+# HF_TOKEN controls auth; verbosity is a separate concern.
+import logging as _logging
+
+_logging.getLogger("huggingface_hub.utils._http").setLevel(_logging.ERROR)
+_logging.getLogger("huggingface_hub.file_download").setLevel(_logging.ERROR)
+_logging.getLogger("huggingface_hub.utils._cache_manager").setLevel(_logging.ERROR)
+_logging.getLogger("filelock").setLevel(_logging.ERROR)
+os.environ.setdefault("HF_HUB_VERBOSITY", "error")
+# Fix SSL certificate verification on macOS where Python's bundled certs may
+# not include the intermediate CA used by HuggingFace's CDN.
+try:
+    import certifi as _certifi
+    os.environ.setdefault("SSL_CERT_FILE", _certifi.where())
+    os.environ.setdefault("REQUESTS_CA_BUNDLE", _certifi.where())
+except ImportError:
+    pass  # certifi not installed — SSL errors may still appear, but are cosmetic
 
 
 def main():
@@ -388,12 +398,20 @@ Examples:
     data_dir = Path(project_root) / "data"
 
     if args.gold_dataset:
-        # Specific dataset(s) requested — use exactly those, no auto-download
+        # Specific dataset(s) requested — auto-download/convert any missing ones
         gold_paths = [Path(p) for p in args.gold_dataset]
         missing = [p for p in gold_paths if not p.exists()]
         if missing:
-            for p in missing:
+            _ensure_requested_datasets(missing, project_root)
+        still_missing = [p for p in gold_paths if not p.exists()]
+        if still_missing:
+            for p in still_missing:
                 print(f"ERROR: Dataset not found: {p}", file=sys.stderr)
+                canonical = data_dir / "input" / p.name
+                if canonical.exists() and canonical != p.resolve():
+                    print(f"       (prepared at {canonical} — pass that path instead)", file=sys.stderr)
+            print("       Known datasets are prepared automatically; see scripts/prepare_datasets.py "
+                  "and scripts/prepare_extended_datasets.py for sources.", file=sys.stderr)
             sys.exit(1)
     else:
         # No dataset specified — auto-download missing ones, then run all available
@@ -1030,6 +1048,62 @@ def _detect_memory_types(gold_path: Path, requested: list[str]) -> list[str]:
         return filtered
     except Exception:
         return requested
+
+
+# Extended datasets prepared by scripts/prepare_extended_datasets.py:
+# gold filename → preparer name
+_EXTENDED_DATASETS = {
+    "fever_gold.json": "fever",
+    "msmarco_gold.json": "msmarco",
+    "multiwoz_gold.json": "multiwoz",
+    "narrativeqa_gold.json": "narrativeqa",
+    "naturalquestions_gold.json": "nq",
+    "webquestions_gold.json": "webquestions",
+    "wizard_gold.json": "wizard",
+}
+
+
+def _ensure_requested_datasets(missing_paths: list[Path], project_root: str) -> None:
+    """Auto-download and convert specific missing gold datasets before a run.
+
+    Recognises the gold filenames produced by scripts/prepare_datasets.py
+    (core datasets) and scripts/prepare_extended_datasets.py (extended
+    datasets). Unrecognised filenames are left alone — the caller re-checks
+    existence and reports what is still missing.
+    """
+    import sys as _sys
+    scripts_dir = Path(project_root) / "scripts"
+    _sys.path.insert(0, str(scripts_dir))
+
+    import prepare_extended_datasets as _ped
+    _ped.load_env()  # HF_TOKEN for HuggingFace sources
+
+    import prepare_datasets as _pd
+
+    for path in missing_paths:
+        name = path.name
+        print(f"\n  Dataset missing — preparing {name} ...")
+        try:
+            if name in _EXTENDED_DATASETS:
+                _ped.PREPARERS[_EXTENDED_DATASETS[name]]()
+                continue
+
+            # Core datasets: download the raw source (if any), then convert.
+            for dest, url, desc in _pd.DOWNLOADS:
+                if dest.name == name:  # direct download (locomo10.json)
+                    _pd._download_file(url, dest, desc)
+            for _conv_name, src, converter_fn, out in _pd.CONVERSIONS:
+                if out.name != name:
+                    continue
+                if src is not None and not src.exists():
+                    for dest, url, desc in _pd.DOWNLOADS:
+                        if dest == src:
+                            _pd._download_file(url, dest, desc)
+                if src is None or src.exists():
+                    converter_fn()
+                    print(f"  ✓ converted: {out.name}")
+        except Exception as e:
+            print(f"  ✗ could not prepare {name}: {e}", file=_sys.stderr)
 
 
 def _ensure_all_datasets(data_dir: Path, project_root: str) -> None:

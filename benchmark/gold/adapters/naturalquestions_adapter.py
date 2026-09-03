@@ -63,6 +63,7 @@ class NaturalQuestionsAdapter(DatasetAdapter):
 
                 # Context passages as memories
                 context = item.get("long_answer_candidates", []) or item.get("document_text", "")
+                memory_ids: list[str] = []
                 if isinstance(context, str):
                     memory = GoldMemoryEvent(
                         id=f"doc_{q_idx}",
@@ -75,6 +76,7 @@ class NaturalQuestionsAdapter(DatasetAdapter):
                         conversation_turn=0,
                     )
                     all_memories[day].append(memory)
+                    memory_ids.append(memory.id)
                 elif isinstance(context, list) and context:
                     for ctx_idx, ctx in enumerate(context[:3]):
                         ctx_text = ctx.get("text", "") if isinstance(ctx, dict) else str(ctx)
@@ -89,8 +91,12 @@ class NaturalQuestionsAdapter(DatasetAdapter):
                             conversation_turn=ctx_idx,
                         )
                         all_memories[day].append(memory)
+                        memory_ids.append(memory.id)
 
-                memory_ids = [m.id for m in all_memories[day]] if all_memories[day] else ["doc_0"]
+                # Only this question's own documents are gold for this query —
+                # not every document injected on the same (reused) day.
+                if not memory_ids:
+                    continue
                 expected = GoldExpectedResult(memory_ids=memory_ids)
 
                 query = GoldQuery(

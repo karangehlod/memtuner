@@ -13,7 +13,7 @@
     <img src="https://github.com/karangehlod/memtuner/actions/workflows/math_tests.yml/badge.svg" alt="Math Tests">
   </a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-green" alt="License">
   <img src="https://img.shields.io/badge/version-0.0.1-informational" alt="Version">
   <img src="https://img.shields.io/badge/status-research--ready-orange" alt="Status">
 </p>
@@ -185,80 +185,76 @@ python -c "import torch; print('ROCm CUDA:', torch.cuda.is_available())"
 
 ## Quick Start
 
-### Step 1 — Prepare datasets
-
-All datasets live under `data/input/`. Download the ones you need:
-
-```bash
-# Download LoCoMo, LongMemEval, SQuAD 2.0, CoQA and convert to gold format
-python scripts/prepare_datasets.py --download --convert
-```
-
-Datasets are **not** committed to this repo — they are fetched from their original
-sources (Snap Research, HuggingFace, Stanford NLP) to respect their licenses.
-
-After this, `data/input/` should contain:
-```
-data/input/
-├── locomo10.json
-├── longmemeval_oracle_gold.json
-├── squad_gold.json
-├── coqa_gold.json
-└── synthetic_gold.json
-```
-
-### Step 2 — Check what your machine can run
+Two commands. Datasets download and convert themselves the first time a run
+needs them — there is no separate data-preparation step.
 
 ```bash
-memtuner doctor
-# or
-python scripts/study_runner.py --doctor
+memtuner doctor              # 1. hardware check + a copy-paste command tuned to your machine
+memtuner study --mode quick  # 2. fast sanity check on all datasets (BM25 + recency, no GPU)
 ```
 
-This prints hardware analysis, which phases are available, and the exact copy-paste command for your machine.
-
+`doctor` prints your CPU/RAM/GPU, which of the 5 phases your machine can run,
+which datasets are already on disk, and the exact `study` command to run next.
 Example on a 16 GB NVIDIA GPU:
+
 ```
   ✓  CPU: 24 logical cores
   ✓  RAM: 64.0 GB total
   ✓  GPU: NVIDIA CUDA — RTX A4000 (16384 MB VRAM, 48 SMs)
   ✓  Phases 1–5 — all phases including CrossEncoder reranker
 
-  memtuner study --gold-dataset data/input/locomo10.json --mode full --workers 23
+  memtuner study --mode full --workers 23
 ```
 
-### Step 3 — Run
+> **HuggingFace datasets:** if `HF_TOKEN` is set in `.env`, all datasets
+> download authenticated. Without it, HuggingFace-hosted sources are tried
+> anonymously; any that fail are skipped with a log line telling you to add
+> `HF_TOKEN=hf_...` to `.env` — everything else still downloads and runs.
+
+### The whole thing — every dataset, every phase
 
 ```bash
-# Sanity check — BM25 + Recency only, ~45s, no GPU needed
-memtuner study --gold-dataset data/input/locomo10.json --mode quick
+memtuner study --mode full            # all datasets × all 5 phases, merged report
+memtuner reports                      # HTML dashboard + PNG plots from all runs
+```
 
-# Default run — Phases 1–3 (baseline + embeddings + hybrid)
-memtuner study --gold-dataset data/input/locomo10.json --mode default
+With no `--gold-dataset` argument, `study` auto-downloads every available
+dataset and merges the results into one report.
 
-# Full 5-phase study on one dataset
+### Scoped runs — one dataset, or specific phases
+
+```bash
+# One dataset (auto-downloaded if missing), full 5 phases
 memtuner study --gold-dataset data/input/locomo10.json --mode full
 
-# Full study — all datasets, results merged into one report
-memtuner study \
-  --gold-dataset data/input/locomo10.json \
-                 data/input/longmemeval_oracle_gold.json \
-                 data/input/squad_gold.json \
-                 data/input/coqa_gold.json \
-  --mode full
+# Quick sanity check on one dataset (~1 min, no GPU)
+memtuner study --gold-dataset data/input/locomo10.json --mode quick
 
-# With LLM judge for answer-quality scoring
-memtuner study \
-  --gold-dataset data/input/locomo10.json \
-  --mode full \
-  --ollama-url http://localhost:11434/v1 \
-  --judge-model nemotron-3-nano:4b
+# Only specific phases (1=baselines 2=embeddings 3=hybrid 4=decay 5=reranker)
+memtuner study --gold-dataset data/input/locomo10.json --mode custom --phases 1 2
 
 # Statistical run — 3 seeds for 95% bootstrap CIs (~3× longer)
-memtuner study \
-  --gold-dataset data/input/locomo10.json \
-  --mode full --seeds 42 123 456
+memtuner study --gold-dataset data/input/locomo10.json --mode full --seeds 42 123 456
+
+# With LLM judge for answer-quality scoring (any OpenAI-compatible endpoint)
+memtuner study --gold-dataset data/input/locomo10.json --mode full \
+  --ollama-url http://localhost:11434/v1 --judge-model nemotron-3-nano:4b
 ```
+
+### Verify your install
+
+```bash
+python -m pytest tests/ -m "unit or contract" -q    # ~15 s, same suite CI runs
+```
+
+### Configuration — what lives where
+
+| File | Purpose | Validated by |
+|---|---|---|
+| `.env` | Secrets and machine overrides (`HF_TOKEN`, `BENCHMARK_WORKERS`, judge endpoint). `memtuner doctor --apply` writes the hardware block for you. | — |
+| [configs/benchmark_config.yaml](configs/benchmark_config.yaml) | Runtime tuning: composite score weights, dataset display names, plot colors. Any value can be overridden with a `BENCHMARK_*` variable in `.env`. Edit directly. | — |
+| [configs/profiles/*.yaml](configs/profiles/) | Scenario/workload configs (queries-per-day profiles) used by `memtuner run`. | `memtuner validate -c <file>` |
+| [configs/study_defaults.yaml](configs/study_defaults.yaml) | Which embedding/reranker models the study sweeps. | — |
 
 All outputs go to `data/output/study_<run_id>/`.
 
@@ -375,36 +371,26 @@ memtuner study \
 
 ---
 
-### Running all datasets one by one
+### Running multiple datasets
 
-Each dataset is run sequentially; a merged report is produced at the end.
+Omit `--gold-dataset` to run **everything** — each dataset runs sequentially
+(auto-downloading if missing) and a merged report is produced at the end:
 
 ```bash
-# All four datasets — full 5-phase study (recommended for publication)
+memtuner study --mode full
+```
+
+Or name a specific subset:
+
+```bash
+# Recommended first publication run — LoCoMo + LongMemEval
 memtuner study \
-  --gold-dataset data/input/locomo10.json \
-                 data/input/longmemeval_oracle_gold.json \
-                 data/input/squad_gold.json \
-                 data/input/coqa_gold.json \
+  --gold-dataset data/input/locomo10.json data/input/longmemeval_oracle_gold.json \
   --mode full
 
-# Estimated total time on NVIDIA A4000 (16 GB):
-#   locomo10.json           ~3–4 h  (1,977 queries, 5,879 memories)
-#   longmemeval_oracle_gold ~2–3 h  (470 queries, 10,288 memories)
-#   squad_gold              ~4–6 h  (11,873 queries)
-#   coqa_gold               ~3–5 h  (7,983 queries)
-#   Total                  ~12–18 h
-
-# LoCoMo only — fastest to iterate
-memtuner study \
-  --gold-dataset data/input/locomo10.json \
-  --mode full
-
-# LoCoMo + LongMemEval (recommended for first publication run)
-memtuner study \
-  --gold-dataset data/input/locomo10.json \
-                 data/input/longmemeval_oracle_gold.json \
-  --mode full
+# Rough full-study times on an NVIDIA A4000 (16 GB):
+#   locomo10.json           ~3–4 h   longmemeval  ~2–3 h
+#   squad_gold              ~4–6 h   coqa_gold    ~3–5 h
 ```
 
 ---
@@ -544,22 +530,43 @@ completes. If a run crashes at cell 50 of 100, the first 50 results are already 
 
 ## Datasets
 
-| Dataset | Path | Queries | Memories | Notes |
-|---------|------|---------|----------|-------|
-| **LoCoMo** | `data/input/locomo10.json` | 1,977 | 5,879 | CC BY-NC 4.0 (Snap Research). Long-horizon episodic memory, 10 conversations |
-| **LongMemEval** | `data/input/longmemeval_oracle_gold.json` | 470 | 10,288 | Temporal reasoning + knowledge updates |
-| **SQuAD 2.0** | `data/input/squad_gold.json` | 11,873 | — | CC BY-SA 4.0. Reading comprehension |
-| **CoQA** | `data/input/coqa_gold.json` | 7,983 | — | Conversational QA |
-| **Synthetic** | `data/input/synthetic_gold.json` | 200 | — | Generated locally. Controlled experiments with known ground truth |
+MemTuner benchmarks against 14 datasets. **None are redistributed in this
+repository** — every dataset is downloaded from its original source the first
+time a run needs it and remains under its original license. We are grateful
+to the authors of these datasets; full citations and license notices are in
+[NOTICE](NOTICE).
 
-**Download all datasets:**
+| Dataset | Path (`data/input/`) | Queries | License | What it tests |
+|---------|----------------------|---------|---------|---------------|
+| **LoCoMo** | `locomo10.json` | 1,986 | CC BY-NC 4.0 ([Snap Research](https://github.com/snap-research/locomo)) | Long-horizon episodic conversation memory |
+| **LongMemEval** | `longmemeval_oracle_gold.json` | 470 | MIT ([Wu et al.](https://github.com/xiaowu0162/LongMemEval)) | Temporal reasoning + knowledge updates |
+| **SQuAD 2.0** | `squad_gold.json` | 11,873 | CC BY-SA 4.0 ([Stanford NLP](https://rajpurkar.github.io/SQuAD-explorer/)) | Reading comprehension |
+| **CoQA** | `coqa_gold.json` | 7,983 | Mixed ([Stanford NLP](https://stanfordnlp.github.io/coqa/)) | Conversational QA |
+| **HotpotQA** | `hotpotqa_gold.json` | 5,000 | CC BY-SA 4.0 ([Yang et al.](https://hotpotqa.github.io/)) | Multi-hop reasoning |
+| **PersonaChat** | `personachat_gold.json` | 3,681 | See source ([FAIR](https://huggingface.co/datasets/bavard/personachat_truecased)) | Persona-grounded dialogue |
+| **FEVER** | `fever_gold.json` | 6,666 | CC BY-SA 3.0 ([fever.ai](https://fever.ai/)) | Fact verification |
+| **MS MARCO** | `msmarco_gold.json` | 10,000 | Research-only ([Microsoft](https://microsoft.github.io/msmarco/)) | Large-scale web QA |
+| **MultiWOZ 2.2** | `multiwoz_gold.json` | 3,845 | MIT ([Budzianowski et al.](https://github.com/budzianowski/multiwoz)) | Task-oriented dialogue state |
+| **NarrativeQA** | `narrativeqa_gold.json` | 10,557 | Apache 2.0 ([DeepMind](https://github.com/deepmind/narrativeqa)) | Long-narrative comprehension |
+| **NaturalQuestions** | `naturalquestions_gold.json` | 2,000 | CC BY-SA 3.0 ([Google](https://ai.google.com/research/NaturalQuestions)) | Real search queries |
+| **WebQuestions** | `webquestions_gold.json` | 2,032 | See source ([Berant et al.](https://huggingface.co/datasets/stanfordnlp/web_questions)) | KB factoid QA |
+| **Wizard of Wikipedia** | `wizard_gold.json` | 3,939 | CC BY-NC 4.0 mirror ([ParlAI](https://parl.ai/projects/wizard_of_wikipedia/)) | Knowledge-grounded dialogue |
+| **Synthetic** | `synthetic_gold.json` | 200 | This repo (Apache 2.0) | Controlled experiments, known ground truth |
+
+> **License courtesy:** using MemTuner with a dataset means accepting that
+> dataset's own terms. LoCoMo, MS MARCO, and the Wizard mirror are
+> **non-commercial** — do not use results derived from them commercially,
+> regardless of MemTuner's Apache 2.0 license.
+
+**Manual preparation (optional — `memtuner study` does this automatically):**
 ```bash
-python scripts/prepare_datasets.py --download --convert
+memtuner prepare-datasets --download --convert       # core 7 datasets
+python scripts/prepare_extended_datasets.py          # extended 7 datasets
 ```
 
-Datasets are downloaded from their original sources (Snap Research, Stanford NLP,
-HuggingFace) and converted to the gold format (~60 MB total). They are not
-redistributed in this repository; each remains under its original license.
+With `HF_TOKEN` set in `.env`, HuggingFace sources download authenticated;
+without it they are attempted anonymously and any failures are logged with
+instructions to add the token.
 
 > **Leakage note (LoCoMo):** 57.6% of LoCoMo queries overlap the memory corpus verbatim.
 > The benchmark warns about this at startup. Results are valid for model selection and
@@ -1153,4 +1160,13 @@ on a 10-core machine silently caps to 9.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+Apache 2.0 allows broad commercial use and grants contributors' patent rights;
+redistributed modified files must indicate that changes were made, and the
+attribution notices in [NOTICE](NOTICE) must be preserved.
+
+**Datasets are not covered by this license.** Each benchmark dataset is
+downloaded from its original source at run time and remains under its own
+license (see [Datasets](#datasets) and [NOTICE](NOTICE)); datasets marked
+non-commercial may not be used commercially regardless of MemTuner's license.

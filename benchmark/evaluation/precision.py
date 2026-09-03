@@ -1,4 +1,4 @@
-"""Standard IR Precision@K evaluator for the Agenticmemory benchmark pipeline.
+"""Standard IR Precision@K evaluator for the MemTuner pipeline.
 
 Precision@K = |retrieved[:K] ∩ gold| / K
 

@@ -478,3 +478,37 @@ class TestRetrievalStrategyContract:
         strategy.clear()
         results = strategy.retrieve("pizza", top_k=5)
         assert results == []
+
+
+@pytest.mark.unit
+class TestUserMaskCacheInvalidation:
+    """Regression: user-mask caches must be rebuilt when the corpus changes size.
+
+    Multi-day datasets re-index a growing corpus on the same strategy instance;
+    a mask cached against the old corpus must not survive the re-index
+    (previously raised IndexError inside retrieve and silently degraded
+    bm25l results via the base_store fallback).
+    """
+
+    @pytest.fixture(params=["bm25", "bm25l"])
+    def strategy(self, request):
+        from benchmark.factory.bootstrap import bootstrap_retrieval_strategies
+        from benchmark.factory.registry import RetrievalStrategyRegistry
+
+        registry = RetrievalStrategyRegistry()
+        bootstrap_retrieval_strategies(registry)
+        if not registry.is_registered(request.param):
+            pytest.skip(f"{request.param} not available")
+        return registry.resolve(request.param)
+
+    def test_mask_survives_corpus_growth(self, strategy):
+        day1 = [_make_memory(f"M-{i:03d}", f"pizza fact number {i}") for i in range(3)]
+        strategy.index(day1)
+        strategy.retrieve("pizza", top_k=2, user_id="u1")  # builds mask for 3-doc corpus
+
+        day2 = day1 + [
+            _make_memory(f"M-{i:03d}", f"hiking fact number {i}") for i in range(3, 10)
+        ]
+        strategy.index(day2)
+        results = strategy.retrieve("hiking", top_k=5, user_id="u1")  # must not raise
+        assert any(mem_id == "M-005" for mem_id, _ in results)

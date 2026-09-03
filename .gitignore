@@ -58,14 +58,11 @@ tmp/
 data/output/
 benchmark_results/
 
-# Raw dataset source files (large, can be re-downloaded).
-# Gold format files (*_gold.json, locomo10.json) ARE committed — they pin the
-# exact evaluation data so benchmark results remain reproducible over time.
-# Re-generate with: python scripts/prepare_datasets.py --download --convert
-data/input/longmemeval/
-data/input/squad/
-data/input/coqa/
-data/input/personachat/
-data/input/hotpotqa/
-data/input/hotpotqa_gold*.json
+# Datasets — NEVER committed. Each remains under its original license
+# (LoCoMo CC BY-NC, MS MARCO research-only, CoQA mixed, ...; see NOTICE).
+# They were purged from git history for the same reason — do not re-add.
+# Everything regenerates with:
+#   memtuner prepare-datasets --download --convert
+#   python scripts/prepare_extended_datasets.py
+data/input/
 data/generated/

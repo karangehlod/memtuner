@@ -1,0 +1,66 @@
+MemTuner
+Copyright 2026 TheProdSDE Team (Karan Gehlod)
+
+This product is licensed under the Apache License, Version 2.0.
+Modified files must carry prominent notices stating that changes were made,
+and this NOTICE file must be preserved in redistributions, per the license.
+
+================================================================================
+Third-party datasets
+================================================================================
+
+MemTuner does NOT redistribute any third-party dataset. All datasets are
+downloaded at run time from their original sources and remain under their
+original licenses. Using MemTuner with a dataset means you accept that
+dataset's terms. We gratefully acknowledge the authors:
+
+- LoCoMo — Snap Research (CC BY-NC 4.0)
+  https://github.com/snap-research/locomo
+  Maharana et al., "Evaluating Very Long-Term Conversational Memory of LLM
+  Agents", ACL 2024.
+
+- LongMemEval — Wu et al. (MIT)
+  https://github.com/xiaowu0162/LongMemEval
+
+- SQuAD 2.0 — Stanford NLP (CC BY-SA 4.0)
+  https://rajpurkar.github.io/SQuAD-explorer/
+  Rajpurkar et al., "Know What You Don't Know", ACL 2018.
+
+- CoQA — Stanford NLP (mixed component licenses; see source)
+  https://stanfordnlp.github.io/coqa/
+  Reddy, Chen, Manning, TACL 2019.
+
+- HotpotQA — Yang et al. (CC BY-SA 4.0)
+  https://hotpotqa.github.io/
+
+- PersonaChat — Facebook AI Research (see source terms)
+  https://huggingface.co/datasets/bavard/personachat_truecased
+  Zhang et al., "Personalizing Dialogue Agents", ACL 2018.
+
+- FEVER — Thorne et al. (annotations CC BY-SA 3.0; Wikipedia-derived)
+  https://fever.ai/
+
+- MS MARCO — Microsoft (non-commercial research terms; see source)
+  https://microsoft.github.io/msmarco/
+
+- MultiWOZ — Budzianowski et al. (MIT)
+  https://github.com/budzianowski/multiwoz
+
+- NarrativeQA — DeepMind (repository Apache 2.0; underlying texts from
+  Project Gutenberg and public movie scripts)
+  https://github.com/deepmind/narrativeqa
+
+- Natural Questions — Google (CC BY-SA 3.0)
+  https://ai.google.com/research/NaturalQuestions
+  (mirror used: https://huggingface.co/datasets/LLukas22/nq-simplified)
+
+- WebQuestions — Berant et al. (license not specified; see source)
+  https://huggingface.co/datasets/stanfordnlp/web_questions
+
+- Wizard of Wikipedia — Dinan et al. / ParlAI (mirror CC BY-NC 4.0;
+  Wikipedia-derived content CC BY-SA)
+  https://parl.ai/projects/wizard_of_wikipedia/
+  (mirror used: https://huggingface.co/datasets/chujiezheng/wizard_of_wikipedia)
+
+Note: datasets marked non-commercial (LoCoMo, MS MARCO, Wizard mirror) may
+not be used for commercial purposes regardless of MemTuner's own license.

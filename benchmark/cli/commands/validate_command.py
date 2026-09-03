@@ -47,7 +47,23 @@ def validate_config(
     check_environment: bool,
     environment_output: Path | None,
 ) -> None:
-    """Validate a benchmark configuration file."""
+    """Validate a benchmark SCENARIO config file (schema: benchmark/config/schema.py).
+
+    Checks a scenario/workload YAML — the kind used by `memtuner run` and
+    stored in configs/profiles/ (low_qpd.yaml, medium_qpd.yaml,
+    high_qpd.yaml) — against the strict BenchmarkConfig pydantic schema:
+    evaluation horizon, seed, scenarios, retrieval strategy, memory modules,
+    decay/pruning policies.
+
+    NOT for configs/benchmark_config.yaml — that file holds runtime tuning
+    (composite score weights, dataset display names) read by the reporting
+    layer and overridden by BENCHMARK_* variables in .env; edit it directly.
+
+    \b
+    Examples:
+      memtuner validate -c configs/profiles/medium_qpd.yaml
+      memtuner validate -c configs/profiles/medium_qpd.yaml --check-environment
+    """
     from benchmark.config.loader import load_config_from_path
     from benchmark.exceptions.config_errors import BenchmarkError
 

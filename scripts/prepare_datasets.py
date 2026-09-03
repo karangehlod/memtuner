@@ -215,12 +215,12 @@ def _download_file(url: str, dest: Path, description: str) -> bool:
 def print_status() -> None:
     print("\n=== Dataset Status ===\n")
 
-    print("AUTO (locomo — included in repo, no download needed):")
+    print("AUTO (locomo — downloaded from snap-research/locomo, no conversion needed):")
     f = DATA_DIR / "locomo10.json"
     status = f"✓ {f.stat().st_size // 1024 // 1024} MB" if f.exists() else "✗ missing"
     print(f"  locomo10.json       {status}")
     if f.exists():
-        print("    → Run: python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode full")
+        print("    → Run: memtuner study --gold-dataset data/input/locomo10.json --mode full")
 
     print("\nAUTO-DOWNLOAD + CONVERT:")
     for name, src, _, out in CONVERSIONS:
@@ -232,7 +232,7 @@ def print_status() -> None:
             out_status = f"✓ {out.stat().st_size // 1024 // 1024} MB" if out.exists() else "✗ not converted"
         print(f"  {name:15s}  source={src_status:25s}  gold={out_status}")
         if out.exists():
-            print(f"    → Run: python scripts/study_runner.py --gold-dataset {out.relative_to(project_root)} --mode full")
+            print(f"    → Run: memtuner study --gold-dataset {out.relative_to(project_root)} --mode full")
 
     print("\nMANUAL DOWNLOAD REQUIRED:")
     for name, url, instructions in MANUAL_DOWNLOADS:
@@ -242,8 +242,31 @@ def print_status() -> None:
     print()
 
 
+def load_env() -> None:
+    """Load .env (HF_TOKEN etc.) without requiring python-dotenv."""
+    env_file = project_root / ".env"
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            if line.strip() and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                os.environ.setdefault(k.strip(), v.strip())
+
+
+def _hf_token_summary() -> None:
+    """Tell the user upfront how HuggingFace downloads will behave."""
+    token = os.environ.get("HF_TOKEN", "").strip()
+    hf_names = [dest.name for dest, url, _ in DOWNLOADS if "huggingface.co" in url]
+    if token and not token.startswith("hf_your"):
+        print(f"  HF_TOKEN found — authenticated HuggingFace downloads enabled ({len(hf_names)} files).")
+    elif hf_names:
+        print("  HF_TOKEN not set — HuggingFace downloads will be attempted anonymously.")
+        print(f"    Files that may fail without it: {', '.join(hf_names)}")
+        print("    Fix: add HF_TOKEN=hf_... to .env (get one at https://huggingface.co/settings/tokens)")
+
+
 def do_download() -> None:
     print("\n=== Downloading Datasets ===\n")
+    _hf_token_summary()
     for dest, url, desc in DOWNLOADS:
         if dest.exists():
             print(f"  ✓ Already present: {dest.name}")
@@ -270,6 +293,7 @@ def do_convert() -> None:
 
 
 def main() -> None:
+    load_env()
     parser = argparse.ArgumentParser(description="Download and prepare benchmark datasets")
     parser.add_argument("--download", action="store_true", help="Download missing dataset files")
     parser.add_argument("--convert", action="store_true", help="Convert downloaded files to gold format")

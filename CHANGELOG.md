@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Agentic Memory Benchmark are documented here.
+All notable changes to MemTuner are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
@@ -8,10 +8,40 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — development branch (will become 0.1.0 on first PyPI release)
 
+### Changed
+- **License: MIT → Apache 2.0** with a NOTICE file carrying dataset
+  attributions. Datasets are never redistributed; each remains under its
+  original license (non-commercial datasets flagged explicitly).
+- **CLI surface simplified** — `memtuner --help` now shows the 8 core
+  commands (doctor, study, prepare-datasets, reports, plots, explore,
+  compare, validate); legacy/advanced commands remain functional but hidden.
+- **Datasets auto-prepare on demand** — `memtuner study` downloads and
+  converts any missing requested dataset before running; `memtuner doctor`
+  reports per-dataset availability. With `HF_TOKEN` in `.env`, HuggingFace
+  sources download authenticated; without it they are attempted anonymously
+  and failures are logged with a fix hint.
+- `memtuner validate` help now states exactly what it validates (scenario
+  configs in `configs/profiles/`, schema `benchmark/config/schema.py`) and
+  that `configs/benchmark_config.yaml` is runtime tuning edited directly.
+
+### Removed
+- **Dead experimental subsystems** — `benchmark/memory/{enterprise,distributed,production}/`,
+  the legacy standalone runner in `benchmark/retrieval/` (`benchmark_orchestrator`,
+  `performance_tester`, `sample_benchmark_runner`, `leaderboard_generator`), and five
+  unwired strategy modules. None were reachable from the CLI or study pipeline;
+  their test files were removed with them.
+- **Committed datasets** — third-party datasets (LoCoMo, LongMemEval, SQuAD, CoQA)
+  are no longer redistributed in the repository. `scripts/prepare_datasets.py
+  --download --convert` fetches all of them (LoCoMo included) from their original
+  sources under their original licenses. Cuts the repo from ~60 MB to ~5 MB.
+- **Internal planning documents** — roadmap/phase-plan/assessment docs removed from
+  `docs/`; the user-facing architecture, API reference, runbook, and metric
+  definitions remain.
+
 ### Added
 - **`--doctor` command** — reads CPU, RAM, GPU and installed packages; prints
   hardware capability matrix and copy-paste ready run command tailored to the
-  detected hardware. Runs as `python study_runner.py --doctor` or `benchmark doctor`.
+  detected hardware. Runs as `python scripts/study_runner.py --doctor` or `memtuner doctor`.
 - **Recency baseline strategy** (`RecencyStrategy`) — returns K most recently
   injected memories, ignoring query content. Runs automatically in Phase 1
   alongside BM25. Anchors all comparisons with a query-agnostic lower bound.
@@ -97,7 +127,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ## [0.0.1] — 2026-08-09 (initial development release)
 
 ### Added
-- Initial five-phase adaptive study runner (`study_runner.py`)
+- Initial five-phase adaptive study runner (`scripts/study_runner.py`)
 - BM25 retrieval strategy with corpus cache
 - EmbeddingsStrategy with model singleton LRU cache
 - HybridStrategy with Reciprocal Rank Fusion (RRF, k=60)

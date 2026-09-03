@@ -183,6 +183,36 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
     else:
         _info("httpx not installed — LLM judge disabled (optional)")
 
+    # ── Datasets ──────────────────────────────────────────────────────────────
+    # Missing datasets are downloaded/converted automatically when a study
+    # requests them; this section just shows what is already on disk.
+    _section("Datasets")
+
+    from pathlib import Path as _Path
+    _data_dir = _Path(__file__).resolve().parents[3] / "data" / "input"
+    _core = [
+        "locomo10.json", "longmemeval_oracle_gold.json", "squad_gold.json",
+        "coqa_gold.json", "personachat_gold.json", "hotpotqa_gold.json",
+        "synthetic_gold.json",
+    ]
+    _extended = [
+        "fever_gold.json", "msmarco_gold.json", "multiwoz_gold.json",
+        "narrativeqa_gold.json", "naturalquestions_gold.json",
+        "webquestions_gold.json", "wizard_gold.json",
+    ]
+    _n_present = 0
+    for _name in _core + _extended:
+        _p = _data_dir / _name
+        if _p.exists():
+            _n_present += 1
+            _ok(f"{_name}  ({_p.stat().st_size // (1024 * 1024)} MB)")
+        else:
+            _info(f"{_name} — not downloaded (auto-fetched when requested)")
+    if _n_present < len(_core):
+        _info("Prepare core datasets now:     python scripts/prepare_datasets.py --download --convert")
+    if _n_present < len(_core) + len(_extended):
+        _info("Prepare extended datasets now: python scripts/prepare_extended_datasets.py")
+
     # ── 3. Model VRAM fit ─────────────────────────────────────────────────────
     _section("Model VRAM Fit")
 

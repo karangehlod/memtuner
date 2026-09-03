@@ -1,1 +1,1 @@
-"""Test suite for the Agentic Memory Benchmarking Tool."""
+"""Test suite for MemTuner."""
