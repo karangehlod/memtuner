@@ -16,8 +16,8 @@ import click
     "--results-dir",
     "-d",
     type=click.Path(exists=True),
-    default="outputs",
-    help="Directory containing benchmark result JSON files.",
+    default="data/output",
+    help="Directory containing benchmark result files (default: data/output/).",
 )
 @click.option(
     "--host",

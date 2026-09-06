@@ -10,6 +10,10 @@ memory (LoCoMo, LongMemEval) compared to BM25 Okapi.
 
 from __future__ import annotations
 
+import re
+
+_PUNCT_RE = re.compile(r"[^\w\s]")
+
 import hashlib
 from typing import TYPE_CHECKING
 
@@ -75,7 +79,7 @@ class BM25LStrategy(RetrievalStrategy):
             uid = m.user_id or "__none__"
             self._user_index.setdefault(uid, set()).add(i)
 
-        token_lists = [m.content.lower().split() for m in memories]
+        token_lists = [_PUNCT_RE.sub(" ", m.content.lower()).split() for m in memories]
         self._bm25 = _BM25L(token_lists) if token_lists else None
 
         if len(_CACHE) >= _CACHE_MAX:
@@ -102,7 +106,7 @@ class BM25LStrategy(RetrievalStrategy):
         if self._bm25 is None or not self._id_list:
             return []
 
-        tokens = query.lower().split()
+        tokens = _PUNCT_RE.sub(" ", query.lower()).split()
         scores = self._bm25.get_scores(tokens)
 
         scores_arr = np.array(scores, dtype=np.float32)

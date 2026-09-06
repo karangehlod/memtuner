@@ -44,7 +44,7 @@ def download_locomo(data_dir: Path) -> Path:
         urllib.request.urlretrieve(LOCOMO_URL, str(output_path))
     except Exception as e:
         print(f"\n  ERROR: Failed to download: {e}")
-        print(f"  Please download manually:")
+        print("  Please download manually:")
         print(f"    curl -Lo {output_path} {LOCOMO_URL}")
         sys.exit(1)
 
@@ -85,11 +85,11 @@ def main() -> None:
     print("=" * 60)
 
     # 1. Download
-    print(f"\n[1/4] Downloading LoCoMo dataset...")
+    print("\n[1/4] Downloading LoCoMo dataset...")
     locomo_path = download_locomo(data_dir)
 
     # 2. Show stats
-    print(f"\n[2/4] Analyzing dataset...")
+    print("\n[2/4] Analyzing dataset...")
     with locomo_path.open() as fh:
         raw_data = json.load(fh)
 
@@ -122,12 +122,12 @@ def main() -> None:
 
     adapter = LoCoMoLoader()
     categories = adapter.get_category_distribution(raw_data)
-    print(f"\n  QA categories:")
+    print("\n  QA categories:")
     for cat, count in sorted(categories.items()):
         print(f"    {cat:25s}: {count:4d}")
 
     difficulty = adapter.get_difficulty_distribution(raw_data)
-    print(f"\n  Difficulty distribution:")
+    print("\n  Difficulty distribution:")
     for level, count in sorted(difficulty.items()):
         print(f"    {level:10s}: {count:4d}")
 
@@ -149,7 +149,7 @@ def main() -> None:
 
     # 4. Convert full dataset
     if not args.subset_only:
-        print(f"\n[4/4] Converting FULL dataset to gold format...")
+        print("\n[4/4] Converting FULL dataset to gold format...")
         full_path = data_dir / "locomo_gold.json"
         full = convert_locomo_to_gold(locomo_path, full_path, "locomo_full")
         print(f"  Queries:  {len(full.queries)}")
@@ -158,14 +158,14 @@ def main() -> None:
         print(f"  Users:    {len(full.user_ids)}")
         print(f"  Output:   {full_path}")
     else:
-        print(f"\n[4/4] Skipped full conversion (--subset-only)")
+        print("\n[4/4] Skipped full conversion (--subset-only)")
 
     print(f"\n{'=' * 60}")
     print("DONE!")
-    print(f"\nNext steps:")
-    print(f"  1. Quick validation:  python -m pytest tests/unit/test_locomo_adapter.py -v")
-    print(f"  2. Benchmark run:     benchmark run --config configs/locomo.yaml")
-    print(f"  3. Grid search:       python grid_search.py --gold data/locomo_gold.json")
+    print("\nNext steps:")
+    print("  1. Quick validation:  python -m pytest tests/unit/test_locomo_adapter.py -v")
+    print("  2. Benchmark run:     benchmark run --config configs/locomo.yaml")
+    print("  3. Grid search:       python grid_search.py --gold data/locomo_gold.json")
 
 
 if __name__ == "__main__":

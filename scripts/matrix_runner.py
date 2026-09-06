@@ -10,7 +10,6 @@ Works on macOS, Linux, and Windows.
 
 from __future__ import annotations
 
-import json
 import sys
 import time
 import uuid
@@ -118,11 +117,11 @@ Examples:
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
+    from benchmark.recommendation.ranker import MatrixRanker, QualityThresholds
+    from benchmark.workload.aggregator import MatrixAggregator, MatrixReporter
     from benchmark.workload.matrix import MatrixExpander
     from benchmark.workload.profile import get_profile
     from benchmark.workload.scheduler import MatrixScheduler
-    from benchmark.workload.aggregator import MatrixAggregator, MatrixReporter
-    from benchmark.recommendation.ranker import MatrixRanker, QualityThresholds
 
     # Validate dataset
     gold_path = Path(args.gold_dataset)
@@ -138,7 +137,7 @@ Examples:
     run_id = uuid.uuid4().hex[:12]
     output_dir = Path(args.output_dir) / f"matrix_{run_id}"
 
-    print(f"\nMemTuner — Matrix Runner")
+    print("\nMemTuner — Matrix Runner")
     print(f"{'='*56}")
     print(f"  Run ID:          {run_id}")
     print(f"  Mode:            {args.mode}")
@@ -181,7 +180,7 @@ Examples:
         )
 
     desc = expander.describe(cells)
-    print(f"\n  Matrix dimensions:")
+    print("\n  Matrix dimensions:")
     print(f"    Memory types:        {desc['memory_types']}")
     print(f"    Retrieval strategies:{desc['retrieval_strategies']}")
     print(f"    Decay policies:      {desc['decay_policies']}")
@@ -192,7 +191,7 @@ Examples:
     # Confirm if large run
     if len(cells) > 50:
         print(f"  WARNING: {len(cells)} cells — this will take significant time.")
-        print(f"  Use --mode core3x3 for a quick 27-cell comparison first.")
+        print("  Use --mode core3x3 for a quick 27-cell comparison first.")
         print()
 
     # Run
@@ -220,7 +219,7 @@ Examples:
     best = ranker.best_production_config(results)
 
     print(f"\n{'='*56}")
-    print(f"BEST PRODUCTION CONFIG:")
+    print("BEST PRODUCTION CONFIG:")
     if best:
         print(f"  Memory type:        {best.memory_type}")
         print(f"  Retrieval strategy: {best.retrieval_strategy}")

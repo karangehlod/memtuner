@@ -61,53 +61,46 @@ from typing import Any
 def compute_mrr(
     results: list[dict[str, Any]],
     relevant_doc_ids: set[str] | None = None,
+    k: int = 10,
 ) -> float:
-    """Compute Mean Reciprocal Rank (MRR) for a single query.
+    """Compute MRR@K (Mean Reciprocal Rank at K) for a single query.
 
     Formula:
-        MRR = 1 / rank_first_relevant
+        MRR@K = 1 / rank_first_relevant   (0.0 if no hit in top-K)
 
     where rank_first_relevant is the 1-indexed position of the first result
-    whose doc_id is in relevant_doc_ids, scanning results in order.
+    whose doc_id is in relevant_doc_ids, scanning only the top-K results.
 
-    Deduplication:
-        Not applicable — the first hit terminates the scan; later duplicates
-        are never reached.
+    The K cutoff is required for MRR@K semantics: a first hit at rank 15 must
+    return 0.0 when K=10, not 1/15. The previous implementation had no K limit
+    and was effectively computing MRR over the full result list regardless of K,
+    inflating reported MRR compared to the bounded MRREvaluator in ranking.py.
 
     Edge cases:
         - results is empty            → returns 0.0
-        - relevant_doc_ids is None    → returns 0.0 (no gold set; cannot rank)
-        - no relevant doc in results  → returns 0.0
+        - relevant_doc_ids is None    → returns 0.0
+        - no relevant doc in top-K    → returns 0.0
 
     Cross-reference:
         MRREvaluator (benchmark/evaluation/ranking.py) implements the same
-        formula operating on list[str] memory IDs rather than list[dict].
-
-    Where called:
-        compute_metric_summary() — aggregates per-query MRR across a dataset.
-        Called directly in benchmark_runner.py run_adapter_on_dataset() and
-        study_runner.py _write_leaderboards_json() for gold-grounded evaluation.
+        formula operating on list[str] memory IDs; both are now MRR@K.
 
     Args:
         results: List of result dicts each containing a 'doc_id' key.
         relevant_doc_ids: Set of gold-label document IDs. If None, returns 0.0.
+        k: Maximum rank to consider. Default 10 matches benchmark standard.
 
     Returns:
-        MRR score in [0, 1].
+        MRR@K score in [0, 1].
     """
-    if not results:
+    if not results or relevant_doc_ids is None:
         return 0.0
 
-    if relevant_doc_ids is None:
-        # Cannot compute MRR without a gold relevant set — return 0 rather than
-        # fabricating a perfect score.
-        return 0.0
-
-    for rank, result in enumerate(results, 1):
+    for rank, result in enumerate(results[:k], 1):
         if result["doc_id"] in relevant_doc_ids:
             return 1.0 / rank
 
-    return 0.0  # No relevant document found
+    return 0.0  # No relevant document in top-K
 
 
 def compute_ndcg(
@@ -428,7 +421,7 @@ def compute_metric_summary(
         recalls_10.append(r10 / denom)
         recalls_100.append(r100 / denom)
         precisions_10.append(r10 / 10)  # reuse r10 — no extra set needed
-        mrrs.append(compute_mrr(results, relevant))
+        mrrs.append(compute_mrr(results, relevant, k=10))
         ndcgs.append(compute_ndcg(results, relevant, k=10))
 
     # Average across all queries (clamp to [0, 1] range)

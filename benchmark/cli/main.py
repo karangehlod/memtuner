@@ -55,8 +55,52 @@ def _load_repo_env_without_dependency(env_path: Path) -> None:
         os.environ[key] = value
 
 
+def _get_version() -> str:
+    # Primary: importlib.metadata reads pyproject.toml after `pip install`.
+    # Fallback: parse pyproject.toml directly so the source tree (before install)
+    # never has a stale hardcoded string — version lives in ONE place only.
+    try:
+        from importlib.metadata import version
+        return version("memtuner")
+    except Exception:
+        pass
+    try:
+        import re
+        from pathlib import Path
+        _pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+        _m = re.search(r'^version\s*=\s*"([^"]+)"', _pyproject.read_text(), re.M)
+        if _m:
+            return _m.group(1)
+    except Exception:
+        pass
+    return "unknown"
+
+
+def _scripts_path() -> str:
+    """Return the absolute path to scripts/, working for both editable and wheel installs."""
+    import sys
+    from pathlib import Path
+    # Editable install: __file__ is inside the source tree
+    # Wheel install: scripts/ is a top-level package installed alongside benchmark/
+    candidate = Path(__file__).resolve().parents[2] / "scripts"
+    if candidate.is_dir():
+        return str(candidate)
+    # Try importlib.resources (wheel install puts scripts/ as a package)
+    try:
+        import importlib.resources as _res
+        return str(_res.files("scripts"))
+    except Exception:
+        pass
+    # Last resort: search sys.path for a scripts/ directory containing study_runner.py
+    for p in sys.path:
+        s = Path(p) / "scripts"
+        if (s / "study_runner.py").exists():
+            return str(s)
+    return str(candidate)  # return best guess; import will fail with a clear error
+
+
 @click.group()
-@click.version_option(version="0.0.1", prog_name="memtuner")
+@click.version_option(version=_get_version(), prog_name="memtuner")
 def cli() -> None:
     """MemTuner — adaptive benchmarking for AI agent memory retrieval.
 
@@ -137,11 +181,10 @@ def study_cmd(study_args: tuple) -> None:
       memtuner study --doctor
     """
     import sys
-    from pathlib import Path
     # study_runner.py lives in scripts/ relative to the project root.
     # Resolve from this file's location so the installed venv binary works
     # regardless of the current working directory.
-    _scripts_dir = str(Path(__file__).resolve().parents[2] / "scripts")
+    _scripts_dir = _scripts_path()
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
     sys.argv = ["memtuner study"] + list(study_args)
@@ -190,8 +233,7 @@ def prepare_datasets_cmd(download: bool, convert: bool, status: bool) -> None:
       memtuner prepare-datasets --download --convert  # do both
     """
     import sys
-    from pathlib import Path
-    _scripts_dir = str(Path(__file__).resolve().parents[2] / "scripts")
+    _scripts_dir = _scripts_path()
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
     import prepare_datasets as _pd
@@ -208,31 +250,32 @@ def prepare_datasets_cmd(download: bool, convert: bool, status: bool) -> None:
 @cli.command("reports")
 @click.option("--output-dir", "-o", type=click.Path(), default=None,
               help="Output directory (default: data/output/).")
-def reports_cmd(output_dir: str | None) -> None:
+@click.option("--no-plots", is_flag=True, default=False,
+              help="Skip PNG chart generation (useful on headless servers).")
+def reports_cmd(output_dir: str | None, no_plots: bool) -> None:
     """Generate HTML dashboard and PNG plots from all past benchmark runs.
 
     Scans data/output/ for completed study runs, builds:
       - master_results.csv  — merged table of all cells
       - reports_data.js     — dashboard data
-      - plots/              — per-dataset PNG charts
+      - plots/              — per-dataset PNG charts (skipped with --no-plots)
       - DATASET_RECOMMENDATIONS.md
 
     \b
     Example:
       memtuner reports
+      memtuner reports --no-plots        # headless / CI environments
       memtuner reports -o /path/to/output
     """
     import sys
-    from pathlib import Path
-    _scripts_dir = str(Path(__file__).resolve().parents[2] / "scripts")
+    _scripts_dir = _scripts_path()
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
     import generate_reports as _gr
     if output_dir:
-        # Override output dir
         import os
         os.environ["BENCHMARK_OUTPUT_DIR"] = output_dir
-    _gr.generate()
+    _gr.generate(skip_plots=no_plots)
 
 
 @cli.command("grid-search", hidden=True)
@@ -259,8 +302,7 @@ def grid_search_cmd(dataset: str, mode: str, workers: int | None,
       memtuner grid-search -d data/input/locomo10.json --mode full --workers 8
     """
     import sys
-    from pathlib import Path
-    _scripts_dir = str(Path(__file__).resolve().parents[2] / "scripts")
+    _scripts_dir = _scripts_path()
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
     args = ["--dataset", dataset, "--mode", mode, "--output-dir", output_dir]
@@ -289,8 +331,7 @@ def matrix_cmd(gold_dataset: str, mode: str, workers: int | None,
       memtuner matrix -d data/input/locomo10.json --mode full --workers 8
     """
     import sys
-    from pathlib import Path
-    _scripts_dir = str(Path(__file__).resolve().parents[2] / "scripts")
+    _scripts_dir = _scripts_path()
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
     args = ["--mode", mode, "--gold-dataset", gold_dataset]
@@ -349,8 +390,7 @@ def compare_strategies_cmd(gold_dataset: str, output_dir: str,
       memtuner compare-strategies -d data/input/locomo10.json
     """
     import sys
-    from pathlib import Path
-    _scripts_dir = str(Path(__file__).resolve().parents[2] / "scripts")
+    _scripts_dir = _scripts_path()
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
     args = ["--gold-dataset", gold_dataset, "--output-dir", output_dir]

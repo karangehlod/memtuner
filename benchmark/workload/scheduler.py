@@ -163,7 +163,12 @@ class MatrixRunResult:
         """Weighted composite score for ranking using COMPOSITE_WEIGHTS.
 
         composite = recall_gate × (w_R × Recall@K + w_P × Precision@K
-                                  + w_M × MRR + w_T × TemporalAccuracy)
+                                  + w_M × MRR + w_T × TemporalAccuracy) / active_weight_sum
+
+        For datasets without temporal signal, temporal_accuracy = 0.0 and the
+        temporal weight is dropped from the denominator so the composite remains
+        in [0, 1] rather than being capped at 0.85. This makes scores comparable
+        across temporal and non-temporal datasets.
 
         Recall gate: if Recall@K < 0.01 → returns 0.0 to prevent an empty
         store with perfect temporal accuracy from outranking a working system.
@@ -177,12 +182,22 @@ class MatrixRunResult:
             self._composite_cache = 0.0
         else:
             w = self.COMPOSITE_WEIGHTS
-            self._composite_cache = (
+            raw = (
                 w["recall"]    * self.recall_at_k
                 + w["precision"] * self.precision_at_k
                 + w["mrr"]       * self.mrr
                 + w["temporal"]  * self.temporal_accuracy
             )
+            # Renormalize: when temporal_accuracy = 0.0, the temporal weight
+            # contributes nothing. Dividing by the sum of non-temporal weights
+            # keeps the composite in [0, 1] so a perfect non-temporal system
+            # scores 1.0, not 0.85.
+            temporal_contributes = self.temporal_accuracy > 0.0
+            active_weight_sum = (
+                w["recall"] + w["precision"] + w["mrr"]
+                + (w["temporal"] if temporal_contributes else 0.0)
+            )
+            self._composite_cache = raw / active_weight_sum if active_weight_sum > 0 else 0.0
         return self._composite_cache
 
     def composite_score_weighted(self, weights: dict) -> float:

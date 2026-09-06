@@ -19,11 +19,9 @@ COPY pyproject.toml ./
 # Create a minimal package stub so pip can resolve the project metadata
 RUN mkdir -p benchmark && touch benchmark/__init__.py
 
-# Install core deps + matplotlib (viz); skip database and explorer optionals
+# Install all core deps including rank-bm25, pyarrow, matplotlib
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir \
-        ".[bm25]" \
-        "matplotlib>=3.7"
+    && pip install --no-cache-dir -e ".[viz]"
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
@@ -38,7 +36,13 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy project source
+# Copy project source (scripts/ must be present — study_runner.py is loaded at runtime)
 COPY . .
 
-ENTRYPOINT ["python", "study_runner.py"]
+# Expose default explorer port
+EXPOSE 8501
+
+# Default: run the full doctor check so users get hardware-aware instructions
+# Override with: docker run memtuner memtuner study --mode quick
+ENTRYPOINT ["memtuner"]
+CMD ["doctor"]

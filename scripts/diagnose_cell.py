@@ -5,7 +5,10 @@ Usage:
     python diagnose_cell.py --gold-dataset data/locomo10.json
 """
 from __future__ import annotations
-import argparse, sys, traceback
+
+import argparse
+import sys
+import traceback
 from pathlib import Path
 
 project_root = str(Path(__file__).resolve().parent.parent)
@@ -13,6 +16,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from benchmark.workload.study_scheduler import _run_study_cell_worker
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -47,10 +51,10 @@ def main():
             evaluation_horizon=50,
         )
         if result.get("success"):
-            print(f"✓ SUCCESS")
+            print("✓ SUCCESS")
             print(f"  recall={result['recall_at_k']:.3f}  mrr={result['mrr']:.3f}  p50={result['latency_p50_ms']:.1f}ms")
         else:
-            print(f"✗ FAILED")
+            print("✗ FAILED")
             print(f"\nFull error:\n{result.get('error_message', '(no error message)')}")
     except Exception:
         print("✗ EXCEPTION during cell execution:\n")

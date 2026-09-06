@@ -80,9 +80,20 @@ def _evict_model_cache_if_needed() -> None:
                 elif _MPS_AVAILABLE:
                     _torch.mps.empty_cache()
 
+# ANN threshold: use faiss for corpora larger than this to avoid O(N×D) brute-force
+# per query. Below this size the numpy dot-product is faster (no index build overhead).
+_ANN_THRESHOLD = 10_000  # docs; brute-force is fine below this
+
+try:
+    import faiss as _faiss_mod  # type: ignore[import-untyped]
+    _FAISS_AVAILABLE = True
+except ImportError:
+    _faiss_mod = None
+    _FAISS_AVAILABLE = False
+
 # Index cache — stores the encoded matrix so identical corpus+model combos skip .encode()
-# Key: "model_name:device:corpus_hash"  Value: (matrix, ids, norms)
-_INDEX_CACHE: dict[str, tuple[np.ndarray, list[str], np.ndarray]] = {}
+# Key: "model_name:device:corpus_hash"  Value: (matrix, ids, norms, faiss_index_or_None)
+_INDEX_CACHE: dict[str, tuple[np.ndarray, list[str], np.ndarray, object]] = {}
 _INDEX_CACHE_ORDER: deque[str] = deque()  # popleft() is O(1) vs list.pop(0) O(N)
 _INDEX_CACHE_MAX = 16  # 16 × ~17MB bge-base matrices ≈ 272MB; well within 64GB RAM
 
@@ -243,6 +254,7 @@ class EmbeddingsStrategy(RetrievalStrategy):
         self._embedding_matrix: np.ndarray | None = None
         self._embedding_ids: list[str] = []
         self._norms: np.ndarray | None = None
+        self._faiss_index: object | None = None  # faiss.IndexFlatIP when corpus >= _ANN_THRESHOLD
 
         # OPTIMIZATION: Query embedding cache (20-30% speedup if queries repeat)
         self._query_embedding_cache: dict[str, np.ndarray] = {}
@@ -297,6 +309,9 @@ class EmbeddingsStrategy(RetrievalStrategy):
                 self._embedding_ids.append(mem.id)
             self._norms = np.ones((len(self._embedding_ids), 1), dtype=np.float32)
             self._memories = incoming
+            # Incremental append grows the matrix — invalidate the faiss index since
+            # it was built for the old (smaller) corpus and would return wrong indices.
+            self._faiss_index = None
 
             # Update the index cache with the grown matrix so that future instances
             # starting from the same full corpus can skip encoding entirely.
@@ -305,7 +320,7 @@ class EmbeddingsStrategy(RetrievalStrategy):
             _full_key = f"{self._model_name}:{self._backend}:{_full_hash}"
             if _full_key not in _INDEX_CACHE:
                 _evict_index_cache_if_needed()
-                _INDEX_CACHE[_full_key] = (self._embedding_matrix, list(self._embedding_ids), self._norms)
+                _INDEX_CACHE[_full_key] = (self._embedding_matrix, list(self._embedding_ids), self._norms, None)
                 _INDEX_CACHE_ORDER.append(_full_key)
             return
 
@@ -317,6 +332,7 @@ class EmbeddingsStrategy(RetrievalStrategy):
             self._embedding_matrix = None
             self._embedding_ids = []
             self._norms = None
+            self._faiss_index = None
             return
 
         ids = [mem.id for mem in memories]
@@ -329,10 +345,11 @@ class EmbeddingsStrategy(RetrievalStrategy):
             _log.getLogger(__name__).debug(
                 "[INDEX_CACHE] Hit — skipping encode of %d memories (key=%r)", len(ids), _index_key
             )
-            cached_matrix, cached_ids, cached_norms = _INDEX_CACHE[_index_key]
+            cached_matrix, cached_ids, cached_norms, cached_faiss = _INDEX_CACHE[_index_key]
             self._embedding_matrix = cached_matrix
             self._embedding_ids = list(cached_ids)  # copy — incremental appends must not mutate the cache
             self._norms = cached_norms
+            self._faiss_index = cached_faiss
             for i, mid in enumerate(cached_ids):
                 self._embeddings[mid] = cached_matrix[i]
             if _index_key in _INDEX_CACHE_ORDER:
@@ -376,14 +393,66 @@ class EmbeddingsStrategy(RetrievalStrategy):
         for i, mem_id in enumerate(ids):
             self._embeddings[mem_id] = all_embeddings[i]
 
-        self._embedding_matrix = np.array(all_embeddings, dtype=np.float32)
+        # RAM guard: check available memory before allocating the matrix.
+        # For large corpora (e.g. MS MARCO 500K passages × 768 dims = 1.5 GB) this
+        # allocation can OOM silently on laptops without a clear error message.
+        _n_docs = len(ids)
+        _dims = len(all_embeddings[0]) if _n_docs > 0 and hasattr(all_embeddings[0], '__len__') else 0
+        _needed_mb = (_n_docs * _dims * 4) / (1024 ** 2)
+        if _needed_mb > 512:
+            try:
+                import psutil as _psutil
+                _avail_mb = _psutil.virtual_memory().available / (1024 ** 2)
+                if _needed_mb > _avail_mb * 0.8:
+                    raise MemoryError(
+                        f"Embedding matrix for {_n_docs} docs × {_dims} dims requires "
+                        f"~{_needed_mb:.0f} MB but only {_avail_mb:.0f} MB RAM is available. "
+                        f"Reduce corpus size or use --mode quick to skip embedding phases."
+                    )
+            except ImportError:
+                pass  # psutil not installed — skip the check
+        try:
+            self._embedding_matrix = np.array(all_embeddings, dtype=np.float32)
+        except MemoryError as _e:
+            raise MemoryError(
+                f"Out of memory building embedding matrix for {_n_docs} docs "
+                f"(~{_needed_mb:.0f} MB needed). "
+                f"Use --skip-models to exclude large embedding models or reduce the dataset."
+            ) from _e
         self._embedding_ids = ids          # live reference — may grow via incremental appends
         self._norms = np.ones((len(ids), 1), dtype=np.float32)
+
+        # Build faiss ANN index for large corpora.
+        # - IndexFlatIP: exact inner-product search on L2-normalised vectors = cosine sim.
+        #   Mathematically identical to brute-force numpy @ but uses SIMD-optimised BLAS
+        #   internally and scales to millions of vectors without OOM (index lives on CPU).
+        # - Threshold: brute-force numpy is faster below ~10K docs (index build overhead
+        #   dominates). Above that, faiss query time is O(N × D / SIMD_width) instead of
+        #   pure Python array operations, and supports GPU offload in future.
+        # - UserID filtering: faiss doesn't support masking natively, so we fall back to
+        #   numpy for user-filtered queries — the mask is applied post-search on the
+        #   over-fetched result set (fetch top_k × fan_out, then filter).
+        self._faiss_index = None
+        if _FAISS_AVAILABLE and _faiss_mod is not None and len(ids) >= _ANN_THRESHOLD:
+            try:
+                _dims = self._embedding_matrix.shape[1]
+                _fidx = _faiss_mod.IndexFlatIP(_dims)  # exact cosine (vectors are normalized)
+                _mat_c = np.ascontiguousarray(self._embedding_matrix, dtype=np.float32)
+                _fidx.add(_mat_c)  # type: ignore[attr-defined]
+                self._faiss_index = _fidx
+                import logging as _lg
+                _lg.getLogger(__name__).debug(
+                    "[FAISS] Built IndexFlatIP for %d docs × %d dims", len(ids), _dims
+                )
+            except Exception as _fe:
+                import logging as _lg
+                _lg.getLogger(__name__).warning("faiss index build failed (%s) — using numpy", _fe)
+                self._faiss_index = None
 
         _evict_index_cache_if_needed()
         # Store a COPY of ids in the cache — incremental appends on self._embedding_ids
         # must never mutate the cached list (which would corrupt every future cache hit).
-        _INDEX_CACHE[_index_key] = (self._embedding_matrix, list(ids), self._norms)
+        _INDEX_CACHE[_index_key] = (self._embedding_matrix, list(ids), self._norms, self._faiss_index)
         _INDEX_CACHE_ORDER.append(_index_key)
 
     def retrieve(
@@ -426,11 +495,30 @@ class EmbeddingsStrategy(RetrievalStrategy):
             if self._cache_enabled:
                 self._query_embedding_cache[query_hash] = query_embedding
 
-        # Cosine similarity = dot product (both sides are unit vectors)
-        query_vec = np.array(query_embedding, dtype=np.float32)
-        similarities = (self._embedding_matrix @ query_vec
-        )
-        # Clamp negatives to 0
+        # Cosine similarity = dot product (both sides are unit vectors after normalize_embeddings=True)
+        query_vec = np.ascontiguousarray(query_embedding, dtype=np.float32)
+
+        # ── ANN path (faiss) ──────────────────────────────────────────────────
+        # Use faiss IndexFlatIP when:
+        #   - faiss is installed and we have an index (corpus >= _ANN_THRESHOLD)
+        #   - No user_id filter needed (faiss has no native mask support; we over-fetch
+        #     then post-filter, but that's only worthwhile without tight user partitions)
+        # Mathematically identical to brute-force for IndexFlatIP (exact search).
+        # Falls back to numpy for small corpora or user-filtered queries.
+        # ─────────────────────────────────────────────────────────────────────
+        if self._faiss_index is not None and not user_id:
+            _q = query_vec.reshape(1, -1)
+            _scores, _idx = self._faiss_index.search(_q, min(top_k, len(self._embedding_ids)))  # type: ignore[union-attr]
+            return [
+                (self._embedding_ids[int(i)], float(s))
+                for s, i in zip(_scores[0], _idx[0])
+                if i >= 0 and float(s) > 0
+            ][:top_k]
+
+        # ── Brute-force numpy path ────────────────────────────────────────────
+        similarities = (self._embedding_matrix @ query_vec)
+        # Clamp negatives to 0 (cosine similarity of normalised vectors in [−1, 1];
+        # negative means the query is directionally opposite — treat as irrelevant)
         np.maximum(similarities, 0.0, out=similarities)
 
         # Apply user filter via boolean mask — cached per user_id, built once per index()
@@ -442,11 +530,9 @@ class EmbeddingsStrategy(RetrievalStrategy):
                 )
             similarities[~self._user_mask_cache[user_id]] = -1.0
 
-        # Use argpartition for O(N) top-k selection instead of O(N log N) full sort
+        # argpartition: O(N) top-k selection instead of O(N log N) full sort
         if top_k < len(similarities):
-            # Get indices of top-k largest values
             top_indices = np.argpartition(similarities, -top_k)[-top_k:]
-            # Sort only those k elements
             top_indices = top_indices[np.argsort(similarities[top_indices])[::-1]]
         else:
             top_indices = np.argsort(similarities)[::-1]
@@ -475,6 +561,7 @@ class EmbeddingsStrategy(RetrievalStrategy):
         self._embedding_matrix = None
         self._embedding_ids = []
         self._norms = None
+        self._faiss_index = None
         self._query_embedding_cache.clear()
         self._user_mask_cache.clear()
 
@@ -534,8 +621,28 @@ class EmbeddingsStrategy(RetrievalStrategy):
         query_embeddings = self.encode_batch(queries)
 
         results = []
+
+        # ── faiss batch path ─────────────────────────────────────────────────
+        # When a faiss index is available and no user_id filter is needed,
+        # batch-search all queries in a single C++ call — much faster than
+        # looping over numpy @ for each query individually.
+        if self._faiss_index is not None and not user_id:
+            query_matrix = np.ascontiguousarray(
+                [np.array(qe, dtype=np.float32) for qe in query_embeddings], dtype=np.float32
+            )
+            scores_batch, idx_batch = self._faiss_index.search(  # type: ignore[union-attr]
+                query_matrix, min(top_k, len(self._embedding_ids))
+            )
+            for scores_row, idx_row in zip(scores_batch, idx_batch):
+                results.append([
+                    (self._embedding_ids[int(i)], float(s))
+                    for s, i in zip(scores_row, idx_row)
+                    if i >= 0 and float(s) > 0
+                ][:top_k])
+            return results
+
+        # ── numpy brute-force batch path ─────────────────────────────────────
         for query_embedding in query_embeddings:
-            # Vectorized cosine similarity
             query_vec = np.array(query_embedding, dtype=np.float32).reshape(1, -1)
             query_norm = np.linalg.norm(query_vec) + 1e-8
 
@@ -553,7 +660,6 @@ class EmbeddingsStrategy(RetrievalStrategy):
                     )
                 similarities[~self._user_mask_cache[user_id]] = -1.0
 
-            # Get top-k results
             if top_k < len(similarities):
                 top_indices = np.argpartition(similarities, -top_k)[-top_k:]
                 top_indices = top_indices[np.argsort(similarities[top_indices])[::-1]]

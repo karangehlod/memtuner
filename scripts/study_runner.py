@@ -27,7 +27,7 @@ Outputs (inside --output-dir):
         phase2_embedding_comparison.png
         phase3_hybrid_weight.png
         phase4_reranker_comparison.png
-        phase5_decay_heatmap.png
+        phase4_decay_heatmap.png
         phase6_leaderboard.png
         study_report.png           — all panels combined
 """
@@ -237,7 +237,7 @@ Examples:
         default=3,
         metavar="N",
         help=(
-            "Phase 5 early-stopping patience (default: 3). "
+            "Phase 4 (decay sweep) early-stopping patience (default: 3). "
             "If composite score does not improve for N consecutive λ steps on a "
             "given decay policy, remaining steps are skipped. Use 0 to disable."
         ),
@@ -642,18 +642,30 @@ def _rename_csv_descriptively(csv_path: Path) -> Path:
 
 
 def _trigger_report_generation(project_root: str) -> None:
-    """Regenerate master CSV, formula doc, and reports_data.js after a run."""
-    try:
-        import importlib.util
-        script = Path(project_root) / "scripts" / "generate_reports.py"
-        if not script.exists():
-            return
-        spec = importlib.util.spec_from_file_location("generate_reports", script)
-        mod  = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
-        mod.generate(Path(project_root))
-    except Exception as _e:
-        print(f"  [warn] Report generation skipped: {_e}")
+    """Regenerate master CSV, formula doc, and reports_data.js in a daemon thread.
+
+    Runs in the background so it does not block the study output banner. For many
+    accumulated past runs (50+) generate_reports.py scans every study_* directory,
+    which can take several seconds on a spinning disk or NFS mount — blocking the
+    main thread would delay the final summary printed to the user.
+    """
+    import threading as _threading
+
+    def _run() -> None:
+        try:
+            import importlib.util
+            script = Path(project_root) / "scripts" / "generate_reports.py"
+            if not script.exists():
+                return
+            spec = importlib.util.spec_from_file_location("generate_reports", script)
+            mod  = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+            spec.loader.exec_module(mod)  # type: ignore[union-attr]
+            mod.generate(Path(project_root))
+        except Exception as _e:
+            print(f"  [warn] Report generation skipped: {_e}")
+
+    _t = _threading.Thread(target=_run, daemon=True, name="report-gen")
+    _t.start()
 
 
 def _write_leaderboards_json(agg, dataset_label: str, run_id: str) -> Path | None:
@@ -1012,7 +1024,8 @@ def _print_summary(agg):
             )
         print("    ★ = CI does not overlap with next-lower group (p < 0.05 approx.)")
         if has_unreliable:
-            print("    ⚠ = N < 10: bootstrap CI spans most of [0, 1] — not meaningful. Run --seeds for reliable CIs.")
+            print("    ⚠ = N < 10: bootstrap CI unreliable (too few observations).")
+            print("       Meaningful CIs need N ≥ 30 (use --seeds with ≥10 seeds).")
 
 
 def _detect_memory_types(gold_path: Path, requested: list[str]) -> list[str]:
@@ -1080,17 +1093,17 @@ def _ensure_requested_datasets(missing_paths: list[Path], project_root: str) -> 
 
     import prepare_datasets as _pd
 
-    for path in missing_paths:
+    def _prepare_one(path: Path) -> None:
+        """Download + convert a single missing dataset (runs in a thread)."""
         name = path.name
         print(f"\n  Dataset missing — preparing {name} ...")
         try:
             if name in _EXTENDED_DATASETS:
                 _ped.PREPARERS[_EXTENDED_DATASETS[name]]()
-                continue
-
-            # Core datasets: download the raw source (if any), then convert.
+                return
+            # Core datasets: download raw source (if needed), then convert.
             for dest, url, desc in _pd.DOWNLOADS:
-                if dest.name == name:  # direct download (locomo10.json)
+                if dest.name == name:
                     _pd._download_file(url, dest, desc)
             for _conv_name, src, converter_fn, out in _pd.CONVERSIONS:
                 if out.name != name:
@@ -1104,6 +1117,27 @@ def _ensure_requested_datasets(missing_paths: list[Path], project_root: str) -> 
                     print(f"  ✓ converted: {out.name}")
         except Exception as e:
             print(f"  ✗ could not prepare {name}: {e}", file=_sys.stderr)
+
+    # ── Parallelism: download multiple missing datasets concurrently ─────────
+    # Downloads are I/O-bound (network + disk write). Threads are the right tool:
+    #   - GIL is released during urllib socket I/O → true parallelism
+    #   - No spawn overhead (unlike multiprocessing)
+    #   - Safe: each dataset writes to a different output path, no shared state
+    # Cap at 4 workers: HuggingFace CDN throttles concurrent downloads from one IP.
+    # ────────────────────────────────────────────────────────────────────────
+    if len(missing_paths) == 1:
+        _prepare_one(missing_paths[0])
+    else:
+        from concurrent.futures import ThreadPoolExecutor as _DlTE
+        from concurrent.futures import as_completed as _dlac
+        print(f"  Preparing {len(missing_paths)} datasets in parallel (I/O-bound, ThreadPool)...")
+        with _DlTE(max_workers=min(4, len(missing_paths))) as _ex:
+            futs = {_ex.submit(_prepare_one, p): p for p in missing_paths}
+            for fut in _dlac(futs):
+                try:
+                    fut.result()
+                except Exception as e:
+                    print(f"  ✗ {futs[fut].name}: {e}", file=_sys.stderr)
 
 
 def _ensure_all_datasets(data_dir: Path, project_root: str) -> None:
@@ -1179,21 +1213,72 @@ def _run_multi_dataset(args, gold_paths: list, phases: list, project_root: str) 
     print(f"  Judge:   {_judge_info}")
     print()
 
-    for ds_idx, gold_path in enumerate(gold_paths, 1):
-        sep = "─" * 60
-        print(f"\n{sep}")
-        print(f"  DATASET {ds_idx}/{n}: {gold_path.name}")
-        print(sep)
+    # ── Parallelism decision for multi-dataset runs ──────────────────────────
+    # Phase 1 only (BM25 + recency, no GPU): datasets are fully independent.
+    # Run them concurrently with ThreadPoolExecutor — threads are correct here
+    # because: (a) rank_bm25 and numpy release the GIL during scoring, (b) no
+    # shared mutable state between dataset runs, (c) thread spawn is cheap vs
+    # the 30s+ per dataset that Phase 1 takes.
+    #
+    # Phases 2+ (embeddings, GPU): CUDA/MPS context is per-process-per-thread;
+    # running two embedding cells on the same GPU simultaneously corrupts outputs.
+    # These must stay sequential.
+    #
+    # Mixed (phases include both 1 and 2+): sequential — Phase 2 dominates anyway.
+    # ────────────────────────────────────────────────────────────────────────
+    _gpu_phases = {2, 3, 4, 5}
+    _can_parallel = n > 1 and not any(p in _gpu_phases for p in phases)
 
-        # Patch args temporarily so _run_single_dataset can use it
-        args.gold_dataset = [str(gold_path)]
-        csv_path = _run_single_dataset(args, gold_path, phases, project_root)
-        if csv_path:
-            written_csvs.append(csv_path)
+    if _can_parallel:
+        print(f"  [parallel] Phase-1-only run on {n} datasets — running concurrently with ThreadPool")
+        print("  [parallel] Threading chosen over multiprocessing: GIL released during BM25/numpy,")
+        print("  [parallel]   no spawn overhead, shared memory for gold cache.\n")
 
-        elapsed = time.monotonic() - t0
-        remaining_est = (elapsed / ds_idx) * (n - ds_idx)
-        print(f"\n  [{ds_idx}/{n} done | elapsed {elapsed:.0f}s | ETA ~{remaining_est:.0f}s remaining]")
+        import copy
+        import threading as _threading
+        _lock = _threading.Lock()
+
+        def _run_one(gold_path: Path, ds_idx: int) -> Path | None:
+            # Each thread gets its own copy of args to avoid concurrent mutation
+            _args = copy.copy(args)
+            _args.gold_dataset = [str(gold_path)]
+            sep = "─" * 60
+            with _lock:
+                print(f"\n{sep}")
+                print(f"  DATASET {ds_idx}/{n}: {gold_path.name} [starting]")
+                print(sep)
+            csv = _run_single_dataset(_args, gold_path, phases, project_root)
+            elapsed = time.monotonic() - t0
+            with _lock:
+                print(f"  [{ds_idx}/{n}] {gold_path.name} done in {elapsed:.0f}s total")
+            return csv
+
+        from concurrent.futures import ThreadPoolExecutor as _DsTpe
+        from concurrent.futures import as_completed as _ac
+        with _DsTpe(max_workers=min(n, (args.workers or 4))) as _ex:
+            _futs = {
+                _ex.submit(_run_one, gp, i): gp
+                for i, gp in enumerate(gold_paths, 1)
+            }
+            for fut in _ac(_futs):
+                csv_path = fut.result()
+                if csv_path:
+                    written_csvs.append(csv_path)
+    else:
+        for ds_idx, gold_path in enumerate(gold_paths, 1):
+            sep = "─" * 60
+            print(f"\n{sep}")
+            print(f"  DATASET {ds_idx}/{n}: {gold_path.name}")
+            print(sep)
+
+            args.gold_dataset = [str(gold_path)]
+            csv_path = _run_single_dataset(args, gold_path, phases, project_root)
+            if csv_path:
+                written_csvs.append(csv_path)
+
+            elapsed = time.monotonic() - t0
+            remaining_est = (elapsed / ds_idx) * (n - ds_idx)
+            print(f"\n  [{ds_idx}/{n} done | elapsed {elapsed:.0f}s | ETA ~{remaining_est:.0f}s remaining]")
 
     if len(written_csvs) > 1:
         print(f"\n{'=' * 60}")
@@ -1272,6 +1357,15 @@ def _run_single_dataset(
     profile = get_profile(args.workload)
     evaluation_horizon = args.evaluation_horizon or profile.evaluation_horizon
 
+    # Warn when --workload flag is non-default — different workloads evaluate
+    # different day-ranges, producing incomparable recall/MRR numbers.
+    if args.workload and args.workload != "medium_qpd":
+        print(
+            f"  [workload] Using '{args.workload}' (horizon={evaluation_horizon}d). "
+            f"Results are NOT comparable to runs with a different --workload: "
+            f"changing the horizon evaluates a different query subset."
+        )
+
     # Use caller-provided run_id/output_dir when available so the banner and
     # the actual output files share the same identifier. Generate fresh values
     # only when called directly (e.g. from _run_multi_dataset).
@@ -1294,6 +1388,24 @@ def _run_single_dataset(
         print(f"  [skip] Delete {gold_path} and re-run to regenerate it.")
         return None
 
+    # ── Evaluation horizon vs dataset coverage ───────────────────────────────
+    # Warn if the dataset contains queries on days beyond evaluation_horizon.
+    # Those queries are silently skipped — this is not a crash, just a coverage gap.
+    try:
+        _dataset_max_day = max((q.day for q in _preflight_ds.queries), default=0)
+        _total_q = len(_preflight_ds.queries)
+        _skipped_q = sum(1 for q in _preflight_ds.queries if q.day >= evaluation_horizon)
+        if _skipped_q > 0:
+            print(
+                f"  [horizon] WARNING: evaluation_horizon={evaluation_horizon}d but dataset "
+                f"has queries up to day {_dataset_max_day}. "
+                f"{_skipped_q}/{_total_q} queries ({_skipped_q*100//_total_q}%) "
+                f"will NOT be evaluated. Use --evaluation-horizon {_dataset_max_day+1} "
+                f"or --workload high_qpd to include all queries."
+            )
+    except Exception:
+        pass
+
     # ── Leakage check ────────────────────────────────────────────────────────
     # Detect whether any evaluation query appears verbatim in the memory corpus.
     # > 1% leakage means the benchmark is measuring memorisation, not retrieval.
@@ -1307,10 +1419,20 @@ def _run_single_dataset(
         _queries = [gq.query for gq in _preflight_ds.queries]
         _leakage = _LeakageChecker(min_overlap_chars=15).check(_queries, _mem_contents)
         _leakage_symbol = "CLEAN" if _leakage.is_clean else "WARNING"
+        _leak_pct = _leakage.leakage_rate * 100
         print(f"  [leakage] {_leakage_symbol}: {_leakage.leaked_count}/{_leakage.total_queries} "
-              f"queries overlap corpus ({_leakage.leakage_rate*100:.1f}%)")
+              f"queries overlap corpus ({_leak_pct:.1f}%)")
         if not _leakage.is_clean:
-            print("  [leakage] > 1% leakage — results may reflect memorisation, not retrieval quality.")
+            import sys as _sys
+            print(
+                f"\n  ╔{'═'*58}╗\n"
+                f"  ║  LEAKAGE WARNING: {_leak_pct:.1f}% of queries verbatim-overlap   ║\n"
+                f"  ║  the memory corpus. Recall scores may reflect           ║\n"
+                f"  ║  memorisation, not retrieval quality. Do not cite       ║\n"
+                f"  ║  these numbers as unbiased recall estimates.            ║\n"
+                f"  ╚{'═'*58}╝\n",
+                file=_sys.stderr,
+            )
     except Exception as _le:
         print(f"  [leakage] check skipped: {_le}")
 
@@ -1455,6 +1577,7 @@ def _run_single_dataset(
                     best_embedding_model, best_embedding_backend,
                     gold_path, evaluation_horizon,
                     best_bm25_weight=best_bm25_weight,
+                    patience=getattr(args, "early_stop_patience", 3),
                 )
                 phase_results.extend(seed_results)
                 continue
@@ -1505,10 +1628,23 @@ def _run_single_dataset(
         all_results.extend(phase_results)
         phase_agg = StudyAggregator(all_results, dataset_name=gold_path.stem)
         recs = phase_agg.study_summary().get("recommendations", {})
-        best_embedding_model  = recs.get("best_embedding_model",  best_embedding_model)
-        best_embedding_backend = recs.get("best_embedding_backend", best_embedding_backend)
-        best_bm25_weight = recs.get("best_bm25_weight", best_bm25_weight)
-        best_strategy = recs.get("best_retrieval_strategy", best_strategy)
+        # Use explicit None-guards: study_summary() always writes the keys even
+        # when a phase has not run yet (value = None). A plain .get(key, fallback)
+        # returns None when the key IS present with value None, silently
+        # discarding the non-None fallback (e.g. DEFAULT_EMBEDDING_MODEL after
+        # Phase 1 when no Phase 2 cells exist yet).
+        _em = recs.get("best_embedding_model")
+        if _em is not None:
+            best_embedding_model = _em
+        _eb = recs.get("best_embedding_backend")
+        if _eb is not None:
+            best_embedding_backend = _eb
+        _bw = recs.get("best_bm25_weight")
+        if _bw is not None:
+            best_bm25_weight = _bw
+        _st = recs.get("best_retrieval_strategy")
+        if _st is not None:
+            best_strategy = _st
 
         _bw_str = f"{best_bm25_weight:.2f}" if best_bm25_weight is not None else "—"
         _em_str = best_embedding_model.split('/')[-1] if best_embedding_model else "—"
@@ -1771,6 +1907,7 @@ def _run_phase4_two_stage(
     gold_path,
     evaluation_horizon: int,
     best_bm25_weight: float | None = None,
+    patience: int = 3,
 ) -> list:
     """Phase 4: broad λ sweep (0.0005…0.10, 8 points) → response curve → fine zoom.
 
@@ -1790,39 +1927,109 @@ def _run_phase4_two_stage(
 
     policies = ["exponential", "logarithmic", "linear", "tiered"]
 
-    for policy in policies:
-        print(f"\n  [{policy}] Stage 1 (broad): λ ∈ [0.0005, 0.10]")
+    # ── Parallelism decision for Phase 4 ────────────────────────────────────
+    # BM25-based best_strategy:  policies are independent → batch ALL broad cells
+    #   into one scheduler.run() call so the ThreadPoolExecutor runs them in
+    #   parallel (4 policies × 8 λ points × N memory types in parallel).
+    #   Threads are correct here: rank_bm25 and numpy release the GIL during
+    #   scoring, so threads achieve genuine concurrency without spawn overhead.
+    #
+    # GPU-based best_strategy (embeddings/hybrid): the GPU context is not
+    #   thread-safe; cells must stay sequential. The existing scheduler handles
+    #   this: GPU cells go through the 'direct_dicts' sequential path regardless.
+    #
+    # Early stopping across policies: patience counter still fires as before.
+    # ────────────────────────────────────────────────────────────────────────
 
-        broad_cells = expander.phase_decay_lambda_sweep(
-            best_strategy=best_strategy,
-            best_embedding_model=best_embed,
-            best_embedding_backend=best_backend,
-            decay_policies=[policy],
-            stage="broad",
-            include_no_decay_baseline=True,
-            bm25_weight=best_bm25_weight,
-        )
-        broad_results = scheduler.run(
-            cells=broad_cells,
+    _uses_gpu = best_strategy not in {"bm25", "bm25l", "recency"}
+
+    if not _uses_gpu:
+        # PARALLEL PATH: generate all 4 policies' broad cells at once and
+        # pass them to a single scheduler.run() call.
+        print("\n  Stage 1 (broad): all 4 policies × λ ∈ [0.0005, 0.10] in parallel")
+        all_broad_cells = []
+        for policy in policies:
+            all_broad_cells.extend(expander.phase_decay_lambda_sweep(
+                best_strategy=best_strategy,
+                best_embedding_model=best_embed,
+                best_embedding_backend=best_backend,
+                decay_policies=[policy],
+                stage="broad",
+                include_no_decay_baseline=True,
+                bm25_weight=best_bm25_weight,
+            ))
+        all_broad_results = scheduler.run(
+            cells=all_broad_cells,
             gold_dataset_path=str(gold_path),
             evaluation_horizon=evaluation_horizon,
         )
-        all_results.extend(broad_results)
+        all_results.extend(all_broad_results)
+        # Split results back per-policy for response curves and fine-zoom decisions
+        broad_results_by_policy: dict[str, list] = {p: [] for p in policies}
+        for r in all_broad_results:
+            if r.success:
+                broad_results_by_policy[r.decay_policy].append(r)
+    else:
+        # SEQUENTIAL PATH: GPU cells must run one policy at a time
+        all_broad_results = []
+        broad_results_by_policy = {p: [] for p in policies}
 
-        # Response curve: λ → mean recall across memory types
+    # Early stopping across policies: if N consecutive policies show no recall
+    # improvement over the no-decay baseline, remaining policies are skipped.
+    _no_improve_count = 0
+    _best_with_decay: float = 0.0
+
+    for policy in policies:
+        if patience > 0 and _no_improve_count >= patience:
+            print(f"\n  [early-stop] {patience} consecutive policies showed no decay benefit "
+                  f"— skipping remaining policies.")
+            break
+
+        if _uses_gpu:
+            # Sequential: generate and run broad cells per policy
+            print(f"\n  [{policy}] Stage 1 (broad): λ ∈ [0.0005, 0.10]")
+            broad_cells = expander.phase_decay_lambda_sweep(
+                best_strategy=best_strategy,
+                best_embedding_model=best_embed,
+                best_embedding_backend=best_backend,
+                decay_policies=[policy],
+                stage="broad",
+                include_no_decay_baseline=True,
+                bm25_weight=best_bm25_weight,
+            )
+            broad_results = scheduler.run(
+                cells=broad_cells,
+                gold_dataset_path=str(gold_path),
+                evaluation_horizon=evaluation_horizon,
+            )
+            all_results.extend(broad_results)
+            broad_results_by_policy[policy] = [r for r in broad_results if r.success]
+        else:
+            # Parallel path already ran — just reference the pre-split results
+            broad_results = broad_results_by_policy.get(policy, []) + [
+                r for r in all_broad_results if not r.success and getattr(r, "decay_policy", "") == policy
+            ]
+            if not _no_improve_count and policy == policies[0]:
+                print("  Parallel broad sweep complete — processing per-policy curves")
+
+        # Response curve: λ → mean recall across memory types.
+        # For the parallel path, read from the per-policy split; for the sequential
+        # path, broad_results is already set above from the scheduler call.
+        _broad_for_curve = broad_results_by_policy.get(policy, []) if not _uses_gpu else (
+            [r for r in broad_results if r.success]
+        )
         by_lam: dict[float, list[float]] = defaultdict(list)
         by_lam_per_type: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
         no_decay_recalls: list[float] = []
         no_decay_per_type: dict[str, list[float]] = defaultdict(list)
-        for r in broad_results:
-            if r.success:
-                lam = r.lambda_value
-                if lam == 0.0:
-                    no_decay_recalls.append(r.recall_at_k)
-                    no_decay_per_type[r.memory_type].append(r.recall_at_k)
-                else:
-                    by_lam[lam].append(r.recall_at_k)
-                    by_lam_per_type[r.memory_type][lam].append(r.recall_at_k)
+        for r in _broad_for_curve:
+            lam = r.lambda_value
+            if lam == 0.0:
+                no_decay_recalls.append(r.recall_at_k)
+                no_decay_per_type[r.memory_type].append(r.recall_at_k)
+            else:
+                by_lam[lam].append(r.recall_at_k)
+                by_lam_per_type[r.memory_type][lam].append(r.recall_at_k)
 
         broad_curve = sorted(
             [(lam, _stats.mean(recalls)) for lam, recalls in by_lam.items()],
@@ -1848,10 +2055,16 @@ def _run_phase4_two_stage(
         best_broad_lam = max(broad_curve, key=lambda x: x[1])[0]
         best_broad_recall = max(broad_curve, key=lambda x: x[1])[1]
 
-        # Skip fine zoom if decay provides no benefit over no-decay baseline
+        # Skip fine zoom if decay provides no benefit over no-decay baseline.
+        # Also update the patience counter: if N consecutive policies show no
+        # benefit, the outer loop will break early (early-stop-patience).
         if no_decay_recalls and best_broad_recall <= _stats.mean(no_decay_recalls):
             print(f"  [{policy}] Decay does not improve over no-decay — skipping fine zoom.")
+            _no_improve_count += 1
             continue
+
+        _no_improve_count = 0  # reset on improvement
+        _best_with_decay = max(_best_with_decay, best_broad_recall)
 
         print(f"\n  [{policy}] Stage 2 (fine): log-zoom around λ={best_broad_lam:.4f}")
         fine_cells = expander.phase_decay_lambda_sweep(

@@ -207,7 +207,6 @@ class DatabaseStrategy(RetrievalStrategy):
             raise RuntimeError(f"Database error during retrieval: {e}") from e
         except Exception as e:
             raise RuntimeError(f"Unexpected error during database retrieval: {e}") from e
-            return []
         finally:
             cursor.close()
 

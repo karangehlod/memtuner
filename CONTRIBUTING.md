@@ -60,24 +60,30 @@ CI enforces both. Fix all lint errors before opening a PR.
 
 ## Adding a new dataset adapter
 
-A dataset adapter translates a raw corpus/QA file into the common `Scenario` format.
+A dataset adapter converts a raw corpus/QA file into the common `GoldDataset` format used by the study runner.
 
-1. Create `benchmark/adapters/<your_dataset>_adapter.py` implementing `BaseAdapter`.
-2. Implement `load(path: Path) -> list[Scenario]`; every `Scenario` must have a non-empty `gold_ids` list.
-3. Register the adapter in `benchmark/adapters/__init__.py` (add to the `ADAPTER_REGISTRY` dict).
-4. Add a unit test in `tests/unit/test_adapter_interface.py` using the existing parametrize fixture.
-5. Add a note to `README.md` (or `docs/datasets.md`) describing the corpus and its license.
+1. Create `benchmark/gold/adapters/<your_dataset>_adapter.py` subclassing `DatasetAdapter`
+   (see `benchmark/gold/adapters/adapter.py` for the interface).
+2. Implement `load(source: Path) -> GoldDataset`. Every query must have at least one expected memory ID in `query.expected.memory_ids`, and **`query.day` must be ≥ the injection day of every referenced memory** — otherwise the memory hasn't been injected yet when the query fires.
+3. The adapter is auto-discovered if you pass its output path to `memtuner study --gold-dataset`. No registration is required for that flow.
+4. To add it to `scripts/prepare_extended_datasets.py` (for auto-download), add a `prepare_<name>()` function and entry in `PREPARERS`.
+5. Add a unit test in `tests/unit/test_adapter_interface.py` using the existing parametrize fixture.
+6. Document the dataset and its license in `README.md` (Datasets table) and `NOTICE`.
 
 ---
 
 ## Adding a new retrieval strategy
 
-A retrieval strategy ranks candidate memory chunks given a query.
+A retrieval strategy ranks memories given a query.
 
-1. Create `benchmark/strategies/<name>_strategy.py` implementing `BaseRetrievalStrategy`.
-2. Implement `retrieve(query: str, memories: list[Memory], top_k: int) -> list[Memory]`.
-3. Register the strategy in `benchmark/strategies/__init__.py` (`STRATEGY_REGISTRY`).
-4. Add unit tests in `tests/unit/test_retrieval_strategies.py` covering: empty corpus, exact match, `top_k > len(corpus)`.
+1. Create `benchmark/memory/strategies/<name>_strategy.py` implementing `RetrievalStrategy`
+   (interface: `benchmark/memory/interfaces/retrieval_strategy.py`).
+2. Implement `index(memories)`, `retrieve(query, top_k, user_id)`, `clear()`, and `name()`.
+3. Register in `benchmark/factory/bootstrap.py` by adding a tuple to the `strategies` list.
+4. Declare thread-safety in `benchmark/workload/study_scheduler.py::_STRATEGIES_SAFE_IN_THREADPOOL`:
+   - Add the name to the set if the strategy is pure Python/numpy (no GPU, no torch).
+   - Leave it out if it uses sentence-transformers or any GPU resource (it will run sequentially).
+5. Add unit tests in `tests/unit/test_retrieval_strategies.py` covering: empty corpus, exact match, `top_k > len(corpus)`, and user isolation.
 
 ---
 

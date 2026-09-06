@@ -5,7 +5,7 @@ description = "Adaptive benchmarking and configuration tuning for AI agent memor
 requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "MemTuner Team"}
+    {name = "Karan Gehlod"}
 ]
 readme = "README.md"
 keywords = ["ai", "agents", "agent-memory", "memory", "memory-retrieval", "benchmark", "evaluation", "llm", "rag", "retrieval", "embeddings", "machine-learning"]
@@ -20,7 +20,7 @@ dependencies = [
     "psutil>=5.9",
     "rank-bm25>=0.2.2",
     "sentence-transformers>=2.2.0",
-    "httpx[socks]==0.28.1",
+    "httpx[socks]>=0.28.0",
     "openai>=1.0",
     "matplotlib>=3.7",
     "numpy>=1.24",
@@ -31,7 +31,10 @@ dependencies = [
 [project.optional-dependencies]
 hf_inference = []
 llm = []
-bm25 = ["rank-bm25>=0.2.2"]
+# bm25 is already a core dependency; this extra is kept for backward compat only
+bm25 = []
+# ANN index for large corpora (>10K memories); optional — falls back to brute-force numpy
+ann = ["faiss-cpu>=1.8.0"]
 database = ["psycopg[binary]>=3.1", "pgvector>=0.2"]
 explorer = ["fastapi>=0.100", "uvicorn>=0.23"]
 mlx = ["mlx>=0.16", "mlx-embeddings>=0.1.0"]  # Apple Silicon only
@@ -39,14 +42,14 @@ viz = ["matplotlib>=3.7"]
 judge = ["httpx>=0.28"]
 stats = ["scipy>=1.11"]
 all = [
-    "memtuner[database,explorer,viz]",
+    "memtuner[database,explorer,viz,judge,stats]",
 ]
 dev = [
     "memtuner[all]",
     "pytest>=7.4",
     "pytest-cov>=4.1",
     "mypy>=1.5",
-    "ruff>=0.1",
+    "ruff>=0.6",
     "hypothesis>=6.75",
 ]
 
@@ -57,7 +60,6 @@ Documentation = "https://github.com/karangehlod/memtuner/tree/main/docs"
 "Bug Tracker" = "https://github.com/karangehlod/memtuner/issues"
 
 [project.scripts]
-benchmark = "benchmark.cli.main:cli"
 memtuner = "benchmark.cli.main:cli"
 
 [build-system]
@@ -65,7 +67,10 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["benchmark*"]
+include = ["benchmark*", "scripts"]
+
+[tool.setuptools.package-data]
+"*" = ["scripts/*.py", "configs/*.yaml", "configs/profiles/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

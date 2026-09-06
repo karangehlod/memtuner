@@ -1,0 +1,70 @@
+name: Release
+
+# Triggers on any version tag push (v1.2.3 format).
+# - New tag (v0.2.0 when v0.1.0 already exists) → creates a new GitHub Release + new PyPI version.
+# - Re-pushed existing tag (v0.1.0 again after a hotfix) → overwrites the existing GitHub Release
+#   with updated binaries; PyPI upload skips cleanly if version already exists.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    name: Test → Build → Release
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write   # create / update GitHub Release
+      id-token: write   # OIDC trusted publishing to PyPI (no API token needed)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        run: python -m pip install --upgrade pip build twine
+
+      - name: Install package + run CI checks
+        run: |
+          pip install -e ".[dev]"
+          python -m ruff check benchmark/ scripts/
+          python -m pytest tests/ -m "unit or contract" -q --tb=short
+
+      - name: Build wheel and sdist
+        run: python -m build
+
+      - name: Verify package version matches git tag
+        run: |
+          PKG_VERSION=$(python -c "from importlib.metadata import version; print(version('memtuner'))")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "Package version : $PKG_VERSION"
+          echo "Git tag version : $TAG_VERSION"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo ""
+            echo "ERROR: pyproject.toml says $PKG_VERSION but the tag is v$TAG_VERSION."
+            echo "Fix: update version = \"$TAG_VERSION\" in pyproject.toml and re-push the tag."
+            exit 1
+          fi
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          # update_release = true: if a release for this tag already exists
+          # (e.g. v0.1.0 was re-tagged after a hotfix), overwrite its assets.
+          # For a brand-new tag this flag has no effect.
+          update_release: true
+
+      - name: Publish to PyPI (OIDC trusted publishing)
+        # Skips gracefully when the version is already on PyPI (re-release of same tag).
+        # Requires a PyPI Trusted Publisher entry pointing at this repo + environment.
+        # One-time setup: https://docs.pypi.org/trusted-publishers/adding-a-publisher/
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true

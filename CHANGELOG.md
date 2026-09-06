@@ -6,7 +6,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased] — development branch (will become 0.1.0 on first PyPI release)
+## [Unreleased] — will become 0.1.0 after cloud validation run
 
 ### Changed
 - **License: MIT → Apache 2.0** with a NOTICE file carrying dataset
@@ -50,9 +50,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   `--seeds 42 123 456`. Non-overlapping CIs flagged with ★ in report.
 - **Multi-seed runs** (`--seeds`) — run each cell once per seed and pool results
   for statistical significance reporting.
-- **Early stopping for Phase 5** (`--early-stop-patience`) — stops testing λ
+- **Early stopping for Phase 4** (`--early-stop-patience`) — stops testing λ
   values per decay policy once composite score plateaus for N consecutive steps.
-  Default patience=3; saves 30–50% of Phase 5 cells on typical datasets.
+  Default patience=3; saves 30–50% of Phase 4 decay cells on typical datasets.
 - **Per-dataset recommendations** — `rank_by_dataset()` in aggregator; separate
   best-config table per dataset in report (LoCoMo vs LongMemEval differ).
 - **Model filtering flags** — `--skip-models`, `--only-models`, `--skip-rerankers`
@@ -99,8 +99,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   fits alone on 16 GB GPU).
 - Startup banner shows GPU backend (`cuda`/`mps`/`cpu`), dependency status,
   and auto-skips Phases 2–4 if `sentence-transformers` is not installed.
-- pyproject.toml version 0.0.1 → 0.2.0; added keywords, project URLs,
-  `bm25`/`judge`/`stats` optional dependency extras.
+- pyproject.toml version bumped to 0.1.0; added keywords, project URLs, `bm25`/`judge`/`stats` optional dependency extras. `httpx` pin loosened to `>=0.28.0`.
 - `strategy_ranking` in aggregator now separates fallback cells (OOM, 404)
   into `embeddings_fallback` label so they don't dilute real strategy averages.
 - 404 "model not found" errors in `base_store.py` are now hard failures (cell
@@ -117,14 +116,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   env var — it now checks only whether `sentence-transformers` is importable.
 - OOM during embedding encode now halves `batch_size` and retries instead of
   crashing the cell.
-- Phase 5 seed sanitization: when recommended strategy requires Ollama but
+- Phase 4 seed sanitization: when recommended strategy requires Ollama but
   recommended model is local-only, strategy corrected to `"embeddings"`.
 - Squad gold file preflight check: 0-byte files detected and skipped before
   scheduling 96 cells that would all fail.
 
 ---
 
-## [0.0.1] — 2026-08-09 (initial development release)
+## [0.0.1] — 2026-08-09 (initial development release; no GitHub release tag)
 
 ### Added
 - Initial five-phase adaptive study runner (`scripts/study_runner.py`)
@@ -142,5 +141,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-[Unreleased]: https://github.com/karangehlod/memtuner/compare/v0.0.1...HEAD
-[0.0.1]: https://github.com/karangehlod/memtuner/releases/tag/v0.0.1
+[Unreleased]: https://github.com/karangehlod/memtuner/tree/main
+
+[0.0.1]: https://github.com/karangehlod/memtuner/tree/v0.0.1

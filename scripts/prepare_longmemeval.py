@@ -78,7 +78,7 @@ def main() -> None:
 
     adapter = LongMemEvalAdapter()
     difficulty = adapter.get_difficulty_distribution(raw_data)
-    print(f"\nDifficulty distribution:")
+    print("\nDifficulty distribution:")
     for level, count in sorted(difficulty.items()):
         print(f"  {level:10s}: {count:4d}")
 
@@ -88,7 +88,7 @@ def main() -> None:
         qtype = instance.get("question_type", "unknown")
         by_type[qtype] = by_type.get(qtype, 0) + 1
 
-    print(f"\nQuestion types:")
+    print("\nQuestion types:")
     for qtype, count in sorted(by_type.items()):
         print(f"  {qtype:35s}: {count:4d}")
 
@@ -140,10 +140,10 @@ def main() -> None:
 
     print(f"\n{'=' * 60}")
     print("DONE!")
-    print(f"\nNext steps:")
-    print(f"  1. Quick validation:  python -m pytest tests/ -x -q")
-    print(f"  2. Benchmark run:     benchmark run --config configs/longmemeval.yaml")
-    print(f"  3. Grid search:       python grid_search.py --gold data/longmemeval_oracle_gold.json")
+    print("\nNext steps:")
+    print("  1. Quick validation:  python -m pytest tests/ -x -q")
+    print("  2. Benchmark run:     benchmark run --config configs/longmemeval.yaml")
+    print("  3. Grid search:       python grid_search.py --gold data/longmemeval_oracle_gold.json")
 
 
 if __name__ == "__main__":

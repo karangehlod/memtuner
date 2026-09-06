@@ -546,8 +546,10 @@ class ScenarioRunner:
             gold_query = result["gold_query"]
             retrieved_memories = result["retrieved_memories"]
             latency_ms = result["latency_ms"]
-            result["elapsed"]
-
+            # latency_ms = pure retrieval time (from _read_from_all_modules / memory module).
+            # result["elapsed"] = wall-clock including event-loop scheduling overhead.
+            # We report latency_ms (retrieval) as the benchmark metric — consistent with
+            # the synchronous path which also measures _read_from_all_modules directly.
             query_latencies_ms.append(latency_ms)
             expected_ids = gold_query.expected.memory_ids
 

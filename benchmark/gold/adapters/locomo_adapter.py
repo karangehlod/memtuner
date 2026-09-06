@@ -107,21 +107,32 @@ class LoCoMoAdapter(DatasetAdapter):
                             if memory:
                                 day_memories.append(memory)
 
-                # Extract queries from Q&A pairs
+                # Store day memories before building queries, so queries on this
+                # day can reference today's AND prior days' memories.
+                if day_memories:
+                    all_memories[day] = day_memories
+
+                # Extract queries from Q&A pairs.
+                # LoCoMo queries often reference events from earlier conversations
+                # (cross-session retrieval is the benchmark's defining property).
+                # Expected IDs = ALL memories injected so far (days 0..day),
+                # not just today's — otherwise cross-session queries are silently
+                # dropped (relevant_memory_ids was empty for prior-day references).
+                all_memories_so_far = [
+                    m
+                    for d in sorted(all_memories.keys())
+                    for m in all_memories[d]
+                ]
                 if "qa" in conversation_item:
                     qa_data = conversation_item["qa"]
                     if isinstance(qa_data, dict):
                         for qa_idx, (question, answer) in enumerate(qa_data.items()):
                             query = self._parse_qa(
-                                question, answer, day, qa_idx, day_memories
+                                question, answer, day, qa_idx, all_memories_so_far
                             )
                             if query:
                                 all_queries.append(query)
                                 user_ids.add(query.user_id)
-
-                # Store day memories
-                if day_memories:
-                    all_memories[day] = day_memories
 
             except Exception as e:
                 raise ValidationError(

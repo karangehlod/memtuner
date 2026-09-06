@@ -141,20 +141,19 @@ class TemporalAccuracyEvaluator(MetricEvaluator):
     ) -> EvaluationResult:
         """Evaluate temporal accuracy (ID-only fallback).
 
-        For the standard interface, this returns a neutral result.
-        Use evaluate_with_context() or evaluate_temporal() for full evaluation.
+        Without an EvaluationContext there is no temporal window to check, so
+        this query is excluded from the temporal_accuracy aggregate by returning
+        query_count=0. This is consistent with evaluate_with_context() when
+        context.temporal_window is None — both signal "not applicable" so the
+        _build_scenario_metrics() guard (if result.query_count > 0) skips it.
 
-        Args:
-            retrieved_ids: Memory IDs returned by memory system.
-            expected_ids: Memory IDs expected from gold dataset.
-
-        Returns:
-            EvaluationResult with value 1.0 (no temporal data available).
+        Use evaluate_with_context() or evaluate_temporal() for real evaluation.
         """
         return EvaluationResult(
             metric_name=self.metric_name(),
             value=1.0,
-            query_count=1,
+            query_count=0,  # excluded from temporal_accuracy aggregate
+            details={"note": "No temporal context available — not evaluated"},
         )
 
     def metric_name(self) -> str:

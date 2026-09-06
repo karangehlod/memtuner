@@ -518,3 +518,146 @@ class TestRRFHybridFusion:
         hybrid = _hybrid(bm25_ranked, embed_ranked)
         results = hybrid.retrieve("q", top_k=3)
         assert len(results) == 3
+
+
+# ---------------------------------------------------------------------------
+# Bug-fix regression tests (6 confirmed bugs)
+# ---------------------------------------------------------------------------
+
+class TestBugFixRegressions:
+    """Regression tests covering all 6 confirmed bugs found during code audit."""
+
+    # Bug A: BM25 corpus cache thread-safety
+    def test_bm25_cache_lock_exists(self) -> None:
+        """_BM25_CACHE_LOCK must be a threading.Lock on the module."""
+        import threading
+        from benchmark.memory.strategies.bm25_strategy import _BM25_CACHE_LOCK
+        assert isinstance(_BM25_CACHE_LOCK, type(threading.Lock()))
+
+    # Bug B: compute_mrr K cutoff
+    def test_compute_mrr_respects_k_cutoff(self) -> None:
+        """First hit beyond K must return 0.0, not 1/rank."""
+        from benchmark.retrieval.metrics_utils import compute_mrr
+        # Relevant doc at rank 11 — beyond K=10 → 0.0
+        results = [{"doc_id": f"d{i}"} for i in range(12)]
+        relevant = {"d10"}  # rank 11 (0-indexed 10)
+        assert compute_mrr(results, relevant, k=10) == 0.0
+        # Same doc at rank 5 (0-indexed 4) → within K → 1/5
+        results2 = [{"doc_id": f"x{i}"} for i in range(12)]
+        results2[4] = {"doc_id": "target"}
+        assert compute_mrr(results2, {"target"}, k=10) == pytest.approx(1.0 / 5)
+
+    def test_compute_mrr_first_hit_in_window(self) -> None:
+        """First hit at rank 1 → 1.0 regardless of K."""
+        from benchmark.retrieval.metrics_utils import compute_mrr
+        results = [{"doc_id": "gold"}] + [{"doc_id": f"d{i}"} for i in range(20)]
+        assert compute_mrr(results, {"gold"}, k=10) == 1.0
+
+    # Bug C: composite score renormalization for non-temporal datasets
+    def test_composite_score_non_temporal_max_is_one(self) -> None:
+        """Perfect recall/precision/MRR on a non-temporal dataset → composite=1.0."""
+        r = MatrixRunResult.__new__(MatrixRunResult)
+        object.__setattr__(r, "cell_id", "test")
+        object.__setattr__(r, "run_id", "test")
+        object.__setattr__(r, "memory_type", "episodic")
+        object.__setattr__(r, "retrieval_strategy", "bm25")
+        object.__setattr__(r, "decay_policy", "none")
+        object.__setattr__(r, "lambda_value", 0.0)
+        object.__setattr__(r, "pruning_threshold", 0.0)
+        object.__setattr__(r, "workload_profile", "medium_qpd")
+        object.__setattr__(r, "seed", 42)
+        object.__setattr__(r, "recall_at_k", 1.0)
+        object.__setattr__(r, "precision_at_k", 1.0)
+        object.__setattr__(r, "mrr", 1.0)
+        object.__setattr__(r, "temporal_accuracy", 0.0)  # non-temporal
+        object.__setattr__(r, "contamination_rate", 0.0)
+        object.__setattr__(r, "module_accuracy", 1.0)
+        object.__setattr__(r, "ndcg", 1.0)
+        object.__setattr__(r, "precision_at_1", 1.0)
+        object.__setattr__(r, "total_queries", 100)
+        object.__setattr__(r, "correct_recalls", 100)
+        object.__setattr__(r, "latency_p50_ms", 5.0)
+        object.__setattr__(r, "latency_p90_ms", 10.0)
+        object.__setattr__(r, "latency_mean_ms", 6.0)
+        object.__setattr__(r, "peak_ram_mb", 100.0)
+        object.__setattr__(r, "duration_seconds", 1.0)
+        object.__setattr__(r, "success", True)
+        object.__setattr__(r, "error_message", None)
+        object.__setattr__(r, "_composite_cache", None)
+        object.__setattr__(r, "platform", "test")
+        assert r.composite_score() == pytest.approx(1.0)
+
+    def test_composite_temporal_penalty_applied_when_signal_exists(self) -> None:
+        """With temporal signal, a perfect result still scores 1.0."""
+        r = MatrixRunResult.__new__(MatrixRunResult)
+        for attr, val in [
+            ("cell_id","t"),("run_id","t"),("memory_type","episodic"),
+            ("retrieval_strategy","bm25"),("decay_policy","none"),("lambda_value",0.0),
+            ("pruning_threshold",0.0),("workload_profile","medium_qpd"),("seed",42),
+            ("recall_at_k",1.0),("precision_at_k",1.0),("mrr",1.0),
+            ("temporal_accuracy",1.0),  # temporal dataset, perfect
+            ("contamination_rate",0.0),("module_accuracy",1.0),("ndcg",1.0),
+            ("precision_at_1",1.0),("total_queries",100),("correct_recalls",100),
+            ("latency_p50_ms",5.0),("latency_p90_ms",10.0),("latency_mean_ms",6.0),
+            ("peak_ram_mb",100.0),("duration_seconds",1.0),("success",True),
+            ("error_message",None),("_composite_cache",None),("platform","test"),
+        ]:
+            object.__setattr__(r, attr, val)
+        assert r.composite_score() == pytest.approx(1.0)
+
+    # Bug D: temporal evaluate() fallback query_count
+    def test_temporal_evaluate_fallback_excluded_from_aggregate(self) -> None:
+        """evaluate() fallback must return query_count=0 so it is excluded from avg."""
+        from benchmark.evaluation.temporal import TemporalAccuracyEvaluator
+        ev = TemporalAccuracyEvaluator()
+        result = ev.evaluate(["m1", "m2"], ["m1"])
+        assert result.query_count == 0, (
+            "evaluate() fallback returned query_count>0 — "
+            "would inflate temporal_accuracy for non-temporal datasets"
+        )
+
+    def test_temporal_evaluate_with_context_no_window_excluded(self) -> None:
+        """evaluate_with_context() with no temporal window → query_count=0."""
+        from benchmark.evaluation.context import EvaluationContext
+        from benchmark.evaluation.temporal import TemporalAccuracyEvaluator
+        ctx = EvaluationContext(
+            retrieved_ids=["m1"],
+            expected_ids=["m1"],
+            temporal_window=None,
+        )
+        ev = TemporalAccuracyEvaluator()
+        result = ev.evaluate_with_context(ctx)
+        assert result.query_count == 0
+
+    # Bug E: phase seed None propagation (unit test via study_summary shape)
+    def test_study_summary_recommendations_always_has_keys(self) -> None:
+        """study_summary()['recommendations'] must contain all seed keys even when None."""
+        from benchmark.workload.study_scheduler import StudyRunResult
+        # Build one Phase 1 result (no embedding info); all required fields supplied
+        r = StudyRunResult(
+            cell_id="c1", run_id="r1",
+            memory_type="episodic", retrieval_strategy="bm25",
+            decay_policy="none", lambda_value=0.0, pruning_threshold=0.0,
+            workload_profile="medium_qpd", seed=42,
+            study_phase="phase1_baselines",
+            embedding_model="", embedding_backend="",
+            bm25_weight=1.0, reranker_model="none",
+            recall_at_k=0.5, precision_at_k=0.1, mrr=0.4, ndcg=0.3,
+            success=True,
+        )
+        agg = StudyAggregator([r])
+        recs = agg.study_summary().get("recommendations", {})
+        for key in ("best_embedding_model", "best_embedding_backend",
+                    "best_bm25_weight", "best_retrieval_strategy"):
+            assert key in recs, f"Missing key '{key}' in recommendations"
+
+    # Bug F: early_stop_patience must be accepted by _run_phase4_two_stage
+    def test_phase4_two_stage_accepts_patience_param(self) -> None:
+        """_run_phase4_two_stage must accept patience kwarg without TypeError."""
+        import inspect
+        from scripts.study_runner import _run_phase4_two_stage
+        sig = inspect.signature(_run_phase4_two_stage)
+        assert "patience" in sig.parameters, (
+            "--early-stop-patience is still a dead flag: "
+            "_run_phase4_two_stage has no 'patience' parameter"
+        )

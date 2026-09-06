@@ -183,6 +183,16 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
     else:
         _info("httpx not installed — LLM judge disabled (optional)")
 
+    _has_faiss = _check_import("faiss")
+    if _has_faiss:
+        try:
+            _ok("faiss", "ANN index enabled (IndexFlatIP) — fast retrieval for >10K memories")
+        except Exception:
+            _ok("faiss", "ANN index enabled for large corpora")
+    else:
+        _info("faiss not installed — brute-force numpy retrieval (fast for <10K memories)")
+        _info("  For large corpora (MS MARCO, NQ): pip install 'memtuner[ann]'  or  pip install faiss-cpu")
+
     # ── Datasets ──────────────────────────────────────────────────────────────
     # Missing datasets are downloaded/converted automatically when a study
     # requests them; this section just shows what is already on disk.

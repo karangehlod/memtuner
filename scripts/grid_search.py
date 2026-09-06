@@ -104,11 +104,11 @@ Examples:
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
-    from benchmark.workload.matrix import MatrixExpander, LAMBDA_STEPS
+    from benchmark.recommendation.ranker import MatrixRanker, QualityThresholds
+    from benchmark.workload.aggregator import MatrixAggregator, MatrixReporter
+    from benchmark.workload.matrix import MatrixExpander
     from benchmark.workload.profile import get_profile
     from benchmark.workload.scheduler import MatrixScheduler
-    from benchmark.workload.aggregator import MatrixAggregator, MatrixReporter
-    from benchmark.recommendation.ranker import MatrixRanker, QualityThresholds
 
     dataset_path = Path(dataset_path_str)
     if not dataset_path.exists():
@@ -169,7 +169,7 @@ Examples:
         )
 
     desc = expander.describe(cells)
-    print(f"  Grid dimensions:")
+    print("  Grid dimensions:")
     print(f"    Memory types:         {desc['memory_types']}")
     print(f"    Retrieval strategies: {desc['retrieval_strategies']}")
     print(f"    Decay policies:       {desc['decay_policies']}")
@@ -189,9 +189,9 @@ Examples:
     # Never holds all results in memory; safe for very long runs.
     output_dir.mkdir(parents=True, exist_ok=True)
     progress_log_path = output_dir / f"progress_{ts}_{run_id}.jsonl"
-    _log_file = open(progress_log_path, "w", buffering=1, encoding="utf-8")  # line-buffered
+    _log_file = open(progress_log_path, "w", buffering=1, encoding="utf-8")  # line-buffered  # noqa: SIM115
 
-    total_cells = len(cells)
+    total_cells = len(cells)  # noqa: F841
     _t_first_cell = [None]  # track ETA after first cell
 
     def _progress(completed: int, total: int, result) -> None:
@@ -258,7 +258,7 @@ Examples:
     print(f"  Successful: {success_count}   Failed: {fail_count}")
 
     if fail_count > 0:
-        print(f"\n  FAILURES:")
+        print("\n  FAILURES:")
         for r in results:
             if not r.success:
                 print(f"    [{r.cell_id}] {r.memory_type} × {r.retrieval_strategy} "
@@ -324,11 +324,10 @@ Examples:
             print(f"    ⚠  {msg}")
         print()
         # Hard exit with non-zero code so CI pipelines catch this
-        import sys as _sys
         print("  Benchmark completed but invariance checks failed — see above.")
         # (Don't sys.exit here so reports are still written)
     else:
-        print(f"\n  ✓ All invariance checks passed.")
+        print("\n  ✓ All invariance checks passed.")
     # ─────────────────────────────────────────────────────────────────────
 
     # Aggregate and report
@@ -370,17 +369,17 @@ Examples:
         print("  No configuration met all quality thresholds.")
         print("  Check the CSV for the closest configs.")
 
-    print(f"\n  Memory type ranking:")
+    print("\n  Memory type ranking:")
     for row in aggregator.rank_by_memory_type():
         print(f"    {row['memory_type']:12s}  composite={row['avg_composite']:.4f}"
               f"  recall={row['avg_recall']:.4f}  noise={row['avg_noise']:.4f}")
 
-    print(f"\n  Strategy ranking:")
+    print("\n  Strategy ranking:")
     for row in aggregator.rank_by_retrieval_strategy():
         print(f"    {row['retrieval_strategy']:12s}  composite={row['avg_composite']:.4f}"
               f"  recall={row['avg_recall']:.4f}  noise={row['avg_noise']:.4f}")
 
-    print(f"\n  Decay policy ranking:")
+    print("\n  Decay policy ranking:")
     for row in aggregator.rank_by_decay_policy():
         print(f"    {row['decay_policy']:12s}  composite={row['avg_composite']:.4f}"
               f"  recall={row['avg_recall']:.4f}  noise={row['avg_noise']:.4f}")

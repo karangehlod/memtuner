@@ -29,18 +29,19 @@ import csv
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
 
 import matplotlib
-matplotlib.use("Agg")  # headless rendering — no display needed
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import numpy as np
 
+matplotlib.use("Agg")  # headless rendering — no display needed
 # Load config — YAML + .env overrides
 import sys as _sys
+
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
+
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
-from config import cfg  # noqa: E402
+from config import cfg
 
 # ── Runtime constants resolved from config ─────────────────────────────────────
 C               = cfg.colors.palette           # name → hex
@@ -189,7 +190,7 @@ def plot_strategy_comparison(ds_name: str, rows: list[dict], out_dir: Path, dpi:
     # Best recall (faint background bar)
     ax.barh(y + h/2, bests, h*3, color=C["blue"], alpha=0.15, label="Best Recall@10")
     # Avg recall (solid bar)
-    bars = ax.barh(y + h/2, avgs,  h,   color=[STRATEGY_COLORS.get(n, C["blue"]) for n in names],
+    ax.barh(y + h/2, avgs,  h,   color=[STRATEGY_COLORS.get(n, C["blue"]) for n in names],
                    label="Avg Recall@10")
     # P@1 bar (below)
     ax.barh(y - h/2, p1s,   h,   color=C["orange"], alpha=0.75, label="Avg Precision@1")
@@ -504,8 +505,8 @@ def plot_best_config_card(ds_name: str, rows: list[dict], out_dir: Path, dpi: in
     ]
 
     left = 0.0
-    for label, val, col in contributions:
-        bar = ax_bar.barh(0, val, 0.4, left=left, color=col)
+    for _label, val, col in contributions:
+        ax_bar.barh(0, val, 0.4, left=left, color=col)
         if val > comp * 0.06:
             ax_bar.text(left + val / 2, 0, f"{val:.3f}", ha="center", va="center",
                         fontsize=7.5, color="white", fontweight="bold")
@@ -516,7 +517,7 @@ def plot_best_config_card(ds_name: str, rows: list[dict], out_dir: Path, dpi: in
     ax_bar.set_xlabel(f"Total = {comp:.4f}")
     ax_bar.grid(axis="x")
 
-    legend_patches = [mpatches.Patch(color=c, label=l) for l, _, c in contributions]
+    legend_patches = [mpatches.Patch(color=c, label=lbl) for lbl, _, c in contributions]
     ax_bar.legend(handles=legend_patches, fontsize=7, loc="lower right",
                   bbox_to_anchor=(1.0, -0.32), ncol=2)
 
@@ -673,8 +674,8 @@ def plot_composite_breakdown(by_ds: dict[str, list], out_dir: Path, dpi: int) ->
         (f"{COMPOSITE_W['mrr']} × MRR",             data["w_mrr"],    C["aqua"]),
         (f"{COMPOSITE_W['temporal']} × Temporal",   data["w_temp"],   C["yellow"]),
     ]
-    for label, vals, col in labels_colors:
-        ax.bar(x, vals, 0.55, bottom=bottoms, color=col, label=label)
+    for _label, vals, col in labels_colors:
+        ax.bar(x, vals, 0.55, bottom=bottoms, color=col, label=_label)
         for xi, (v, b) in enumerate(zip(vals, bottoms)):
             if v > 0.02:
                 ax.text(xi, b + v/2, f"{v:.3f}", ha="center", va="center",
@@ -822,8 +823,8 @@ def write_recommendations(by_ds: dict[str, list], out_path: Path) -> None:
             f"**Best config**: `{strat}` + `{embed}` ({backend}) + `{decay}` decay (λ={lam:.4f})",
             f"+ BM25 weight={bm25w:.2f} (semantic={sem_w:.2f}) + `{mem}` memory",
             "",
-            f"| Metric | Value |",
-            f"|--------|-------|",
+            "| Metric | Value |",
+            "|--------|-------|",
             f"| Recall@10 | {r10:.4f} |",
             f"| Precision@10 | {p10:.4f} |",
             f"| MRR | {mrr:.4f} |",
@@ -836,11 +837,11 @@ def write_recommendations(by_ds: dict[str, list], out_path: Path) -> None:
             f"{COMPOSITE_W['recall']}×{r10:.4f} + {COMPOSITE_W['precision']}×{p10:.4f}"
             f" + {COMPOSITE_W['mrr']}×{mrr:.4f} + {COMPOSITE_W['temporal']}×{ta:.4f}) = {comp:.4f}`",
             "",
-            f"**Strategy ranking** (avg Recall@10): "
+            "**Strategy ranking** (avg Recall@10): "
             + " > ".join(f"`{s}` ({np.mean([_f(r,'recall_at_k') for r in by_s[s]]):.3f})"
                          for s in strat_rank),
             "",
-            f"**Best memory type** (avg composite): "
+            "**Best memory type** (avg composite): "
             + " > ".join(f"`{m}` ({np.mean([_composite(r) for r in by_m[m]]):.3f})"
                          for m in mem_rank),
             "",
@@ -868,7 +869,7 @@ def generate_plots(project_root: Path | None = None, dpi: int = 150) -> None:
 
     print(f"\nMemTuner Plot Generator  (dpi={dpi})")
     print(f"  Output: {plots_dir}")
-    print(f"  Loading data...")
+    print("  Loading data...")
 
     by_ds = load_all(output_dir)
     if not by_ds:
@@ -892,7 +893,7 @@ def generate_plots(project_root: Path | None = None, dpi: int = 150) -> None:
         plot_best_config_card   (ds_name, rows, plots_dir, dpi)
 
     # Cross-dataset plots
-    print(f"\n  [Cross-dataset]")
+    print("\n  [Cross-dataset]")
     plot_cross_strategy_heatmap (by_ds, plots_dir, dpi)
     plot_cross_decay_heatmap    (by_ds, plots_dir, dpi)
     plot_composite_breakdown    (by_ds, plots_dir, dpi)
@@ -968,7 +969,7 @@ Install dependencies:
         by_ds = load_single_csv(csv_path)
         out_dir = Path(args.out) if args.out else csv_path.parent / "plots"
         out_dir.mkdir(parents=True, exist_ok=True)
-        print(f"\nMemTuner Plot Generator — single CSV mode")
+        print("\nMemTuner Plot Generator — single CSV mode")
         print(f"  CSV:    {csv_path.name}")
         print(f"  Output: {out_dir}\n")
         for ds_name, rows in by_ds.items():

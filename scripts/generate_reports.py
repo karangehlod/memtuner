@@ -25,7 +25,7 @@ from pathlib import Path
 
 # Load config — YAML + .env overrides.  cfg is the single source of truth.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from config import cfg  # noqa: E402
+from config import cfg
 
 # Module-level aliases so the rest of the file stays readable
 DATASET_MAP: dict[int, str] = cfg.datasets.query_count_to_name
@@ -199,7 +199,7 @@ def write_formula_doc(out_path: Path, cells: list[dict] | None = None) -> None:
         results.append((ds, strat, embed, bm25w, decay, r10, p10, mrr, ta, comp, len(rows)))
 
     lines += ["", "### Composite breakdown per dataset (best config)", ""]
-    for ds, strat, embed, bm25w, decay, r10, p10, mrr, ta, comp, n in results:
+    for ds, _strat, _embed, _bm25w, _decay, r10, _p10, _mrr, _ta, _comp, _n in results:
         gate = 1.0 if r10 >= cfg.composite.recall_gate else 0.0
         lines.append(
             f"```\n{ds:<14} = {gate:.0f} × "
@@ -214,8 +214,8 @@ def write_formula_doc(out_path: Path, cells: list[dict] | None = None) -> None:
         "| Dataset | Cells benchmarked | Best strategy | Best Recall@10 |",
         "|---------|------------------|---------------|----------------|",
     ]
-    for ds, strat, embed, bm25w, decay, r10, p10, mrr, ta, comp, n in results:
-        lines.append(f"| {ds} | {n} | {strat} | {r10:.4f} |")
+    for ds, _strat, _embed, _bm25w, _decay, r10, _p10, _mrr, _ta, _comp, _n in results:
+        lines.append(f"| {ds} | {_n} | {_strat} | {r10:.4f} |")
 
     out_path.write_text(base + "\n".join(lines) + "\n", encoding="utf-8")
     print(f"  COMPOSITE_SCORE_FORMULA.md  → {out_path.name}  (section 7 refreshed)")
@@ -378,7 +378,7 @@ def write_reports_data_js(data: dict, out_path: Path) -> None:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def generate(project_root: Path | None = None) -> None:
+def generate(project_root: Path | None = None, skip_plots: bool = False) -> None:
     # project_root param kept for backward compat with study_runner hook
     output_dir = cfg.reporting.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -405,19 +405,23 @@ def generate(project_root: Path | None = None) -> None:
     write_reports_data_js(data, output_dir / "reports_data.js")
 
     # Generate PNG plots and recommendations doc
-    try:
-        import importlib.util
-        _proj_root = project_root or Path(__file__).resolve().parent.parent
-        plot_script = Path(__file__).parent / "plot_benchmark.py"
-        spec = importlib.util.spec_from_file_location("plot_benchmark", plot_script)
-        mod  = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-        spec.loader.exec_module(mod)                  # type: ignore[union-attr]
-        mod.generate_plots(_proj_root)
-    except Exception as exc:
-        print(f"  [warn] Plot generation skipped: {exc}", file=sys.stderr)
+    if skip_plots:
+        print("  [--no-plots] Skipping PNG generation.")
+    else:
+        try:
+            import importlib.util
+            _proj_root = project_root or Path(__file__).resolve().parent.parent
+            plot_script = Path(__file__).parent / "plot_benchmark.py"
+            spec = importlib.util.spec_from_file_location("plot_benchmark", plot_script)
+            mod  = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+            spec.loader.exec_module(mod)                  # type: ignore[union-attr]
+            mod.generate_plots(_proj_root)
+        except Exception as exc:
+            print(f"  [warn] Plot generation failed: {exc}", file=sys.stderr)
+            print("         Run with --no-plots to skip on headless machines.", file=sys.stderr)
 
     print(f"\n  Reports ready in {output_dir}/")
-    print(f"    Open dashboard.html or dashboard_per_dataset.html to view.\n")
+    print("    Open dashboard.html or dashboard_per_dataset.html to view.\n")
 
 
 if __name__ == "__main__":

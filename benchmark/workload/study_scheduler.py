@@ -310,6 +310,19 @@ class CellCheckpointer:
         self._path = output_dir / f"progress_{run_id}.csv"
         self._lock = threading.Lock()
         self._header_written = False
+        # Keep the file handle open for the lifetime of the run.
+        # open()/close() on every write causes a Win32 FlushFileBuffers (~100ms) on
+        # Windows; for a 500-cell sweep that adds ~50s of pure I/O overhead.
+        # We flush after each write for crash-safety instead of relying on close().
+        self._file = open(self._path, "a", newline="", encoding="utf-8", buffering=1)  # noqa: SIM115
+
+    def __del__(self) -> None:
+        try:
+            if not self._file.closed:
+                self._file.flush()
+                self._file.close()
+        except Exception:
+            pass
 
     @property
     def path(self) -> Path:
@@ -337,13 +350,12 @@ class CellCheckpointer:
             "error_message": next(iter((result.error_message or "").splitlines()), "")[:120],
         }
         with self._lock:
-            write_header = not self._header_written
-            with open(self._path, "a", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=self._FIELDS)
-                if write_header:
-                    writer.writeheader()
-                    self._header_written = True
-                writer.writerow(row)
+            writer = csv.DictWriter(self._file, fieldnames=self._FIELDS)
+            if not self._header_written:
+                writer.writeheader()
+                self._header_written = True
+            writer.writerow(row)
+            self._file.flush()  # crash-safe: data on disk after each cell
 
 
 def _needs_direct_execution(retrieval_strategy: str) -> bool:

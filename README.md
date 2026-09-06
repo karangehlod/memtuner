@@ -30,18 +30,71 @@ MemTuner answers: *"Which combination of memory type, retrieval strategy, embedd
 
 **Why this matters:** Production agent memory systems require five independent design decisions: what to store (memory type), how to find it (retrieval strategy), which model to use (embedding), how to rank results (reranker), and when to forget (decay). Without a systematic sweep, developers make guesses. MemTuner provides empirical answers.
 
+---
+
+## When to use MemTuner — and why
+
+### Use it when you are:
+
+**Building a production agent with long-term memory**
+You're integrating a memory layer into a chatbot, coding assistant, or autonomous agent and need to decide: BM25 vs embeddings vs hybrid? Which embedding model? Should I add temporal decay? MemTuner gives you empirical answers on your actual corpus and query distribution — not generic benchmarks on unrelated data.
+
+**Evaluating an existing memory system before shipping**
+You have a prototype working. Before deploying, you want to know if recall@10 is actually good enough and which configuration to ship. MemTuner's five-phase sweep identifies the optimal configuration and reports bootstrap CIs so you know how stable the answer is.
+
+**Comparing retrieval strategies across datasets**
+You want to know whether BM25 + semantic hybrid outperforms pure semantic across LoCoMo, SQuAD, and MS MARCO — and whether the answer changes by dataset. MemTuner's per-dataset recommendations are precisely designed for this.
+
+**Writing a research paper on agent memory**
+You need reproducible, statistically-grounded ablation results. MemTuner outputs CSV/JSON artifacts, generates publication-quality figures, computes 95% bootstrap CIs, and flags leakage. The five-phase adaptive design is citation-ready (BibTeX in README).
+
+**Debugging why your memory system has low recall**
+You have a system with poor recall and you're not sure whether it's the embedding model, the BM25 weight, or the decay policy. Run `--mode default` on your dataset and the Phase 3 hybrid weight curve will show exactly where the tradeoff breaks.
+
+---
+
+### Do NOT use it when:
+
+- **Your corpus has > 500K memories** — Above ~500K docs, even faiss IndexFlatIP (exact) becomes slow and the embedding matrix may exceed system RAM. See [Scale limits](#scale-limits). Install faiss for the best experience with large corpora: `pip install ".[ann]"`.
+- **You want a quick "is my RAG working?" check** — Use `memtuner study --mode quick` (BM25 baseline only, ~1 min) as a sanity check, but for production validation you want Phases 2–4.
+- **You need online/streaming memory evaluation** — MemTuner evaluates a static corpus with pre-defined gold queries. It does not model memory growth over a live session.
+- **Your task is generation quality, not retrieval** — MemTuner measures Recall@K, MRR, and NDCG. If your primary concern is answer fluency or factual accuracy of generated text, add `--judge-model` to layer an LLM judge on top.
+
+---
+
+### Why MemTuner over alternatives?
+
+| | MemTuner | MTEB | RAGAS | LlamaIndex eval |
+|---|---|---|---|---|
+| **What it measures** | Retrieval config quality for agent memory | Embedding model quality | RAG pipeline quality (answer faithfulness, context recall) | RAG answer quality |
+| Agent-specific memory types (episodic/semantic/preference/entity) | ✅ | ❌ | ❌ | ❌ |
+| Five-knob retrieval config sweep | ✅ | ❌ | ❌ | ❌ |
+| Temporal decay policies | ✅ | ❌ | ❌ | ❌ |
+| Per-dataset adaptive seeding | ✅ | ❌ | ❌ | ❌ |
+| IR metrics (Recall@K, MRR, NDCG) | ✅ | ✅ | Partial | Partial |
+| Bootstrap CIs + significance | ✅ | ✅ | ❌ | ❌ |
+| Works fully offline (no LLM API) | ✅ | ✅ | Optional¹ | Optional¹ |
+| Datasets included out of the box | 14 | 129 | 3 | Varies |
+| One command → full config report | ✅ | ❌ | ❌ | ❌ |
+| LLM judge for answer quality | Optional (`--judge-model`) | ❌ | ✅ (core feature) | ✅ (core feature) |
+
+¹ RAGAS and LlamaIndex eval default to OpenAI but can use any LLM via LiteLLM — the LLM judge is optional in MemTuner too.
+
+**The key difference**: MTEB tells you *which embedding model is best* across a fixed benchmark suite. RAGAS tells you *whether your generated answers are faithful*. MemTuner tells you *which combination of memory type, embedding model, BM25 weight, reranker, and decay policy gives the best retrieval* on your specific corpus and query distribution — and it does so without requiring any LLM call for the core benchmark.
+
 ### Key design decisions
 
 - **Five-phase adaptive study** — each phase uses the prior winner as seed, so later phases automatically build on the best earlier configuration
 - **All embedding and reranker models run directly on GPU** via PyTorch (sentence-transformers) — no HTTP overhead, no Ollama required for retrieval
-- **Statistical significance** — 95% bootstrap CIs reported when multiple seeds are run; recency baseline anchors every comparison
-- **Early stopping** — Phase 5 (decay sweep) stops testing λ values once performance plateaus, saving up to 40% of cells
+- **Statistical significance** — Bootstrap CIs reported when multiple seeds are run; recency baseline anchors every comparison. Meaningful CIs require N ≥ 30 observations per strategy (≥ 10 seeds); 3 seeds is sufficient for sanity-checking only
+- **Early stopping** — Phase 4 (decay sweep) stops testing λ values once performance plateaus, saving up to 40% of cells
 - **Per-dataset recommendations** — the best strategy varies significantly by dataset; results are reported per-dataset, not just as a cross-dataset average
 
 ---
 
 ## Table of Contents
 
+- [When to use MemTuner](#when-to-use-memtuner--and-why)
 - [Benchmark Design](#benchmark-design)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -234,7 +287,10 @@ memtuner study --gold-dataset data/input/locomo10.json --mode quick
 # Only specific phases (1=baselines 2=embeddings 3=hybrid 4=decay 5=reranker)
 memtuner study --gold-dataset data/input/locomo10.json --mode custom --phases 1 2
 
-# Statistical run — 3 seeds for 95% bootstrap CIs (~3× longer)
+# Statistical run — 3 seeds for bootstrap CIs (~3× longer)
+# NOTE: N=3 seeds × ~4 memory types = ~12 observations per strategy.
+# Bootstrap CIs from N<30 are very wide and not meaningful for publication.
+# Use --seeds with at least 10 seeds for CIs worth reporting.
 memtuner study --gold-dataset data/input/locomo10.json --mode full --seeds 42 123 456
 
 # With LLM judge for answer-quality scoring (any OpenAI-compatible endpoint)
@@ -625,7 +681,7 @@ For each group g with n observations:
 
 Standard non-parametric percentile bootstrap (Sakai 2006, Voorhees 2001).
 
-### Early stopping (Phase 5)
+### Early stopping (Phase 4 — decay sweep)
 
 ```
 For each policy ∈ {exponential, logarithmic, linear}:
@@ -636,13 +692,13 @@ For each policy ∈ {exponential, logarithmic, linear}:
     if counter ≥ patience (3): skip remaining λ values, break
 ```
 
-Typically saves 30–50% of Phase 5 cells when optimal λ is found at 0.01–0.02.
+Typically saves 30–50% of Phase 4 cells when optimal λ is found at 0.01–0.02.
 
 ---
 
 ## Results
 
-### LoCoMo (10 conversations, 1,977 queries, 5,879 memories)
+### LoCoMo (10 conversations, 1,986 queries, 5,879 memories)
 
 > Measured on Apple Silicon MPS. Phase 5 CrossEncoder cells require CUDA and were skipped on this machine.
 
@@ -676,7 +732,6 @@ Typically saves 30–50% of Phase 5 cells when optimal λ is found at 0.01–0.0
 
 #### Phase 4 — Temporal decay sweep (episodic, hybrid bge-base bm25w=0.35)
 
-*Note: Phase 4 seeding bug fixed — prior runs incorrectly used bm25_weight=0.5 instead of 0.35. Re-run required for corrected numbers.*
 
 | Policy | Best λ | Recall@10 | MRR | vs no-decay |
 |--------|--------|-----------|-----|-------------|
@@ -926,7 +981,7 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph IN["data/input/"]
-        LCM["locomo10.json\n5,879 memories\n1,977 queries"]
+        LCM["locomo10.json\n5,879 memories\n1,986 queries"]
         LME["longmemeval_oracle_gold.json\n10,288 memories · 470 queries"]
         SQ["squad_gold.json\n11,873 queries"]
         CQ["coqa_gold.json\n7,983 queries"]
@@ -1005,7 +1060,9 @@ graph LR
 | Model LRU cache | `_INDEX_CACHE` (16 slots, deque eviction) | Same corpus+model → skip encode (Phase 3 reuses Phase 2) |
 | CrossEncoder cache | `_CE_MODEL_CACHE` | Reranker loaded once, reused across Phase 5 cells |
 | BM25 corpus cache | `_BM25_CORPUS_CACHE` | Tokenize corpus once per unique corpus |
-| User mask cache | `BM25Strategy`, `EmbeddingsStrategy` | Boolean mask built once per (user, corpus); reused for all 1977 queries |
+| ANN index (faiss) | `EmbeddingsStrategy` | `IndexFlatIP` replaces numpy `@` for corpora ≥ 10K memories; ~25× faster per query; batch-search in `retrieve_batch()` |
+| BM25 punctuation stripping | `BM25Strategy`, `BM25LStrategy` | Compiled regex removes attached punct before tokenizing — "memory." and "memory" match |
+| User mask cache | `BM25Strategy`, `EmbeddingsStrategy` | Boolean mask built once per (user, corpus); reused for all 1,986 queries |
 | Gold oracle O(1) lookups | `GoldOracle` | Pre-built `{(day, query): result}` index; eliminates O(N) scan per query call |
 | NDCG IDCG table | `NDCGEvaluator` | Precomputed at init; O(1) per query vs O(K) log2 calls |
 | Vectorized bootstrap CI | `StudyAggregator` | NumPy resample replaces 30K Python RNG calls; ~10–50× faster |
@@ -1014,6 +1071,33 @@ graph LR
 | Thread pool (BM25/Recency) | `StudyScheduler` | Up to `cpu_count-1` true-parallel workers via threads |
 | Hard worker cap | `StudyScheduler` | `min(requested, cpu_count-1, n_parallel_cells)` — no idle threads |
 | OMP/MKL thread cap | startup env | GPU kernel threads not starved by numpy/blas threads |
+| Checkpoint file handle | `CellCheckpointer` | File kept open across writes; `flush()` per cell instead of `close()` (saves ~100ms/cell on Windows) |
+
+### Scale limits
+
+MemTuner uses **exact brute-force retrieval** (dense matrix dot-product and exact BM25) — which is correct for benchmarking precision but has hard corpus-size limits:
+
+| Corpus size | Embedding retrieval | BM25 indexing | Recommended |
+|-------------|--------------------|--------------:|-------------|
+| < 10K docs | ~5–20 ms/query | < 5 s build | All modes, all hardware |
+| 10K–100K docs | ~50–200 ms/query | 10–60 s build | GPU recommended for Phase 2+ |
+| 100K–500K docs | 200 ms–1 s/query | 1–5 min build, 2–6 GB RAM | CUDA only; laptop may OOM |
+| > 500K docs | > 1 s/query (exact faiss) | may exceed system RAM | Not supported; use chunked/approximate index |
+
+**ANN index (faiss)** is available as an optional dependency:
+```bash
+pip install ".[ann]"   # installs faiss-cpu
+```
+- Threshold: corpora ≥ 10,000 memories automatically use `faiss.IndexFlatIP` (exact cosine search, SIMD-optimised — ~25× faster than numpy brute-force at 100K+ docs)
+- Corpora < 10,000 use numpy directly (faster for small N due to no index-build overhead)
+- Falls back silently to numpy if faiss is not installed — run `memtuner doctor` to check
+
+**Tips for large corpora:**
+- Use `--workload low_qpd` to reduce evaluation horizon and query count.
+- Use `--skip-models` to exclude large embedding models (bge-m3, Qwen3-4B) on memory-constrained machines.
+- The RAM guard in `EmbeddingsStrategy` warns before attempting an allocation that would OOM the process.
+
+**Phase 2 GPU cell throughput**: embedding cells run sequentially (one at a time, in-process), which is required for stable MPS/CUDA context management. A 6-model × 3-memory-type Phase 2 sweep = 18 sequential cells of ~15s each = ~5 minutes on a GPU. Phase 1 (BM25/recency) runs in a thread pool and fully parallelises.
 
 ---
 

@@ -42,10 +42,11 @@ def create_explorer_app(results_directory: Path) -> Any:
         data_loader.load_all_runs()
         yield
 
+    from benchmark import __version__ as _memtuner_version
     app = FastAPI(
         title="MemTuner Explorer",
         description="Read-only dashboard for benchmark results",
-        version="0.1.0",
+        version=_memtuner_version,
         lifespan=lifespan,
     )
 

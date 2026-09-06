@@ -27,7 +27,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Lint (ruff)
-        run: python -m ruff check benchmark/
+        run: python -m ruff check benchmark/ scripts/
 
       - name: Unit + contract tests
         run: python -m pytest tests/ -m "unit or contract" -q --tb=short
