@@ -32,7 +32,7 @@ from __future__ import annotations
 import hashlib
 import itertools
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from benchmark.workload.matrix import ARCHIVAL_FLOORS, LAMBDA_STEPS, DecaySpec
 
@@ -136,8 +136,9 @@ class StudyCell:
     def semantic_weight(self) -> float:
         return round(1.0 - self.bm25_weight, 2)
 
-    # Cached cell ID — computed once on first access, MD5 is pure and deterministic.
-    _cell_id_cache: str | None = None
+    # Cached cell ID — excluded from __hash__ and __eq__ so the frozen-dataclass
+    # hash stays stable before and after the first cell_id access.
+    _cell_id_cache: str | None = field(default=None, compare=False, hash=False, repr=False)
 
     @property
     def cell_id(self) -> str:
@@ -664,18 +665,35 @@ class StudyExpander:
         return cells
 
     def describe(self, cells: list[StudyCell]) -> dict:
+        # Single pass over cells — replaces 8 separate set-comprehension passes.
         by_phase: dict[str, int] = {}
+        mem_types: set[str] = set()
+        strats: set[str] = set()
+        embed_models: set[str] = set()
+        embed_backends: set[str] = set()
+        bm25_weights: set[float] = set()
+        reranker_models: set[str] = set()
+        decay_policies: set[str] = set()
+        lambda_values: set[float] = set()
         for c in cells:
             by_phase[c.study_phase] = by_phase.get(c.study_phase, 0) + 1
+            mem_types.add(c.memory_type)
+            strats.add(c.retrieval_strategy)
+            embed_models.add(c.embedding_model)
+            embed_backends.add(c.embedding_backend)
+            bm25_weights.add(c.bm25_weight)
+            reranker_models.add(c.reranker_model)
+            decay_policies.add(c.decay.policy)
+            lambda_values.add(c.decay.lambda_value)
         return {
             "total_cells": len(cells),
             "by_phase": by_phase,
-            "memory_types": sorted({c.memory_type for c in cells}),
-            "retrieval_strategies": sorted({c.retrieval_strategy for c in cells}),
-            "embedding_models": sorted({c.embedding_model for c in cells}),
-            "embedding_backends": sorted({c.embedding_backend for c in cells}),
-            "bm25_weights": sorted({c.bm25_weight for c in cells}),
-            "reranker_models": sorted({c.reranker_model for c in cells}),
-            "decay_policies": sorted({c.decay.policy for c in cells}),
-            "lambda_values": sorted({c.decay.lambda_value for c in cells}),
+            "memory_types": sorted(mem_types),
+            "retrieval_strategies": sorted(strats),
+            "embedding_models": sorted(embed_models),
+            "embedding_backends": sorted(embed_backends),
+            "bm25_weights": sorted(bm25_weights),
+            "reranker_models": sorted(reranker_models),
+            "decay_policies": sorted(decay_policies),
+            "lambda_values": sorted(lambda_values),
         }

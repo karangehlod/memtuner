@@ -97,43 +97,35 @@ class BooleanAdapter(RetrievalStrategy):
                 self.num_queries += 1
                 return []
 
-            # Boolean AND - documents must contain ALL terms
-            matching_docs = None
-
-            for term in query_terms:
+            # Boolean AND — process rarest term first to minimise intermediate set size
+            # and allow early exit when the intersection empties.
+            sorted_terms = sorted(
+                query_terms,
+                key=lambda t: len(self.inverted_index.get(t, set()))
+            )
+            matching_docs: set | None = None
+            for term in sorted_terms:
                 term_docs = self.inverted_index.get(term, set())
+                if not term_docs:
+                    matching_docs = set()
+                    break
+                matching_docs = term_docs.copy() if matching_docs is None else matching_docs & term_docs
+                if not matching_docs:
+                    break
 
-                if matching_docs is None:
-                    matching_docs = term_docs.copy()
-                else:
-                    matching_docs &= term_docs
+            if not matching_docs:
+                elapsed = time.time() - start
+                self.query_times.append(elapsed)
+                self.num_queries += 1
+                return []
 
-            if matching_docs is None:
-                matching_docs = set()
-
-            # Score by number of matching terms
-            scored_docs = []
-            for doc_id in matching_docs:
-                content = self.documents.get(doc_id, "")
-
-                # Score: how many terms appear in document
-                match_count = sum(
-                    1 for term in query_terms
-                    if term in content.lower()
-                )
-                score = match_count / max(len(query_terms), 1)
-
-                scored_docs.append((doc_id, score, content))
-
-            # Sort by score
-            scored_docs.sort(key=lambda x: x[1], reverse=True)
-
-            # Get top-k
-            for doc_id, score, content in scored_docs[:top_k]:
+            # All docs in matching_docs passed the full AND — score = 1.0 by definition
+            # (every query term is guaranteed present). No re-scan needed.
+            for doc_id in list(matching_docs)[:top_k]:
                 results.append({
                     "doc_id": doc_id,
-                    "score": score,
-                    "content": content,
+                    "score": 1.0,
+                    "content": self.documents.get(doc_id, ""),
                 })
 
             elapsed = time.time() - start

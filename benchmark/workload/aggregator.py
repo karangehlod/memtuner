@@ -48,6 +48,12 @@ class MatrixAggregator:
             return None
         return max(self._successful, key=lambda r: r.composite_score())
 
+    def best_by_recall(self) -> Any | None:
+        """Return the single result with the highest raw Recall@K."""
+        if not self._successful:
+            return None
+        return max(self._successful, key=lambda r: r.recall_at_k)
+
     def rank_by_memory_type(self) -> list[dict]:
         """Average composite score per memory type, ranked best→worst."""
         by_type: dict[str, list[float]] = defaultdict(list)

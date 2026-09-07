@@ -145,18 +145,18 @@ class DenseVectorAdapter(RetrievalStrategy):
             results = []
 
             if self.use_transformers and self.model:
-                # Encode query (module-level import, not repeated per query)
                 query_embedding = self.model.encode([query], show_progress_bar=False)[0]
 
-                # Compute cosine similarity
+                # Hoist query vector construction and norm outside the doc loop —
+                # both are constant across all documents.
+                query_vec = np.array(query_embedding)
+                query_norm = np.linalg.norm(query_vec) + 1e-8
+
                 scores = {}
                 for doc_id, doc_embedding in self.embeddings.items():
                     doc_vec = np.array(doc_embedding)
-                    query_vec = np.array(query_embedding)
-
-                    # Cosine similarity
                     similarity = np.dot(query_vec, doc_vec) / (
-                        np.linalg.norm(query_vec) * np.linalg.norm(doc_vec) + 1e-8
+                        query_norm * (np.linalg.norm(doc_vec) + 1e-8)
                     )
                     scores[doc_id] = float(similarity)
             else:
@@ -168,15 +168,8 @@ class DenseVectorAdapter(RetrievalStrategy):
                     similarity = self._cosine_similarity(query_emb, doc_emb)
                     scores[doc_id] = similarity
 
-            # Rank by score
-            ranked = sorted(
-                scores.items(),
-                key=lambda x: x[1],
-                reverse=True
-            )
-
-            # Get top-k
-            for doc_id, score in ranked[:top_k]:
+            import heapq as _hq
+            for doc_id, score in _hq.nlargest(top_k, scores.items(), key=lambda x: x[1]):
                 results.append({
                     "doc_id": doc_id,
                     "score": float(score),

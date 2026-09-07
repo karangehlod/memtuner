@@ -114,18 +114,16 @@ class LearnedDenseAdapter(RetrievalStrategy):
             if self.use_transformers and self.model:
                 import numpy as np
 
-                # Encode query
+                # Encode query once; hoist norm computation outside the doc loop.
                 query_embedding = self.model.encode([query], show_progress_bar=False)[0]
+                query_vec = np.array(query_embedding)
+                query_norm = np.linalg.norm(query_vec) + 1e-8
 
-                # Compute similarity to all documents
                 scores = {}
                 for doc_id, doc_embedding in self.doc_embeddings.items():
                     doc_vec = np.array(doc_embedding)
-                    query_vec = np.array(query_embedding)
-
-                    # Cosine similarity (learned embeddings are normalized)
                     similarity = np.dot(query_vec, doc_vec) / (
-                        np.linalg.norm(query_vec) * np.linalg.norm(doc_vec) + 1e-8
+                        query_norm * (np.linalg.norm(doc_vec) + 1e-8)
                     )
                     scores[doc_id] = float(similarity)
             else:
@@ -137,15 +135,8 @@ class LearnedDenseAdapter(RetrievalStrategy):
                     similarity = self._learned_similarity(query_emb, doc_emb)
                     scores[doc_id] = similarity
 
-            # Rank by score (learned models typically score higher)
-            ranked = sorted(
-                scores.items(),
-                key=lambda x: x[1],
-                reverse=True
-            )
-
-            # Get top-k
-            for doc_id, score in ranked[:top_k]:
+            import heapq as _hq
+            for doc_id, score in _hq.nlargest(top_k, scores.items(), key=lambda x: x[1]):
                 results.append({
                     "doc_id": doc_id,
                     "score": float(score),

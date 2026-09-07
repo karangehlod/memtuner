@@ -312,7 +312,13 @@ class ScenarioRunner:
                 # t = ln(importance / T) / λ. We use min_score from this check
                 # to estimate how many days until ANY memory could cross the threshold.
                 if scores:
-                    _min_score = min(scores.values())
+                    _flagged_set = set(flagged_ids)
+                    # Use the minimum score among SURVIVING memories only.
+                    # Including flagged IDs here would give min_score ≤ threshold on
+                    # every day that any memory is prunable, permanently disabling the
+                    # debounce after the first prune event.
+                    _surviving_scores = [s for mid, s in scores.items() if mid not in _flagged_set]
+                    _min_score = min(_surviving_scores) if _surviving_scores else 0.0
                     _threshold = getattr(policy, "threshold", 0.15)
                     if _min_score > _threshold * 1.05:  # 5% buffer
                         # Estimate days until min_score could reach threshold
@@ -497,7 +503,9 @@ class ScenarioRunner:
                     result = evaluator.evaluate_with_context(evaluation_context)
                     evaluations.append(result)
 
-                is_correct = any(rid in expected_ids for rid in all_retrieved_ids)
+                # Use _retrieved_set (already built above) for O(|expected|) check
+                # instead of O(top_k × |expected|) list-in-list scan.
+                is_correct = any(eid in _retrieved_set for eid in expected_ids)
                 if is_correct:
                     correct_count += 1
 
@@ -620,7 +628,7 @@ class ScenarioRunner:
                 result_eval = evaluator.evaluate_with_context(evaluation_context)
                 evaluations.append(result_eval)
 
-            is_correct = any(rid in expected_ids for rid in all_retrieved_ids)
+            is_correct = any(eid in _retrieved_set for eid in expected_ids)
             if is_correct:
                 correct_count += 1
 
@@ -681,10 +689,11 @@ class ScenarioRunner:
             for text in query_texts:
                 if text in prewarmed_texts:
                     continue
-                _gk = f"{_model_name}:{_backend}:{hashlib.md5(text.encode()).hexdigest()}"
+                _qhash = hashlib.md5(text.encode()).hexdigest()
+                _gk = f"{_model_name}:{_backend}:{_qhash}"
                 if _use_global and _gk in _QEC:
-                    # Global cache hit: populate instance cache directly
-                    cache[hashlib.md5(text.encode()).hexdigest()] = _QEC[_gk]
+                    # Global cache hit: populate instance cache directly — reuse hash computed above
+                    cache[_qhash] = _QEC[_gk]
                     prewarmed_texts.add(text)
                 else:
                     new_texts.append(text)

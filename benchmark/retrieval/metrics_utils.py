@@ -57,6 +57,13 @@ Score-estimated path:
 import math
 from typing import Any
 
+# Prefix-sum table for IDCG up to K=200: _IDCG_TABLE[n] = sum_{i=1}^{n} 1/log2(i+1).
+# Avoids recomputing the loop with math.log2 on every compute_ndcg() call (called
+# once per query in the benchmark hot path — 1977 queries × up to 112 cells).
+_IDCG_TABLE: list[float] = [0.0] * 201
+for _i in range(1, 201):
+    _IDCG_TABLE[_i] = _IDCG_TABLE[_i - 1] + 1.0 / math.log2(_i + 1)
+
 
 def compute_mrr(
     results: list[dict[str, Any]],
@@ -163,11 +170,9 @@ def compute_ndcg(
             dcg += 1.0 / math.log2(i + 1)
             _seen.add(doc_id)
 
-    # Compute IDCG (Ideal DCG - perfect ranking)
+    # Compute IDCG via precomputed prefix-sum table — O(1) instead of O(k) log2 calls.
     num_relevant = len(relevant_doc_ids)
-    idcg = 0.0
-    for i in range(1, min(num_relevant, k) + 1):
-        idcg += 1.0 / math.log2(i + 1)
+    idcg = _IDCG_TABLE[min(num_relevant, k, 200)]
 
     if idcg == 0:
         return 0.0

@@ -61,16 +61,25 @@ class EntityStore(BaseLongTermStore):
             allow_strategy_fallback=allow_strategy_fallback,
             **kwargs,
         )
+        # Pre-normalised entity lists: event.id → [e.lower() for e in event.entities]
+        # Prevents calling str.lower() on every (query, memory) pair at score time.
+        self._entity_lower_cache: dict[str, list[str]] = {}
 
     def write(self, event: MemoryEvent) -> None:
         """Write only if memory type is accepted by this store."""
         if event.type in _ACCEPTED_TYPES:
+            self._entity_lower_cache[event.id] = [e.lower() for e in (event.entities or [])]
             super().write(event)
 
     def write_on_day(self, event: MemoryEvent, day: int) -> None:
         """Write only if memory type is accepted by this store."""
         if event.type in _ACCEPTED_TYPES:
+            self._entity_lower_cache[event.id] = [e.lower() for e in (event.entities or [])]
             super().write_on_day(event, day)
+
+    def clear(self) -> None:
+        self._entity_lower_cache.clear()
+        super().clear()
 
     def _compute_relevance_score(
         self,
@@ -94,7 +103,9 @@ class EntityStore(BaseLongTermStore):
         similarity = SequenceMatcher(None, query_lower, event.content.lower()).ratio()
 
         entity_boost = sum(
-            self.ENTITY_BOOST_FACTOR for entity in event.entities if entity.lower() in query_lower
+            self.ENTITY_BOOST_FACTOR
+            for entity in self._entity_lower_cache.get(event.id, [])
+            if entity in query_lower
         )
 
         return (similarity + entity_boost) * decay_factor
@@ -114,6 +125,8 @@ class EntityStore(BaseLongTermStore):
         """
         query_lower = query.query.lower()
         entity_boost = sum(
-            self.ENTITY_BOOST_FACTOR for entity in event.entities if entity.lower() in query_lower
+            self.ENTITY_BOOST_FACTOR
+            for entity in self._entity_lower_cache.get(event.id, [])
+            if entity in query_lower
         )
         return (strategy_score + entity_boost) * event.importance

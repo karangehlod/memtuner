@@ -59,6 +59,10 @@ class EpisodicBuffer(MemoryWriter, MemoryReader):
         Args:
             event: The memory event to store.
         """
+        if len(self._buffer) == self._capacity:
+            # Evict the creation-day entry for the memory about to be dropped
+            # so _creation_days stays O(capacity) instead of O(total_writes).
+            self._creation_days.pop(self._buffer[0].id, None)
         self._buffer.append(event)
         self._creation_days[event.id] = 0
 
@@ -71,6 +75,8 @@ class EpisodicBuffer(MemoryWriter, MemoryReader):
             event: The memory event to store.
             day: The simulated day of injection.
         """
+        if len(self._buffer) == self._capacity:
+            self._creation_days.pop(self._buffer[0].id, None)
         self._buffer.append(event)
         self._creation_days[event.id] = day
 

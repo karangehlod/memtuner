@@ -669,7 +669,9 @@ class StudyAggregator(MatrixAggregator):
         base["reranker_ranking"] = self.rank_by_reranker()
         base["best_per_phase"] = self.best_per_phase()
         base["per_dataset"] = self.rank_by_dataset()
-        _strat_ranks = self.rank_by_retrieval_strategy()
+        # Reuse the already-computed ranking from base.summary() — avoids a second
+        # O(N) pass over all results (rank_by_retrieval_strategy is called there already).
+        _strat_ranks = base.get("retrieval_strategy_ranking", [])
 
         # top_ranked: each axis is ranked independently from its own phase data.
         # embedding_model and embedding_backend are always from the same row —
@@ -784,7 +786,7 @@ class StudyReporter:
             best_f1 = (2 * best.recall_at_k * best_prec / (best.recall_at_k + best_prec)) if (best.recall_at_k + best_prec) > 0 else 0.0
             lines += [
                 "",
-                "BEST OVERALL CONFIGURATION",
+                "BEST OVERALL CONFIGURATION  (ranked by composite score)",
                 f"  Memory:     {best.memory_type}",
                 f"  Strategy:   {best.retrieval_strategy}",
                 f"  Embedding:  {getattr(best, 'embedding_model', '—')}",
@@ -800,6 +802,28 @@ class StudyReporter:
                 f"  Noise:      {best.contamination_rate:.4f}",
                 f"  Latency p50:{best.latency_p50_ms:.1f}ms  p90:{best.latency_p90_ms:.1f}ms  p99:{best.latency_p99_ms:.1f}ms",
                 f"  Composite:  {best.composite_score():.4f}",
+            ]
+
+        best_recall = agg.best_by_recall()
+        if best_recall and best and best_recall.cell_id != best.cell_id:
+            br_prec = best_recall.precision_at_k
+            br_f1 = (2 * best_recall.recall_at_k * br_prec / (best_recall.recall_at_k + br_prec)) if (best_recall.recall_at_k + br_prec) > 0 else 0.0
+            lines += [
+                "",
+                "HIGHEST RAW RECALL CONFIGURATION  (may differ from composite-score winner)",
+                f"  NOTE: Composite score balances Recall×0.40 + Precision×0.25 + MRR×0.20 + Temporal×0.15.",
+                f"        This config maximises Recall@K alone; the composite winner above has better overall balance.",
+                f"  Memory:     {best_recall.memory_type}",
+                f"  Strategy:   {best_recall.retrieval_strategy}",
+                f"  Embedding:  {getattr(best_recall, 'embedding_model', '—')}",
+                f"  BM25 wt:    {getattr(best_recall, 'bm25_weight', '—')}",
+                f"  Reranker:   {getattr(best_recall, 'reranker_model', '—')}",
+                f"  Decay:      {best_recall.decay_policy} (λ={best_recall.lambda_value:.3f})",
+                f"  Recall@K:   {best_recall.recall_at_k:.4f}",
+                f"  Precision@K:{br_prec:.4f}",
+                f"  F1:         {br_f1:.4f}",
+                f"  MRR:        {best_recall.mrr:.4f}",
+                f"  Composite:  {best_recall.composite_score():.4f}",
             ]
 
         lines += ["", "STRATEGY RANKING (avg composite score)"]

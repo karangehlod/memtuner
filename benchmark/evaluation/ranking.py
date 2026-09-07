@@ -237,11 +237,14 @@ class NDCGEvaluator(MetricEvaluator):
         # Deduplicate: a relevant doc appearing twice should only be credited once.
         # Without dedup, DCG can exceed IDCG → NDCG > 1.0.
         dcg = 0.0
+        relevant_in_top_k = 0
         _seen_ndcg: set[str] = set()
         for rank, memory_id in enumerate(top_k_retrieved, start=1):
-            if memory_id in gold_set and memory_id not in _seen_ndcg:
-                dcg += 1.0 / math.log2(rank + 1)
-                _seen_ndcg.add(memory_id)
+            if memory_id in gold_set:
+                relevant_in_top_k += 1
+                if memory_id not in _seen_ndcg:
+                    dcg += 1.0 / math.log2(rank + 1)
+                    _seen_ndcg.add(memory_id)
 
         # IDCG: ideal DCG — O(1) lookup in precomputed table built in __init__.
         num_relevant = min(len(gold_set), self._top_k)
@@ -258,7 +261,7 @@ class NDCGEvaluator(MetricEvaluator):
                 "dcg": round(dcg, 4),
                 "idcg": round(idcg, 4),
                 "top_k": self._top_k,
-                "relevant_in_top_k": sum(1 for mid in top_k_retrieved if mid in gold_set),
+                "relevant_in_top_k": relevant_in_top_k,
             },
         )
 
@@ -354,9 +357,10 @@ class PrecisionAtKEvaluator(MetricEvaluator):
 
         if not top_k_retrieved:
             precision = 0.0
+            relevant_with_dups = 0
         else:
-            # Use set intersection — a duplicate ID occupies one rank slot and
-            # should not be credited twice. Denominator is always K.
+            # Single pass: count with duplicates (for details) and deduplicated (for precision).
+            relevant_with_dups = sum(1 for mid in top_k_retrieved if mid in gold_set)
             relevant_count = len(set(top_k_retrieved) & gold_set)
             precision = relevant_count / self._top_k
 
@@ -365,7 +369,7 @@ class PrecisionAtKEvaluator(MetricEvaluator):
             value=precision,
             query_count=1,
             details={
-                "relevant_in_top_k": sum(1 for mid in top_k_retrieved if mid in gold_set),
+                "relevant_in_top_k": relevant_with_dups,
                 "returned_count": len(top_k_retrieved),
                 "top_k": self._top_k,
             },

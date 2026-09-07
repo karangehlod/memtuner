@@ -95,7 +95,13 @@ class SemanticStore(BaseLongTermStore):
         similarity = SequenceMatcher(None, query.query.lower(), event.content.lower()).ratio()
         return similarity * decay_factor
 
-    def _apply_module_weight(self, strategy_score: float, event: MemoryEvent) -> float:
+    def _apply_module_weight(
+        self,
+        query: ReadQuery,
+        event: MemoryEvent,
+        strategy_score: float,
+        decay_factor: float,
+    ) -> float:
         """Override: semantic facts are equally important — do NOT multiply by importance.
 
         The base class multiplies by event.importance, but semantic knowledge should

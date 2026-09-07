@@ -54,8 +54,8 @@ class QuantizedAdapter(RetrievalStrategy):
                 from sentence_transformers import SentenceTransformer
 
                 try:
-                    model = SentenceTransformer("all-MiniLM-L6-v2")
-                    float_embeddings = model.encode(texts, show_progress_bar=False)
+                    self._st_model = SentenceTransformer("all-MiniLM-L6-v2")
+                    float_embeddings = self._st_model.encode(texts, show_progress_bar=False)
                 except Exception:
                     # Network error or model not available, use fallback
                     raise ImportError("sentence_transformers not available")
@@ -87,8 +87,8 @@ class QuantizedAdapter(RetrievalStrategy):
                 from sentence_transformers import SentenceTransformer
 
                 try:
-                    model = SentenceTransformer("all-MiniLM-L6-v2")
-                    query_emb = model.encode([query], show_progress_bar=False)[0]
+                    _st = getattr(self, "_st_model", None) or SentenceTransformer("all-MiniLM-L6-v2")
+                    query_emb = _st.encode([query], show_progress_bar=False)[0]
                     query_quantized = (query_emb * 100).astype(np.int8)
                 except Exception:
                     # Network error or model not available, use fallback
@@ -113,10 +113,8 @@ class QuantizedAdapter(RetrievalStrategy):
                     sim = self._quantized_similarity(query_emb, doc_emb)
                     scores[doc_id] = sim
 
-            # Rank by score
-            ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-
-            for doc_id, score in ranked[:top_k]:
+            import heapq as _hq
+            for doc_id, score in _hq.nlargest(top_k, scores.items(), key=lambda x: x[1]):
                 results.append({
                     "doc_id": doc_id,
                     "score": float(score),

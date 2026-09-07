@@ -33,11 +33,17 @@ class RecencyStrategy(RetrievalStrategy):
     def __init__(self) -> None:
         self._memories: list[MemoryEvent] = []   # ordered by injection (oldest first)
         self._id_to_pos: dict[str, int] = {}     # memory_id → insertion index
+        self._user_memories: dict[str, list[MemoryEvent]] = {}  # user_id → ordered list
 
     def index(self, memories: list[MemoryEvent]) -> None:
         """Record memories in their presented order (oldest first = index 0)."""
         self._memories = list(memories)
         self._id_to_pos = {mem.id: i for i, mem in enumerate(memories)}
+        # Pre-build user index so retrieve() is O(1) lookup instead of O(N) scan.
+        self._user_memories = {}
+        for mem in memories:
+            uid = mem.user_id or "__none__"
+            self._user_memories.setdefault(uid, []).append(mem)
 
     def retrieve(
         self,
@@ -58,9 +64,10 @@ class RecencyStrategy(RetrievalStrategy):
         Returns:
             List of (memory_id, recency_score) sorted most-recent first.
         """
-        candidates = self._memories
         if user_id:
-            candidates = [m for m in candidates if m.user_id == user_id]
+            candidates = self._user_memories.get(user_id, [])
+        else:
+            candidates = self._memories
 
         if not candidates:
             return []
@@ -78,6 +85,7 @@ class RecencyStrategy(RetrievalStrategy):
     def clear(self) -> None:
         self._memories.clear()
         self._id_to_pos.clear()
+        self._user_memories.clear()
 
     @classmethod
     def is_available(cls) -> bool:

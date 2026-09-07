@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import re
+
 from benchmark.tokenizer.interface import Tokenizer
+
+_TOKEN_RE = re.compile(r"[A-Za-z0-9]+|[^\sA-Za-z0-9]")
 
 
 class SimpleBPETokenizer(Tokenizer):
@@ -17,12 +21,7 @@ class SimpleBPETokenizer(Tokenizer):
         self._vocab_seed = 123456789
 
     def _tokenize(self, text: str) -> list[str]:
-        # naive split; keep letters and digits grouped
-        import re
-
-        tokens = re.findall(r"[A-Za-z0-9]+|[^\sA-Za-z0-9]", text.lower())
-        # combine punctuation with surrounding token where appropriate
-        return tokens
+        return _TOKEN_RE.findall(text.lower())
 
     def encode(self, text: str) -> list[int]:
         tokens = self._tokenize(text)

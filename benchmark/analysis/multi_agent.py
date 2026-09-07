@@ -77,12 +77,10 @@ def run_interference_test(
     leaked_queries = 0
     details = []
 
+    all_memory_ids = set().union(*user_memory_ids.values())
     for user_idx in range(num_users):
         user_id = f"agent-{user_idx:03d}"
-        other_ids = set()
-        for other_user, other_mems in user_memory_ids.items():
-            if other_user != user_id:
-                other_ids.update(other_mems)
+        other_ids = all_memory_ids - user_memory_ids[user_id]
 
         for q_idx in range(queries_per_user):
             query = ReadQuery(

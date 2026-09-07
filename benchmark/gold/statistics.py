@@ -128,7 +128,7 @@ class StatisticsComputer:
             Complete DatasetStatistics object.
         """
         # Initialize accumulators
-        all_memories = []
+        memory_count = 0  # running counter — avoids building a list only to call len()
         all_importance = []
         memories_per_user: dict[str, int] = {}
         memories_per_day: dict[int, int] = {}
@@ -142,7 +142,7 @@ class StatisticsComputer:
             memories_per_day[day] = 0
 
             for memory in day_events.memory_events:
-                all_memories.append(memory)
+                memory_count += 1
                 all_importance.append(memory.importance)
                 memories_per_day[day] += 1
 
@@ -162,7 +162,6 @@ class StatisticsComputer:
 
         # Compute counts
         query_count = len(dataset.queries)
-        memory_count = len(all_memories)
         user_count = len(memories_per_user) + len(
             set(q.user_id for q in dataset.queries) - set(memories_per_user.keys())
         )

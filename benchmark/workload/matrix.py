@@ -280,32 +280,24 @@ class MatrixExpander:
         # This threshold means that pruning of data happens when the memory score falls below 15% of its original value, which allows for a fair comparison of decay policies without confounding effects from varying pruning aggressiveness.
         CONSTANT_PRUNING_THRESHOLD = 0.15
 
+        # Singletons for constant policies — created once, not 24× inside the loop.
+        _none_decay = DecaySpec(policy="none", lambda_value=0.0,
+                                pruning_threshold=CONSTANT_PRUNING_THRESHOLD)
+        _periodic_decay = DecaySpec(policy="periodic", lambda_value=0.0,
+                                    pruning_threshold=CONSTANT_PRUNING_THRESHOLD)
+        _lambda_decay_specs: dict[str, list[DecaySpec]] = {
+            p: [DecaySpec(policy=p, lambda_value=lam,
+                          pruning_threshold=CONSTANT_PRUNING_THRESHOLD) for lam in lambdas]
+            for p in policies if p not in ("none", "periodic")
+        }
+
         for mem_type, strategy, policy in itertools.product(mem_types, strats, policies):
             if policy == "none":
-                decay_specs = [
-                    DecaySpec(
-                        policy="none",
-                        lambda_value=0.0,
-                        pruning_threshold=CONSTANT_PRUNING_THRESHOLD,
-                    )
-                ]
+                decay_specs = [_none_decay]
             elif policy == "periodic":
-                decay_specs = [
-                    DecaySpec(
-                        policy="periodic",
-                        lambda_value=0.0,
-                        pruning_threshold=CONSTANT_PRUNING_THRESHOLD,
-                    )
-                ]
+                decay_specs = [_periodic_decay]
             else:
-                decay_specs = [
-                    DecaySpec(
-                        policy=policy,
-                        lambda_value=lam,
-                        pruning_threshold=CONSTANT_PRUNING_THRESHOLD,
-                    )
-                    for lam in lambdas
-                ]
+                decay_specs = _lambda_decay_specs[policy]
 
             for decay in decay_specs:
                 cells.append(

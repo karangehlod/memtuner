@@ -96,7 +96,7 @@ class TestEpisodicStoreAdapter:
         adapter.teardown()
 
         assert len(adapter.memories) == 0
-        assert len(adapter.query_results) == 0
+        assert len(adapter._per_query_results) == 0
 
 
 class TestSemanticStoreAdapter:

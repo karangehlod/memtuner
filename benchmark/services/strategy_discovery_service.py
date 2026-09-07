@@ -137,7 +137,9 @@ class StrategyAvailabilityService:
         Returns:
             StrategyInfo with availability and reason (if unavailable).
         """
-        all_info = self.discover()
+        # Restrict discover() to only this strategy — avoids a full O(all_strategies)
+        # registry scan when only one result is needed.
+        all_info = self.discover(allowlist=[strategy_name])
         return all_info.get(
             strategy_name,
             StrategyInfo(

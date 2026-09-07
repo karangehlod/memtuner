@@ -31,6 +31,8 @@ class RetrievalRerankAdapter(RetrievalStrategy):
         self.errors = 0
         self.start_time: float = 0.0
         self.build_time: float = 0.0
+        self._cross_encoder = None       # loaded once in initialize() when CUDA available
+        self._fallback_vectorizer = None # pre-fitted once in initialize() for non-CUDA fallback
 
     def initialize(self, documents: list[dict[str, Any]]) -> None:
         """Initialize retrieval adapter."""
@@ -38,11 +40,31 @@ class RetrievalRerankAdapter(RetrievalStrategy):
             start = time.time()
             self.start_time = start
 
-            # Store documents
             self.documents = {doc.get("id", ""): doc.get("content", "") for doc in documents}
-
-            # Initialize retrieval adapter
             self.retrieval_adapter.initialize(documents)
+
+            # Pre-load the CrossEncoder on CUDA so _rerank_candidates doesn't reload it
+            # on every query call (each load reads ~250 MB from disk/cache).
+            try:
+                from benchmark.resources.hw_probe import DEVICE as _HW_DEVICE
+                if _HW_DEVICE == "cuda":
+                    from sentence_transformers import CrossEncoder as _CE
+                    self._cross_encoder = _CE("cross-encoder/qnli-distilroberta-base")
+            except Exception:
+                self._cross_encoder = None
+
+            # Pre-fit TfidfVectorizer against the full corpus so _fallback_rerank
+            # only needs transform() (O(C×V)) instead of fit_transform() (O(N×L×V))
+            # on every query. The fallback is used on non-CUDA platforms (the common case).
+            try:
+                from sklearn.feature_extraction.text import TfidfVectorizer as _TV
+                _all_texts = list(self.documents.values())
+                if _all_texts:
+                    _vect = _TV(lowercase=True, stop_words="english")
+                    _vect.fit(_all_texts)
+                    self._fallback_vectorizer = _vect
+            except Exception:
+                self._fallback_vectorizer = None
 
             self.build_time = time.time() - start
 
@@ -96,8 +118,7 @@ class RetrievalRerankAdapter(RetrievalStrategy):
                 return sorted(candidates, key=lambda c: c.get("score", 0.0), reverse=True)[:top_k]
 
             try:
-                # Use cross-encoder for reranking (more sophisticated than bi-encoder)
-                model = CrossEncoder("cross-encoder/qnli-distilroberta-base")
+                model = self._cross_encoder or CrossEncoder("cross-encoder/qnli-distilroberta-base")
 
                 # Prepare query-document pairs
                 query_doc_pairs = [
@@ -149,10 +170,14 @@ class RetrievalRerankAdapter(RetrievalStrategy):
             from sklearn.feature_extraction.text import TfidfVectorizer
             from sklearn.metrics.pairwise import cosine_similarity
 
-            # Vectorize query and candidates
+            # Use pre-fitted vectorizer (transform-only, no re-fit per query)
+            # Falls back to fit_transform if vectorizer wasn't built in initialize().
             texts = [query] + [c["content"] for c in candidates]
-            vectorizer = TfidfVectorizer(lowercase=True, stop_words="english")
-            tfidf_matrix = vectorizer.fit_transform(texts)
+            if self._fallback_vectorizer is not None:
+                tfidf_matrix = self._fallback_vectorizer.transform(texts)
+            else:
+                vectorizer = TfidfVectorizer(lowercase=True, stop_words="english")
+                tfidf_matrix = vectorizer.fit_transform(texts)
 
             # Compute similarities to query
             query_vec = tfidf_matrix[0]

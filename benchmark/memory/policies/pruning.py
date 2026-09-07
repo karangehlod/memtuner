@@ -66,14 +66,16 @@ class CapacityBasedPruningPolicy(LifecyclePolicy):
         if len(memory_scores) <= self._max_capacity:
             return []
 
-        # heapq.nlargest is O(N log K) vs O(N log N) for a full sort
-        to_keep = {
+        # nsmallest(excess) is O(N log excess) — directly yields only the IDs to prune.
+        # When excess << capacity (typical: trimming a few from a large store),
+        # this is significantly cheaper than nlargest(K) + O(K) set + O(N) complement.
+        excess = len(memory_scores) - self._max_capacity
+        return [
             memory_id
-            for memory_id, _ in heapq.nlargest(
-                self._max_capacity, memory_scores.items(), key=lambda pair: pair[1]
+            for memory_id, _ in heapq.nsmallest(
+                excess, memory_scores.items(), key=lambda pair: pair[1]
             )
-        }
-        return [memory_id for memory_id in memory_scores if memory_id not in to_keep]
+        ]
 
 
 class AgeBasedPruningPolicy(ScoreThresholdPruningPolicy):

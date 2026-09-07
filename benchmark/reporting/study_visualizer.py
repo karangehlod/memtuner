@@ -152,6 +152,21 @@ class StudyVisualizer:
         self._all = results
         self._out = Path(output_dir)
         self._out.mkdir(parents=True, exist_ok=True)
+        # Pre-filtered view excluding decay-sweep phases — computed once, referenced by
+        # 5+ chart methods that each previously did an identical O(N) filter pass.
+        _decay_tags = {"phase4_decay_broad", "phase4_decay_fine",
+                       "phase4_decay_sweep", "phase4b_archival_floor"}
+        self._non_decay_results = [
+            r for r in self._results
+            if getattr(r, "study_phase", "general") not in _decay_tags
+        ]
+        # Pre-grouped by retrieval_strategy — replaces O(S×N) per-strategy filter passes
+        # inside 9+ chart methods. Built once in O(N), accessed in O(1) per strategy.
+        from collections import defaultdict as _dd
+        _by_strat: dict = _dd(list)
+        for _r in self._non_decay_results:
+            _by_strat[_r.retrieval_strategy].append(_r)
+        self._by_strategy: dict = dict(_by_strat)
 
     # ─── Public API ──────────────────────────────────────────────────────────
 
@@ -890,18 +905,25 @@ class StudyVisualizer:
             ("phase4b_archival_floor",       "Phase 4b\nArchival Floor"),
         ]
 
-        # Collect best recall and composite seen after each phase
-        seen_results: list = []
+        # Group by phase once (O(N)), then track running best (O(1) per phase update)
+        # instead of a full O(N×P) scan + O(accumulated) max per phase.
+        from collections import defaultdict as _dd
+        _by_phase: dict = _dd(list)
+        for _r in self._results:
+            _by_phase[getattr(_r, "study_phase", "")].append(_r)
+
+        best_so_far = None
         phase_labels, phase_recall, phase_composite = [], [], []
         phase_p50, phase_p99 = [], []
 
         for phase_tag, label in _phase_order:
-            phase_cells = [r for r in self._results
-                           if getattr(r, "study_phase", "") == phase_tag]
+            phase_cells = _by_phase.get(phase_tag, [])
             if not phase_cells:
                 continue
-            seen_results.extend(phase_cells)
-            best = max(seen_results, key=lambda r: r.composite_score())
+            for _r in phase_cells:
+                if best_so_far is None or _r.composite_score() > best_so_far.composite_score():
+                    best_so_far = _r
+            best = best_so_far
             phase_labels.append(label)
             phase_recall.append(best.recall_at_k)
             phase_composite.append(best.composite_score())
@@ -986,10 +1008,7 @@ class StudyVisualizer:
         if not self._results:
             return ""
 
-        _decay_tags = {"phase4_decay_broad", "phase4_decay_fine",
-                       "phase4_decay_sweep", "phase4b_archival_floor"}
-        cells = [r for r in self._results
-                 if getattr(r, "study_phase", "general") not in _decay_tags]
+        cells = self._non_decay_results
         strategies = sorted({r.retrieval_strategy for r in cells},
                              key=lambda s: -_mean_std(
                                  [r.recall_at_k for r in cells
@@ -1050,7 +1069,7 @@ class StudyVisualizer:
         x_k = np.arange(len(k_points))
 
         for i, s in enumerate(strategies):
-            sub = [r for r in cells if r.retrieval_strategy == s]
+            sub = self._by_strategy.get(s, [])
             if not sub:
                 continue
             p1_s  = _mean_std([r.precision_at_1    for r in sub])[0]  # recall@K=1
@@ -1102,7 +1121,7 @@ class StudyVisualizer:
         ndcg_vals = [_mean_std([r.ndcg           for r in cells if r.retrieval_strategy == s])[0] for s in strategies]
         f1_vals   = []
         for s in strategies:
-            sub = [r for r in cells if r.retrieval_strategy == s]
+            sub = self._by_strategy.get(s, [])
             avg_r = _mean_std([r.recall_at_k    for r in sub])[0]
             avg_p = _mean_std([r.precision_at_k for r in sub])[0]
             f1_vals.append((2 * avg_r * avg_p / (avg_r + avg_p)) if (avg_r + avg_p) > 0 else 0.0)
@@ -1150,10 +1169,7 @@ class StudyVisualizer:
         if not self._results:
             return ""
 
-        _decay_tags = {"phase4_decay_broad", "phase4_decay_fine",
-                       "phase4_decay_sweep", "phase4b_archival_floor"}
-        cells = [r for r in self._results
-                 if getattr(r, "study_phase", "general") not in _decay_tags]
+        cells = self._non_decay_results
         strategies = sorted({r.retrieval_strategy for r in cells})
 
         # Extra width for the outside legend on the cost scatter panel
@@ -1167,7 +1183,7 @@ class StudyVisualizer:
         # ── Panel 1: Recall-per-ms efficiency ratio ───────────────────────────
         eff_vals = []
         for s in strategies:
-            sub = [r for r in cells if r.retrieval_strategy == s]
+            sub = self._by_strategy.get(s, [])
             avg_r = _mean_std([r.recall_at_k for r in sub])[0]
             avg_lat = _mean_std([r.latency_p50_ms for r in sub])[0]
             eff_vals.append(avg_r / max(avg_lat, 0.001))
@@ -1187,7 +1203,7 @@ class StudyVisualizer:
 
         # ── Panel 2: Cost vs Recall Pareto scatter ────────────────────────────
         for i, s in enumerate(strategies):
-            sub = [r for r in cells if r.retrieval_strategy == s]
+            sub = self._by_strategy.get(s, [])
             costs   = [r.total_cost    for r in sub]
             recalls = [r.recall_at_k   for r in sub]
             if recalls:
@@ -1246,10 +1262,7 @@ class StudyVisualizer:
         if not self._results:
             return ""
 
-        _decay_tags = {"phase4_decay_broad", "phase4_decay_fine",
-                       "phase4_decay_sweep", "phase4b_archival_floor"}
-        cells = [r for r in self._results
-                 if getattr(r, "study_phase", "general") not in _decay_tags]
+        cells = self._non_decay_results
         strategies = sorted({r.retrieval_strategy for r in cells},
                              key=lambda s: -_mean_std([r.recall_at_k for r in cells
                                                         if r.retrieval_strategy == s])[0])
@@ -1266,7 +1279,7 @@ class StudyVisualizer:
         x = np.arange(len(k_values))
 
         for i, s in enumerate(strategies):
-            sub = [r for r in cells if r.retrieval_strategy == s]
+            sub = self._by_strategy.get(s, [])
             if not sub:
                 continue
             p1   = _mean_std([r.precision_at_1  for r in sub])[0]  # recall@1
@@ -1322,7 +1335,7 @@ class StudyVisualizer:
         # The K=1 operating point (precision@1, recall@1) is a second point per strategy.
         _markers = ["o", "s", "^", "D", "P", "*", "X"]
         for i, s in enumerate(strategies):
-            sub = [r for r in cells if r.retrieval_strategy == s]
+            sub = self._by_strategy.get(s, [])
             if not sub:
                 continue
             r10  = _mean_std([r.recall_at_k     for r in sub])[0]
@@ -1441,10 +1454,7 @@ class StudyVisualizer:
         if not self._results:
             return ""
 
-        _decay_tags = {"phase4_decay_broad", "phase4_decay_fine",
-                       "phase4_decay_sweep", "phase4b_archival_floor"}
-        cells = [r for r in self._results
-                 if getattr(r, "study_phase", "general") not in _decay_tags]
+        cells = self._non_decay_results
         strategies = sorted({r.retrieval_strategy for r in cells},
                              key=lambda s: -_mean_std([r.recall_at_k for r in cells
                                                         if r.retrieval_strategy == s])[0])
@@ -1461,7 +1471,7 @@ class StudyVisualizer:
         # ── Panel 1: Recall with CI error bars ───────────────────────────────
         means, ci_lows, ci_highs, total_q, correct_q = [], [], [], [], []
         for s in strategies:
-            sub = [r for r in cells if r.retrieval_strategy == s]
+            sub = self._by_strategy.get(s, [])
             vals = [r.recall_at_k for r in sub]
             m, _ = _mean_std(vals)
             n = len(vals)
@@ -1513,7 +1523,7 @@ class StudyVisualizer:
 
         # ── Panel 2: Latency mean vs P50 gap (outlier detector) ──────────────
         for i, s in enumerate(strategies):
-            sub = [r for r in cells if r.retrieval_strategy == s]
+            sub = self._by_strategy.get(s, [])
             p50_m  = _mean_std([r.latency_p50_ms  for r in sub])[0]
             mean_m = _mean_std([r.latency_mean_ms for r in sub])[0]
             p99_m  = _mean_std([r.latency_p99_ms  for r in sub])[0]
@@ -1776,10 +1786,7 @@ class StudyVisualizer:
 
         # ── Panel 4: Strategy → Recall + MRR + P50 (grouped bars + twin) ───
         ax4 = axes[1, 1]
-        _decay_tags = {"phase4_decay_broad", "phase4_decay_fine",
-                       "phase4_decay_sweep", "phase4b_archival_floor"}
-        strat_cells = [r for r in self._results
-                       if getattr(r, "study_phase", "general") not in _decay_tags]
+        strat_cells = self._non_decay_results
         strategies = sorted({r.retrieval_strategy for r in strat_cells})
         if strategies:
             x = np.arange(len(strategies))

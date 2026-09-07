@@ -1,6 +1,7 @@
 """Adapter for ChainSearch - advanced multi-chain retrieval ranking."""
 
 import time
+from collections import defaultdict
 from typing import Any
 
 from benchmark.retrieval.metrics_utils import compute_metric_summary
@@ -33,7 +34,10 @@ class ChainSearchAdapter(RetrievalStrategy):
         self.ann_adapter = ANNAdapter()
         self.documents: dict[str, str] = {}
         self.query_times: list[float] = []
-        self.search_results: list[tuple[str, float]] = []
+        # Per-query result lists — compute_metric_summary expects list[list[dict]],
+        # not a flat list. The previous list.extend() was a correctness bug: it
+        # passed all Q×top_k results as a single "query" to the aggregator.
+        self._per_query_results: list[list[dict]] = []
         self.num_queries = 0
         self.errors = 0
         self.start_time: float = 0.0
@@ -45,10 +49,8 @@ class ChainSearchAdapter(RetrievalStrategy):
             start = time.time()
             self.start_time = start
 
-            # Store documents
             self.documents = {doc.get("id", ""): doc.get("content", "") for doc in documents}
 
-            # Initialize all three chains
             self.bm25_adapter.initialize(documents)
             self.dense_adapter.initialize(documents)
             self.ann_adapter.initialize(documents)
@@ -63,47 +65,34 @@ class ChainSearchAdapter(RetrievalStrategy):
         try:
             start = time.time()
 
-            # Get results from all three chains
             bm25_results = self.bm25_adapter.search(query, top_k=100)
             dense_results = self.dense_adapter.search(query, top_k=100)
             ann_results = self.ann_adapter.search(query, top_k=100)
 
-            # Build weighted fusion scores
-            chain_scores: dict[str, float] = {}
+            # defaultdict(float) eliminates the double-lookup dict.get() + __setitem__
+            # pattern — each update is a single hash lookup with in-place += .
+            chain_scores: dict[str, float] = defaultdict(float)
 
-            # Chain 1: BM25 (weight=0.3)
             for rank, result in enumerate(bm25_results, 1):
-                doc_id = result["doc_id"]
-                score = 0.3 * (1.0 / (60 + rank))
-                chain_scores[doc_id] = chain_scores.get(doc_id, 0.0) + score
+                chain_scores[result["doc_id"]] += 0.3 * (1.0 / (60 + rank))
 
-            # Chain 2: Dense (weight=0.5, highest weight for semantic quality)
             for rank, result in enumerate(dense_results, 1):
-                doc_id = result["doc_id"]
-                score = 0.5 * (1.0 / (60 + rank))
-                chain_scores[doc_id] = chain_scores.get(doc_id, 0.0) + score
+                chain_scores[result["doc_id"]] += 0.5 * (1.0 / (60 + rank))
 
-            # Chain 3: ANN (weight=0.2, fast approximation)
             for rank, result in enumerate(ann_results, 1):
-                doc_id = result["doc_id"]
-                score = 0.2 * (1.0 / (60 + rank))
-                chain_scores[doc_id] = chain_scores.get(doc_id, 0.0) + score
+                chain_scores[result["doc_id"]] += 0.2 * (1.0 / (60 + rank))
 
-            # Rank by fused score
-            ranked = sorted(chain_scores.items(), key=lambda x: x[1], reverse=True)
-
-            results = []
-            for doc_id, score in ranked[:top_k]:
-                results.append({
-                    "doc_id": doc_id,
-                    "score": float(score),
-                    "content": self.documents.get(doc_id, ""),
-                })
+            import heapq as _hq
+            results = [
+                {"doc_id": doc_id, "score": float(score),
+                 "content": self.documents.get(doc_id, "")}
+                for doc_id, score in _hq.nlargest(top_k, chain_scores.items(), key=lambda x: x[1])
+            ]
 
             elapsed = time.time() - start
             self.query_times.append(elapsed)
             self.num_queries += 1
-            self.search_results.extend(results)
+            self._per_query_results.append(results)  # one list per query, not flat extend
             return results
 
         except Exception as e:
@@ -113,9 +102,8 @@ class ChainSearchAdapter(RetrievalStrategy):
     def get_metrics(self) -> RetrievalMetrics:
         """Get performance metrics."""
         try:
-            # Compute real metrics using score-based relevance estimation
             metric_summary = compute_metric_summary(
-                all_results=[self.search_results] if self.search_results else [],
+                all_results=self._per_query_results if self._per_query_results else [],
                 use_score_estimation=True,
             )
 
@@ -124,7 +112,6 @@ class ChainSearchAdapter(RetrievalStrategy):
                 if self.query_times else 0.0
             )
 
-            # Combined index size (all three chains)
             bm25_metrics = self.bm25_adapter.get_metrics()
             dense_metrics = self.dense_adapter.get_metrics()
             ann_metrics = self.ann_adapter.get_metrics()
@@ -163,7 +150,7 @@ class ChainSearchAdapter(RetrievalStrategy):
         self.ann_adapter.teardown()
         self.documents.clear()
         self.query_times.clear()
-        self.search_results.clear()
+        self._per_query_results.clear()
 
 
 RetrievalStrategyRegistry.register("chainsearch", ChainSearchAdapter)

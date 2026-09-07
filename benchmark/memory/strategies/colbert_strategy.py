@@ -73,12 +73,13 @@ def _chunk_text(text: str, n: int) -> list[str]:
     ]
 
 
-def _maxsim(query_vecs: np.ndarray, doc_vecs: np.ndarray) -> float:
-    """ColBERT MaxSim: sum of per-query-token maximum cosine similarity."""
-    # query_vecs: (Q, D)   doc_vecs: (K, D)
-    q_norm = query_vecs / (np.linalg.norm(query_vecs, axis=1, keepdims=True) + 1e-9)
-    d_norm = doc_vecs / (np.linalg.norm(doc_vecs, axis=1, keepdims=True) + 1e-9)
-    sim = q_norm @ d_norm.T          # (Q, K)
+def _maxsim(q_norm: np.ndarray, d_prenorm: np.ndarray) -> float:
+    """ColBERT MaxSim on pre-normalized vectors (no norm ops at query time).
+
+    q_norm:    (Q, D) query token embeddings, already L2-normalised
+    d_prenorm: (K, D) doc chunk embeddings, L2-normalised at index time
+    """
+    sim = q_norm @ d_prenorm.T       # (Q, K)
     return float(sim.max(axis=1).sum())
 
 
@@ -133,8 +134,9 @@ class ColBERTStrategy(RetrievalStrategy):
 
         for m in memories:
             chunks = _chunk_text(m.content, _CHUNK_TOKENS)
-            vecs = self._model.encode(chunks, batch_size=256, show_progress_bar=False)
-            self._doc_vecs[m.id] = np.array(vecs)
+            vecs = np.array(self._model.encode(chunks, batch_size=256, show_progress_bar=False))
+            # Pre-normalise once at index time so _maxsim needs no per-query norm ops.
+            self._doc_vecs[m.id] = vecs / (np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-9)
             uid = m.user_id or "__none__"
             self._user_index.setdefault(uid, []).append(m.id)
             self._user_index.setdefault("__none__", [])
@@ -158,6 +160,8 @@ class ColBERTStrategy(RetrievalStrategy):
         q_vecs = np.array(
             self._model.encode(q_chunks, batch_size=256, show_progress_bar=False)
         )
+        # Normalise query once here; _maxsim expects pre-normalised inputs on both sides.
+        q_norm = q_vecs / (np.linalg.norm(q_vecs, axis=1, keepdims=True) + 1e-9)
 
         if user_id:
             candidates = (
@@ -169,9 +173,9 @@ class ColBERTStrategy(RetrievalStrategy):
             candidates = list(self._doc_vecs.keys())
 
         scored = [
-            (mid, _maxsim(q_vecs, self._doc_vecs[mid]))
+            (mid, _maxsim(q_norm, self._doc_vecs[mid]))
             for mid in candidates
             if mid in self._doc_vecs
         ]
-        scored.sort(key=lambda x: x[1], reverse=True)
-        return scored[:top_k]
+        import heapq as _hq
+        return _hq.nlargest(top_k, scored, key=lambda x: x[1])

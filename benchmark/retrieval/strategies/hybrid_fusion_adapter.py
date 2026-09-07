@@ -75,11 +75,9 @@ class HybridFusionAdapter(RetrievalStrategy):
                 dense_rrf = 1.0 / (60 + rank)  # k=60 for dense
                 rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + dense_rrf
 
-            # Rank by fused score
-            ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
-
+            import heapq as _hq
             results = []
-            for doc_id, score in ranked[:top_k]:
+            for doc_id, score in _hq.nlargest(top_k, rrf_scores.items(), key=lambda x: x[1]):
                 results.append({
                     "doc_id": doc_id,
                     "score": float(score),

@@ -119,8 +119,9 @@ class AdaptiveRetrievalStrategy(RetrievalStrategy):
 
         bm25_inst.index(memories)
         embed_inst.index(memories)
-        # Hybrid reuses the already-indexed sub-strategies — no double indexing.
-        hybrid_inst.index(memories)
+        # hybrid_inst holds live references to bm25_inst and embed_inst which are
+        # already indexed above — calling hybrid_inst.index() again would re-index
+        # both sub-strategies a second time, doubling the O(N) corpus hashing work.
 
         self._strategies = {
             "bm25":       bm25_inst,

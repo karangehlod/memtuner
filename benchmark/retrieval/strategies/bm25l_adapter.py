@@ -26,6 +26,7 @@ class BM25LAdapter(RetrievalStrategy):
         self.doc_lengths = []
         self.avg_doc_length = 0.0
         self.tokenized_docs = []
+        self.doc_tf: list[dict[str, int]] = []  # pre-computed term-frequency Counter per doc
         self.idf_scores: dict[str, float] = {}
         self.query_times: list[float] = []
         self.search_results: list[tuple[str, float]] = []
@@ -56,10 +57,15 @@ class BM25LAdapter(RetrievalStrategy):
                 self.documents[doc_id] = content
                 doc_ids.append(doc_id)
 
-                # Tokenize
+                # Tokenize and pre-compute per-doc term frequencies.
+                # _score_document uses dict.get() (O(1)) instead of list.count() (O(L)).
                 tokens = self._tokenize(content)
                 self.tokenized_docs.append(tokens)
                 self.doc_lengths.append(len(tokens))
+                tf: dict[str, int] = {}
+                for t in tokens:
+                    tf[t] = tf.get(t, 0) + 1
+                self.doc_tf.append(tf)
 
             # Calculate average document length
             if self.doc_lengths:
@@ -85,18 +91,19 @@ class BM25LAdapter(RetrievalStrategy):
             if not query_tokens:
                 return []
 
-            # Score documents
+            # Score documents using pre-computed TF maps for O(1) term lookups
             scores = {}
-            for doc_id, tokens in zip(self.documents.keys(), self.tokenized_docs):
-                score = self._score_document(query_tokens, tokens)
+            for doc_id, tokens, tf_map in zip(
+                self.documents.keys(), self.tokenized_docs, self.doc_tf
+            ):
+                score = self._score_document(query_tokens, tokens, tf_map)
                 scores[doc_id] = score
 
-            # Rank by score
-            ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            import heapq as _hq
+            ranked = _hq.nlargest(top_k, scores.items(), key=lambda x: x[1])
 
-            # Build results
             results = []
-            for doc_id, score in ranked[:top_k]:
+            for doc_id, score in ranked:
                 results.append({
                     "doc_id": doc_id,
                     "score": float(score),
@@ -113,7 +120,8 @@ class BM25LAdapter(RetrievalStrategy):
             self.errors += 1
             raise RuntimeError(f"BM25L search failed: {e}")
 
-    def _score_document(self, query_tokens: list[str], doc_tokens: list[str]) -> float:
+    def _score_document(self, query_tokens: list[str], doc_tokens: list[str],
+                        doc_tf_map: dict[str, int] | None = None) -> float:
         """Score document using BM25L formula."""
         score = 0.0
         doc_length = len(doc_tokens)
@@ -125,8 +133,8 @@ class BM25LAdapter(RetrievalStrategy):
             if token not in self.idf_scores:
                 continue
 
-            # Term frequency in document
-            tf = doc_tokens.count(token)
+            # Term frequency — O(1) dict lookup instead of O(L) list.count()
+            tf = doc_tf_map.get(token, 0) if doc_tf_map is not None else doc_tokens.count(token)
 
             # BM25L length normalization (improved for longer docs)
             # BM25L = BM25 + (1 - b) term at denominator
@@ -151,23 +159,25 @@ class BM25LAdapter(RetrievalStrategy):
             return self.k1
 
     def _compute_idf_scores(self) -> None:
-        """Compute IDF scores for all terms."""
-        self.idf_scores = {}
+        """Compute IDF scores for all terms in a single O(N×L) pass.
+
+        Previous approach: O(V×N×L) — for each unique term, scan all docs with
+        list membership (O(L) per doc). For V=20K terms, N=10K docs, L=50 tokens,
+        that is 10 billion comparisons.
+        This approach: build a term→doc_count posting map in one pass, then
+        compute IDF per term in O(V). Total: O(N×L + V).
+        """
         num_docs = len(self.tokenized_docs)
+        doc_freq: dict[str, int] = {}
+        # Count how many documents contain each term (using pre-built TF maps)
+        for tf_map in self.doc_tf:
+            for term in tf_map:
+                doc_freq[term] = doc_freq.get(term, 0) + 1
 
-        # Collect all unique terms
-        all_terms = set()
-        for tokens in self.tokenized_docs:
-            all_terms.update(tokens)
-
-        # Calculate IDF for each term
-        for term in all_terms:
-            # Count documents containing term
-            doc_freq = sum(1 for tokens in self.tokenized_docs if term in tokens)
-
-            # IDF = log((N - n + 0.5) / (n + 0.5))
-            idf = max(0.0, (num_docs - doc_freq + 0.5) / (doc_freq + 0.5))
-            self.idf_scores[term] = idf
+        self.idf_scores = {
+            term: max(0.0, (num_docs - df + 0.5) / (df + 0.5))
+            for term, df in doc_freq.items()
+        }
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:

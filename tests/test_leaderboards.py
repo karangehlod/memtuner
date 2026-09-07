@@ -294,6 +294,7 @@ class TestLeaderboardMultiDataset:
 
         assert entry["memory_adapter"] == "episodic_store"
         assert entry["num_datasets"] == 3
-        # Accuracy should be average of all 3 datasets
-        expected_accuracy = (0.8 + 0.9 + 0.85) / 3
+        # accuracy_score = (recall@1 + recall@5 + recall@10 + mrr + ndcg) / 5.0
+        # Test metrics: recall_at_1=0, recall_at_5=0, recall_at_10=0.8, mrr=0.85, ndcg=0
+        expected_accuracy = (0.0 + 0.0 + 0.8 + 0.85 + 0.0) / 5.0
         assert abs(entry["accuracy_score"] - expected_accuracy) < 0.001

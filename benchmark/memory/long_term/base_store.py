@@ -10,6 +10,7 @@ and normalizes tier thresholds, confidence formulas, and pruning logic.
 
 from __future__ import annotations
 
+import heapq as _heapq
 import math
 import threading
 import time as time_module
@@ -386,8 +387,7 @@ class BaseLongTermStore(MemoryWriter, MemoryReader):
                     continue
 
             # Sort by module-weighted relevance score, truncate to top_k
-            scored.sort(key=lambda triple: triple[1], reverse=True)
-            top_k_by_relevance = scored[: query.top_k]
+            top_k_by_relevance = _heapq.nlargest(query.top_k, scored, key=lambda triple: triple[1])
 
             # Apply decay as post-ranking recency adjustment
             top_k = [
@@ -397,8 +397,7 @@ class BaseLongTermStore(MemoryWriter, MemoryReader):
         else:
             # Fall back to standard scoring via _compute_relevance_score
             scored = self._score_candidates(query, candidates, current_day, user_id)
-            scored.sort(key=lambda triple: triple[1], reverse=True)
-            top_k = scored[: query.top_k]
+            top_k = _heapq.nlargest(query.top_k, scored, key=lambda triple: triple[1])
 
         retrieved = [
             RetrievedMemory(
@@ -457,8 +456,17 @@ class BaseLongTermStore(MemoryWriter, MemoryReader):
         only need to compare relative scores across memories.
         """
         current_day = getattr(self, "_current_day", 0)
-        all_scores = self.get_memory_scores(current_day)
-        return {mid: all_scores.get(mid, 0.0) for mid in memory_ids}
+        # Compute directly over requested IDs — avoids building the full O(N) dict
+        # and then re-filtering to the requested subset.
+        result: dict[str, float] = {}
+        for mid in memory_ids:
+            event = self._memories.get(mid)
+            if event is None:
+                result[mid] = 0.0
+            else:
+                days_elapsed = max(0, current_day - self._creation_days.get(mid, 0))
+                result[mid] = event.importance * self._compute_decay_factor(days_elapsed)
+        return result
 
     def get_creation_day(self, memory_id: str) -> int | None:
         """Return the creation day for a memory, or None if not found.
@@ -527,7 +535,9 @@ class BaseLongTermStore(MemoryWriter, MemoryReader):
         self._memories.clear()
         self._creation_days.clear()
         self._user_memories.clear()   # ghost IDs in user index cause zero-result reads
-        self._decay_cache.clear()
+        # _decay_cache maps days_elapsed → factor; values depend only on construction
+        # parameters (lambda, policy, archival_floor), NOT on which memories are stored.
+        # Clearing it would force a full exp() recompute after every benchmark cell reset.
         self._index_dirty = True      # force index rebuild on next read()
 
     # ------------------------------------------------------------------

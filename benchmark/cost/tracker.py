@@ -51,6 +51,7 @@ class InMemoryCostTracker(CostTracker):
     def __init__(self) -> None:
         """Initialize with empty cost entries."""
         self._entries: list[CostEntry] = []
+        self._total_usd: float = 0.0
 
     def record(self, entry: CostEntry) -> None:
         """Record a cost entry.
@@ -59,14 +60,11 @@ class InMemoryCostTracker(CostTracker):
             entry: The cost entry to record.
         """
         self._entries.append(entry)
+        self._total_usd += entry.amount_usd
 
     def total_cost_usd(self) -> float:
-        """Return total accumulated cost.
-
-        Returns:
-            Sum of all entry amounts in USD.
-        """
-        return sum(entry.amount_usd for entry in self._entries)
+        """Return total accumulated cost in O(1)."""
+        return self._total_usd
 
     def entries_by_source(self) -> dict[str, float]:
         """Return costs grouped by source.
@@ -82,6 +80,7 @@ class InMemoryCostTracker(CostTracker):
     def reset(self) -> None:
         """Clear all recorded entries."""
         self._entries.clear()
+        self._total_usd = 0.0
 
 
 class CompositeCostTracker(CostTracker):
@@ -94,13 +93,15 @@ class CompositeCostTracker(CostTracker):
 
     def __init__(self, tokenizer: Tokenizer | None = None) -> None:
         self._entries: list[CostEntry] = []
+        self._total_usd: float = 0.0
         self._token_cost_calculator = TokenCostCalculator(tokenizer=tokenizer)
 
     def record(self, entry: CostEntry) -> None:
         self._entries.append(entry)
+        self._total_usd += entry.amount_usd
 
     def total_cost_usd(self) -> float:
-        return sum(entry.amount_usd for entry in self._entries)
+        return self._total_usd
 
     def entries_by_source(self) -> dict[str, float]:
         grouped: dict[str, float] = {}
@@ -110,6 +111,7 @@ class CompositeCostTracker(CostTracker):
 
     def reset(self) -> None:
         self._entries.clear()
+        self._total_usd = 0.0
 
     def record_llm_cost(
         self,

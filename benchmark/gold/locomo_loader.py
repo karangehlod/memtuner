@@ -166,6 +166,18 @@ def _compute_importance(text: str, is_evidence: bool) -> float:
     return 0.3 + 0.3 * length_factor
 
 
+# Pre-compiled patterns for _infer_memory_type — avoids rebuilding list literals and
+# running up to 16 individual substring scans on every call (5879+ calls per benchmark run).
+_PREFERENCE_RE = re.compile(
+    r"i like|i love|i prefer|i enjoy|favorite|i hate|i dislike|always choose|usually pick",
+    re.IGNORECASE,
+)
+_ENTITY_RE = re.compile(
+    r"my name is|i live in|i work at|i moved to|my job is|i am a|i'm from",
+    re.IGNORECASE,
+)
+
+
 class LoCoMoLoader:
     """Loads LoCoMo JSON data directly into GoldDataset format.
 
@@ -462,37 +474,10 @@ class LoCoMoLoader:
 
     def _infer_memory_type(self, text: str) -> MemoryType:
         """Infer memory type from conversation content."""
-        text_lower = text.lower()
-
-        # Preference indicators
-        preference_words = [
-            "i like",
-            "i love",
-            "i prefer",
-            "i enjoy",
-            "favorite",
-            "i hate",
-            "i dislike",
-            "always choose",
-            "usually pick",
-        ]
-        if any(pw in text_lower for pw in preference_words):
+        if _PREFERENCE_RE.search(text):
             return MemoryType.PREFERENCE
-
-        # Entity/factual indicators
-        entity_words = [
-            "my name is",
-            "i live in",
-            "i work at",
-            "i moved to",
-            "my job is",
-            "i am a",
-            "i'm from",
-        ]
-        if any(ew in text_lower for ew in entity_words):
+        if _ENTITY_RE.search(text):
             return MemoryType.ENTITY
-
-        # Default to episodic (most conversational memory is episodic)
         return MemoryType.EPISODIC
 
     def _convert_qa_annotations(
@@ -506,6 +491,16 @@ class LoCoMoLoader:
         """Convert QA annotations into GoldQuery objects."""
         qa_annotations = sample.get("qa", [])
         queries: list[GoldQuery] = []
+
+        # Compute max_day once per sample (constant across all QA annotations in this sample)
+        # instead of re-scanning the full conversation dict for every QA.
+        _conv = sample.get("conversation", {})
+        _sample_max_day = 0
+        for _k, _v in _conv.items():
+            if _k.endswith("_date_time") and isinstance(_v, str):
+                _parsed = _parse_session_datetime(_v)
+                if _parsed:
+                    _sample_max_day = max(_sample_max_day, _datetime_to_day(_parsed, reference_date))
 
         for qa_idx, qa in enumerate(qa_annotations):
             question = qa.get("question", "")
@@ -526,18 +521,7 @@ class LoCoMoLoader:
             if not expected_memory_ids:
                 continue
 
-            # Determine query day (after all evidence is injected)
-            # Use the last day in the dataset + 1 as query day
-            conversation = sample.get("conversation", {})
-            max_day = 0
-            for key, value in conversation.items():
-                if key.endswith("_date_time") and isinstance(value, str):
-                    parsed = _parse_session_datetime(value)
-                    if parsed:
-                        day = _datetime_to_day(parsed, reference_date)
-                        max_day = max(max_day, day)
-
-            query_day = max_day + 1
+            query_day = _sample_max_day + 1
 
             # Determine temporal window from evidence sessions
             temporal_window = self._get_temporal_window_for_evidence(
@@ -578,6 +562,8 @@ class LoCoMoLoader:
         """Determine temporal window from evidence dialog IDs."""
         conversation = sample.get("conversation", {})
         evidence_days: list[int] = []
+        # Build set once; avoids creating a new map() iterator per turn (O(T×E) → O(T+E))
+        _evidence_ids_set = {str(eid) for eid in evidence_dia_ids}
 
         # Map dia_ids to their session's timestamp
         for session_key in conversation:
@@ -588,9 +574,7 @@ class LoCoMoLoader:
 
                 session_has_evidence = False
                 for turn in session_turns:
-                    if isinstance(turn, dict) and str(turn.get("dia_id", "")) in map(
-                        str, evidence_dia_ids
-                    ):
+                    if isinstance(turn, dict) and str(turn.get("dia_id", "")) in _evidence_ids_set:
                         session_has_evidence = True
                         break
 

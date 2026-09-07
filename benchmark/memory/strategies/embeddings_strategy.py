@@ -649,12 +649,11 @@ class EmbeddingsStrategy(RetrievalStrategy):
 
         # ── numpy brute-force batch path ─────────────────────────────────────
         for query_embedding in query_embeddings:
-            query_vec = np.array(query_embedding, dtype=np.float32).reshape(1, -1)
-            query_norm = np.linalg.norm(query_vec) + 1e-8
-
-            similarities = (self._embedding_matrix @ query_vec.T).flatten() / (
-                self._norms.flatten() * query_norm
-            )
+            query_vec = np.array(query_embedding, dtype=np.float32).reshape(-1)
+            # _embedding_matrix rows are already L2-normalised (normalize_embeddings=True)
+            # and _norms is all-ones; dividing by ~1.0 adds no information.
+            # Match the single-query retrieve() path which skips this division entirely.
+            similarities = (self._embedding_matrix @ query_vec).flatten()
             np.maximum(similarities, 0.0, out=similarities)
 
             # Apply user filter via the shared cache — built once, reused for each query
