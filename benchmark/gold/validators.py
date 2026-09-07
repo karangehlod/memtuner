@@ -218,17 +218,13 @@ class TemporalValidator(Validator):
             max_day = dataset.events[-1].day
             for i, query in enumerate(dataset.queries):
                 # If query has reference_day, check it's within bounds
-                if (
-                    hasattr(query, "reference_day")
-                    and query.reference_day is not None
-                    and query.reference_day > max_day
-                ):
+                if query.day is not None and query.day > max_day:
                         issues.append(
                             ValidationIssue(
                                 severity=ValidationSeverity.WARNING,
                                 validator=self.name,
-                                message=f"Query references day {query.reference_day}, but max day is {max_day}",
-                                location=f"queries[{i}].reference_day",
+                                message=f"Query references day {query.day}, but max day is {max_day}",
+                                location=f"queries[{i}].day",
                             )
                         )
 

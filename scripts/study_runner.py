@@ -198,7 +198,7 @@ Examples:
         "--workers",
         type=int,
         default=None,
-        help="Max parallel workers (default: cpu_count // 2)",
+        help="Max parallel workers (default: cpu_count - 1, leaving 1 core for OS)",
     )
     parser.add_argument(
         "--seed",
@@ -742,7 +742,7 @@ def _write_leaderboards_json(agg, dataset_label: str, run_id: str) -> Path | Non
             recall_ci_low      (float|None) — from bootstrap_ci(metric="recall_at_k",
                                               group_by="embedding_model")
             recall_ci_high     (float|None)
-            avg_latency_p50_ms (float)
+            avg_latency_ms     (float) — from rank_by_embedding_model() key "avg_latency_ms"
             recall_per_ms      (float)
             runs               (int)
 
@@ -854,9 +854,11 @@ def _write_leaderboards_json(agg, dataset_label: str, run_id: str) -> Path | Non
             "avg_ndcg": row.get("avg_ndcg", 0.0),
             "recall_ci_low":  ci_e.get("ci_low"),
             "recall_ci_high": ci_e.get("ci_high"),
-            "avg_latency_p50_ms": row.get("avg_latency_p50_ms", 0.0),
+            # rank_by_embedding_model() emits "avg_latency_ms"; rank_by_retrieval_strategy()
+            # emits "avg_latency_p50_ms". Use the correct key here to avoid always-zero latency.
+            "avg_latency_ms": row.get("avg_latency_ms", 0.0),
             "recall_per_ms": (
-                row.get("avg_recall", 0.0) / max(row.get("avg_latency_p50_ms", 0.001), 0.001)
+                row.get("avg_recall", 0.0) / max(row.get("avg_latency_ms", 0.001), 0.001)
             ),
             "runs": row.get("runs", 0),
         })
@@ -923,8 +925,13 @@ def _write_leaderboards_json(agg, dataset_label: str, run_id: str) -> Path | Non
     out_dir = _Path("benchmark_results")
     out_dir.mkdir(exist_ok=True)
     out_path = out_dir / "leaderboards.json"
-    with open(out_path, "w", encoding="utf-8") as _f:
+    # Atomic write: write to a temp file then os.replace() to avoid partial reads
+    # when multiple dataset threads write concurrently (parallel multi-dataset mode).
+    import os as _os
+    _tmp = out_path.with_suffix(".tmp")
+    with open(_tmp, "w", encoding="utf-8") as _f:
         _json.dump(leaderboard, _f, indent=2, default=str)
+    _os.replace(_tmp, out_path)  # atomic on POSIX; near-atomic on Windows
     print(f"\n  benchmark_results/leaderboards.json updated (gold-grounded, run_id={run_id})")
     return out_path
 
@@ -2005,10 +2012,7 @@ def _run_phase4_two_stage(
             all_results.extend(broad_results)
             broad_results_by_policy[policy] = [r for r in broad_results if r.success]
         else:
-            # Parallel path already ran — just reference the pre-split results
-            broad_results = broad_results_by_policy.get(policy, []) + [
-                r for r in all_broad_results if not r.success and getattr(r, "decay_policy", "") == policy
-            ]
+            # Parallel path already ran — results are in broad_results_by_policy
             if not _no_improve_count and policy == policies[0]:
                 print("  Parallel broad sweep complete — processing per-policy curves")
 

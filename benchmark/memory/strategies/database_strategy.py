@@ -155,8 +155,7 @@ class DatabaseStrategy(RetrievalStrategy):
     ) -> list[tuple[str, float]]:
         """Retrieve from database.
 
-        For now, uses keyword search. With pgvector embeddings,
-        this could be upgraded to vector similarity search.
+        Uses ILIKE keyword search. For vector similarity search use PgVectorStrategy.
 
         Args:
             query: The query text.
@@ -168,7 +167,7 @@ class DatabaseStrategy(RetrievalStrategy):
         """
         cursor = self._conn.cursor()
         try:
-            # Simple keyword search (can be upgraded to vector search)
+            # ILIKE keyword search — for vector similarity use PgVectorStrategy
             query_pattern = f"%{query}%"
 
             if user_id:

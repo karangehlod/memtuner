@@ -77,8 +77,13 @@ class DenseVectorAdapter(RetrievalStrategy):
                 try:
                     self.model = SentenceTransformer("all-MiniLM-L6-v2", device=_EMBEDDING_DEVICE)
                     self.use_transformers = True
-                except Exception:
-                    # Network error or model not available, use fallback
+                except Exception as _e:
+                    import logging as _lg
+                    _lg.getLogger(__name__).warning(
+                        "sentence-transformers model failed to load (%s). "
+                        "Falling back to MD5-hash embeddings — results will be "
+                        "semantically meaningless. Fix: pip install sentence-transformers", _e
+                    )
                     self.use_transformers = False
             else:
                 self.use_transformers = False

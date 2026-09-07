@@ -90,7 +90,7 @@ def _scripts_path() -> str:
         import importlib.resources as _res
         return str(_res.files("scripts"))
     except Exception:
-        pass
+        pass  # importlib.resources not available or scripts not packaged
     # Last resort: search sys.path for a scripts/ directory containing study_runner.py
     for p in sys.path:
         s = Path(p) / "scripts"

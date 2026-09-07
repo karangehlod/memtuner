@@ -82,4 +82,6 @@ def estimate_query_cost(strategy: str, latency_ms: float) -> float:
         "llm_rerank": 0.0003,
     }
     storage_cost = 0.000001
-    return base_costs.get(strategy, 0.0005) + storage_cost
+    # Include latency cost: $0.0001 per 100ms of GPU/CPU time
+    latency_cost = latency_ms * 0.000001  # $0.0001 per 100ms
+    return base_costs.get(strategy, 0.0005) + storage_cost + latency_cost

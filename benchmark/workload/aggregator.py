@@ -140,12 +140,26 @@ class MatrixAggregator:
         return sorted(rows, key=lambda x: x["avg_composite"], reverse=True)
 
     def rank_by_decay_policy(self) -> list[dict]:
-        """Average composite score per decay policy, ranked best→worst."""
+        """Average composite score per decay policy, ranked best→worst.
+
+        Only considers Phase 4 cells (decay sweep). Excluding Phase 1 baseline
+        cells prevents BM25/recency results from inflating the 'none' policy
+        average, which would make no-decay look better than it is in a fair
+        per-strategy comparison.
+        """
+        _decay_phases = {
+            "phase4_decay_broad", "phase4_decay_fine", "phase4_decay_sweep",
+            "phase4b_archival_floor",
+        }
         by_policy: dict[str, list[float]] = defaultdict(list)
         by_policy_recall: dict[str, list[float]] = defaultdict(list)
         by_policy_noise: dict[str, list[float]] = defaultdict(list)
 
-        for r in self._successful:
+        # Use only Phase 4 cells; fall back to all if no Phase 4 cells ran
+        phase4_cells = [r for r in self._successful
+                        if getattr(r, "study_phase", "") in _decay_phases]
+        source = phase4_cells if phase4_cells else self._successful
+        for r in source:
             by_policy[r.decay_policy].append(r.composite_score())
             by_policy_recall[r.decay_policy].append(r.recall_at_k)
             by_policy_noise[r.decay_policy].append(r.contamination_rate)

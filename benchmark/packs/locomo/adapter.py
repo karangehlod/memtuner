@@ -207,7 +207,33 @@ class LoCoMoPack(BenchmarkPack):
                 if not expected_memory_ids:
                     continue  # Skip questions without traceable evidence
 
-                query_day = evaluation_horizon - 1
+                # Assign query_day based on when the evidence sessions occurred, not at
+                # the very end of the horizon. This preserves LoCoMo's temporal ordering:
+                # a query about session 2 events should not see session 6 memories.
+                # We find the latest session index among the evidence dialogs, convert it
+                # to a day, then fire the query one day later. If no session mapping is
+                # available, fall back to evaluation_horizon - 1 (original behaviour).
+                try:
+                    # LoCoMo dialog IDs have format "D{session}:{turn}" e.g. "D1:3".
+                    # Extract session number from the D<N> prefix before the colon.
+                    import re as _re
+                    _ev_sessions = []
+                    for ev_id in evidence:
+                        if ev_id in dialog_id_to_memory_id:
+                            _m = _re.match(r'D(\d+):', ev_id)
+                            if _m:
+                                _ev_sessions.append(int(_m.group(1)))
+                    if _ev_sessions:
+                        _latest_ev_session = max(_ev_sessions)
+                        # days_per_session already computed above in the outer loop
+                        query_day = min(
+                            int(_latest_ev_session * days_per_session) + 1,
+                            evaluation_horizon - 1,
+                        )
+                    else:
+                        query_day = evaluation_horizon - 1
+                except Exception:
+                    query_day = evaluation_horizon - 1
                 acceptable_modules = _CATEGORY_TO_MODULES.get(category, ["episodic_store"])
 
                 query = GoldQuery(

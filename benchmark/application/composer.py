@@ -159,6 +159,15 @@ class BenchmarkComposer:
             allow_strategy_fallback=allow_strategy_fallback,
         )
 
+        # Warn if no memory modules are configured — run will produce all-zero metrics
+        if not config.memory.enabled.has_any_module():
+            logger.warning(
+                "No memory modules enabled in config.memory.enabled "
+                "(both short_term and long_term are empty). "
+                "All recall/precision metrics will be 0.0. "
+                "Add at least one module, e.g. long_term=['episodic_store']."
+            )
+
         # 4. Construct lifecycle policies
         lifecycle_policies = self._build_lifecycle_policies(config)
 
@@ -169,8 +178,9 @@ class BenchmarkComposer:
         # 6. Determine effective K from dataset
         recall_k = dataset.evaluation_criteria.recall_k
 
-        # 7. Build evaluators with dataset-driven K
-        evaluators = self._build_evaluators(recall_k)
+        # 7. Build evaluators with dataset-driven K and actual corpus size
+        _corpus_size = sum(len(e.memory_events) for e in dataset.events)
+        evaluators = self._build_evaluators(recall_k, corpus_size=_corpus_size)
 
         # 8. Create scenario with validated horizon
         effective_horizon = self._compute_effective_horizon(config, dataset)
@@ -353,11 +363,12 @@ class BenchmarkComposer:
         DatasetValidator().validate(dataset)
         return dataset
 
-    def _build_evaluators(self, recall_k: int) -> list[Any]:
-        """Build evaluators using dataset-driven K.
+    def _build_evaluators(self, recall_k: int, corpus_size: int = 5879) -> list[Any]:
+        """Build evaluators using dataset-driven K and actual corpus size.
 
         Args:
             recall_k: The K value from dataset evaluation criteria.
+            corpus_size: Total memory count in the dataset (for FPR denominator).
 
         Returns:
             List of evaluator instances.
@@ -367,7 +378,7 @@ class BenchmarkComposer:
         evaluators: list[Any] = [
             RecallEvaluator(top_k=recall_k),
             StandardPrecisionEvaluator(top_k=recall_k),
-            FalsePositiveEvaluator(),
+            FalsePositiveEvaluator(corpus_size=corpus_size, top_k=recall_k),
             TemporalAccuracyEvaluator(),
         ]
 

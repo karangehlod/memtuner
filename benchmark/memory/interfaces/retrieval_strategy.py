@@ -56,7 +56,7 @@ class RetrievalStrategy(ABC):
     @abstractmethod
     def clear(self) -> None:
         """Clear all indexed data."""
-        pass
+        ...
 
     @classmethod
     def is_available(cls) -> bool:

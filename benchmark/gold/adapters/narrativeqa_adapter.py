@@ -1,3 +1,5 @@
+import math
+
 """Adapter for NarrativeQA - long narrative comprehension."""
 
 import hashlib
@@ -86,7 +88,7 @@ class NarrativeQAAdapter(DatasetAdapter):
                     if not question:
                         continue
 
-                    memory_ids = [f"narrative_{n_idx}_{i}" for i in range(len(narrative_text)//chunk_size + 1)]
+                    memory_ids = [f"narrative_{n_idx}_{i}" for i in range(math.ceil(len(narrative_text) / chunk_size))]
                     expected = GoldExpectedResult(memory_ids=memory_ids)
 
                     query = GoldQuery(

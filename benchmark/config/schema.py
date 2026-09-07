@@ -129,6 +129,15 @@ class MemorySelectionConfig(BaseModel):
     short_term: list[str] = Field(default_factory=list, description="Enabled STM modules")
     long_term: list[str] = Field(default_factory=list, description="Enabled LTM modules")
 
+    @property
+    def all_modules(self) -> list[str]:
+        """Combined list of all enabled modules."""
+        return self.short_term + self.long_term
+
+    def has_any_module(self) -> bool:
+        """Return True when at least one memory module is configured."""
+        return bool(self.short_term or self.long_term)
+
 
 class MemoryConfig(BaseModel):
     """Top-level memory configuration.

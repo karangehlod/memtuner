@@ -72,9 +72,11 @@ class WebQuestionsAdapter(DatasetAdapter):
                     )
                     all_memories[day].append(memory)
 
-                memory_ids = [f"kb_{q_idx}_{i}" for i in range(min(len(answers), 3))] or ["kb_0"]
-                expected = GoldExpectedResult(memory_ids=memory_ids)
+                memory_ids = [f"kb_{q_idx}_{i}" for i in range(min(len(answers), 3))]
+                if not memory_ids:
+                    continue  # no answers — skip unresolvable query
 
+                expected = GoldExpectedResult(memory_ids=memory_ids)
                 query = GoldQuery(
                     day=day,
                     query=question,

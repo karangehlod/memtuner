@@ -70,7 +70,9 @@ class HotpotQAAdapter(DatasetAdapter):
                     )
                     all_memories[day].append(memory)
 
-                memory_ids = [f"doc_{q_idx}_{i}" for i in range(min(len(context), 4))] or ["doc_0"]
+                memory_ids = [f"doc_{q_idx}_{i}" for i in range(min(len(context), 4))]
+                if not memory_ids:
+                    continue  # no context paragraphs — skip unresolvable query
                 expected = GoldExpectedResult(memory_ids=memory_ids)
 
                 query = GoldQuery(

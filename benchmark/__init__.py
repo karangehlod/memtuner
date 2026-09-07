@@ -9,7 +9,7 @@ def _read_version() -> str:
         from importlib.metadata import version
         return version("memtuner")
     except Exception:
-        pass
+        pass  # metadata unavailable before pip install
     # 2. Source tree without install — parse pyproject.toml directly.
     # This keeps version in ONE place (pyproject.toml) with no stale fallback.
     try:
@@ -20,7 +20,7 @@ def _read_version() -> str:
         if _m:
             return _m.group(1)
     except Exception:
-        pass
+        pass  # pyproject.toml not found (non-standard install)
     return "unknown"
 
 

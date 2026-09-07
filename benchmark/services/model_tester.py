@@ -183,11 +183,8 @@ class ModelTester:
         """Get all embedding models to test (Ollama + OpenAI)"""
         models = []
 
-        # Try Ollama models
-        try:
-            models.extend(ModelTester.get_ollama_embedding_models())
-        except Exception as e:
-            logger.warning(f"Could not load Ollama models: {e}")
+        # Ollama models are loaded via environment variables (BENCHMARK_OLLAMA_EMBEDDING_MODELS)
+        # get_ollama_embedding_models() was removed — no try/except needed here
 
         # Try OpenAI models
         models.extend(ModelTester.get_openai_embedding_models())

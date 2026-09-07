@@ -338,9 +338,15 @@ class PrecisionAtKEvaluator(MetricEvaluator):
             EvaluationResult with precision value between 0.0 and 1.0.
         """
         if not expected_ids:
-            raise ValueError(
-                "PrecisionAtKEvaluator: expected_ids cannot be empty. "
-                "Every query must have at least one expected memory."
+            # Consistent with StandardPrecisionEvaluator (precision.py): empty gold → 0.0
+            # (every retrieved item is a false positive if there's nothing expected).
+            # MRR/NDCG/Recall raise ValueError for empty gold; Precision uses 0.0 because
+            # the denominator is K (not |gold|) so the formula is still well-defined.
+            return EvaluationResult(
+                metric_name=self.metric_name(),
+                value=0.0,
+                query_count=1,
+                details={"note": "No expected memories — precision=0.0"},
             )
 
         gold_set = set(expected_ids)

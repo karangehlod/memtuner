@@ -175,9 +175,9 @@ class ScratchpadAdapter(MemoryAdapter):
                 num_memories=len(self.scratch),
                 num_queries=self.num_queries,
                 elapsed_seconds=elapsed_seconds,
-                query_latency_p50_ms=_pct(self.query_times, 50) * 1000,
-                query_latency_p95_ms=_pct(self.query_times, 95) * 1000,
-                index_build_ms=sum(self.write_times) * 1000,
+                query_latency_p50_ms=_pct(self.query_times, 50),  # already in ms
+                query_latency_p95_ms=_pct(self.query_times, 95),  # already in ms
+                index_build_ms=sum(self.write_times),  # already in ms
                 peak_rss_mb=_rss(),
                 cpu_percent=_cpu(),
             )

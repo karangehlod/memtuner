@@ -111,6 +111,12 @@ class BenchmarkRunner:
                 result = self._scenario_runner.run_scenario(scenario, run_id)
                 scenario_results.append(result)
                 self._time_provider.reset()
+                # Clear all memory modules between scenarios to prevent cross-scenario
+                # contamination: stores retain injected memories across scenarios,
+                # which inflates contamination_rate and corrupts recall for scenario N+1.
+                for _mod in self._scenario_runner._memory_modules.values():
+                    if hasattr(_mod, "clear"):
+                        _mod.clear()
 
             completed_at = self._time_provider.current_timestamp()
             cost_summary = self._build_cost_summary(scenario_results)

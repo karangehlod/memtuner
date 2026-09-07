@@ -138,6 +138,7 @@ def sweep_benchmark(
                 "seed": 42,
                 "scenarios": ["delayed_recall"],
                 "retrieval_strategy": strategy,
+                "recall_k": k,  # K sweep: write k into config so evaluator uses it
             },
             "observability": {
                 "exporter": "none",

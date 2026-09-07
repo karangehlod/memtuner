@@ -99,7 +99,10 @@ class GoldDatasetScenario(BenchmarkScenario):
             GoldDayEvents or None.
         """
         if self._split_day is not None and day >= self._split_day:
-            return GoldDayEvents(day=day, memory_events=[])
+            # Return None rather than GoldDayEvents(memory_events=[]) — the Pydantic
+            # model enforces min_length=1 on memory_events and would raise ValidationError.
+            # None signals "no injection on this held-out day" to the scenario runner.
+            return None
         return self._events_by_day.get(day)
 
     def get_queries_for_day(self, day: int) -> list[GoldQuery]:

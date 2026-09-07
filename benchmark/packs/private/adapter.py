@@ -174,6 +174,17 @@ class PrivateDataPack(BenchmarkPack):
             )
             all_queries.append(query)
 
+        if not all_day_events:
+            raise ValueError(
+                "Private pack: no memory events found. "
+                "Check that events.jsonl is non-empty and each line has 'content' and 'day' fields."
+            )
+        if not all_queries:
+            raise ValueError(
+                "Private pack: no queries found. "
+                "Check that queries.jsonl is non-empty and each line has 'query_text' and 'expected_memory_ids'."
+            )
+
         return GoldDataset(
             schema_version="1.0",
             scenario="private-custom",

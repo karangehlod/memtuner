@@ -172,7 +172,7 @@ class EpisodicBufferAdapter(MemoryAdapter):
             )
 
             # Reliability: track evictions
-            self.evictions / max(1, self.num_writes)
+            _eviction_rate = self.evictions / max(1, self.num_writes)
             success_rate = 1.0 - (self.num_failures / max(1, self.num_writes + self.num_queries))
 
             return MemoryMetrics(

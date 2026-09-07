@@ -132,6 +132,12 @@ class StrategyTestingService:
             elapsed = time.monotonic() - start
 
             # Extract metrics from first scenario
+            if not result.scenario_results:
+                raise ValueError(
+                    "Benchmark run produced no scenario results. "
+                    "Check that config.memory.enabled has at least one module "
+                    "and the dataset has queries."
+                )
             sr = result.scenario_results[0]
             metrics = {
                 "recall": sr.recall_at_k,

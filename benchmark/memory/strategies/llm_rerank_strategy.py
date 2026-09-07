@@ -327,7 +327,16 @@ class LLMRerankStrategy(RetrievalStrategy):
             if provider == "ollama" and self._ollama_base_url:
                 return provider
 
-        # Fallback: n-gram (no real reranking)
+        # Fallback: n-gram Jaccard similarity — no neural reranking.
+        # Log a warning so users know they're not getting CrossEncoder results.
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "LLMRerankStrategy: no provider available for model '%s'. "
+            "Falling back to n-gram Jaccard similarity (not a neural reranker). "
+            "For CrossEncoder reranking: use a machine with CUDA GPU. "
+            "For API reranking: set BENCHMARK_OLLAMA_BASE_URL or BENCHMARK_HF_INFERENCE_URL.",
+            self._model_name or "(none)",
+        )
         return "local_overlap"
 
     def _build_client(self):

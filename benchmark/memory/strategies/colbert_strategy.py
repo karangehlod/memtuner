@@ -78,20 +78,20 @@ class ColBERTStrategy(RetrievalStrategy):
     Scores each (query, memory) pair via MaxSim aggregation.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str | None = None) -> None:
         if not _ST_AVAILABLE:
             raise ImportError(
                 "sentence-transformers not installed. "
                 "Install: pip install sentence-transformers"
             )
-        _model_name = os.environ.get("BENCHMARK_COLBERT_MODEL", _DEFAULT_MODEL)
+        # Priority: explicit model_name arg (from StudyCell config) > env var > hardcoded default
+        _model_name = model_name or os.environ.get("BENCHMARK_COLBERT_MODEL", _DEFAULT_MODEL)
         self._model = _get_model(_model_name)
         self._memories: dict[str, MemoryEvent] = {}
         # memory_id → stacked token embeddings (K, D)
         self._doc_vecs: dict[str, np.ndarray] = {}
         self._user_index: dict[str, list[str]] = {}
 
-    @property
     def name(self) -> str:
         return "colbert"
 

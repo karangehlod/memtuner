@@ -67,7 +67,7 @@ You have a system with poor recall and you're not sure whether it's the embeddin
 | | MemTuner | MTEB | RAGAS | LlamaIndex eval |
 |---|---|---|---|---|
 | **What it measures** | Retrieval config quality for agent memory | Embedding model quality | RAG pipeline quality (answer faithfulness, context recall) | RAG answer quality |
-| Agent-specific memory types (episodic/semantic/preference/entity) | ✅ | ❌ | ❌ | ❌ |
+| Agent-specific memory types (episodic/semantic/preference) | ✅ | ❌ | ❌ | ❌ |
 | Five-knob retrieval config sweep | ✅ | ❌ | ❌ | ❌ |
 | Temporal decay policies | ✅ | ❌ | ❌ | ❌ |
 | Per-dataset adaptive seeding | ✅ | ❌ | ❌ | ❌ |
@@ -178,7 +178,7 @@ flowchart LR
 | **Episodic** | `EpisodicStore` | Conversation turns, events with timestamps |
 | **Semantic** | `SemanticStore` | Facts, knowledge, structured information |
 | **Preference** | `PreferenceStore` | User preferences, personal context |
-| **Entity** | `EntityStore` | Named entities and their attributes |
+| **Entity** | `EntityStore` | Named entities and their attributes (pass `--memory-types episodic semantic preference entity` to include) |
 
 ---
 
@@ -269,7 +269,9 @@ Example on a 16 GB NVIDIA GPU:
 
 ```bash
 memtuner study --mode full            # all datasets × all 5 phases, merged report
-memtuner reports                      # HTML dashboard + PNG plots from all runs
+memtuner reports                      # HTML dashboard + data JS from all past runs
+memtuner plots                        # regenerate PNG charts from past runs
+memtuner plots --dpi 300              # high-res for publication
 ```
 
 With no `--gold-dataset` argument, `study` auto-downloads every available
@@ -311,7 +313,7 @@ python -m pytest tests/ -m "unit or contract" -q    # ~15 s, same suite CI runs
 | `.env` | Secrets and machine overrides (`HF_TOKEN`, `BENCHMARK_WORKERS`, judge endpoint). `memtuner doctor --apply` writes the hardware block for you. | — |
 | [configs/benchmark_config.yaml](configs/benchmark_config.yaml) | Runtime tuning: composite score weights, dataset display names, plot colors. Any value can be overridden with a `BENCHMARK_*` variable in `.env`. Edit directly. | — |
 | [configs/profiles/*.yaml](configs/profiles/) | Scenario/workload configs (queries-per-day profiles) used by `memtuner run`. | `memtuner validate -c <file>` |
-| [configs/study_defaults.yaml](configs/study_defaults.yaml) | Which embedding/reranker models the study sweeps. | — |
+| [configs/study_defaults.yaml](configs/study_defaults.yaml) | Which embedding/reranker models the study sweeps; also sets default `seed`, `workers`, `recall_k`, and judge endpoint. Pass with `--study-config`. | — |
 
 All outputs go to `data/output/study_<run_id>/`.
 
@@ -370,20 +372,26 @@ python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode qu
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--gold-dataset PATH [PATH ...]` | required | One or more dataset paths under `data/input/` |
+| `--gold-dataset PATH [PATH ...]` | required* | One or more dataset paths. Omit to auto-download and run all available. |
 | `--mode` | `default` | `quick` (ph1) · `default` (ph1–3) · `full` (ph1–5) · `custom` |
-| `--phases N [N ...]` | from mode | Run specific phases only, e.g. `--phases 4 5` |
+| `--phases N [N ...]` | from mode | Run specific phases only, e.g. `--phases 1 2` or `--phases 4 5` |
 | `--workers N` | `cpu_count - 1` | Parallel threads for BM25/recency phases |
-| `--seeds N [N ...]` | `42` | Multiple seeds for bootstrap CIs, e.g. `--seeds 42 123 456` |
+| `--seed N` | `42` | Single random seed |
+| `--seeds N [N ...]` | `[--seed]` | Multiple seeds for bootstrap CIs, e.g. `--seeds 42 123 456` |
 | `--early-stop-patience N` | `3` | Phase 4 early-stopping patience; `0` disables |
-| `--ollama-url URL` | none | Ollama server for LLM judge |
-| `--judge-model MODEL` | none | e.g. `nemotron-3-nano:4b` |
-| `--workload` | `medium_qpd` | `low_qpd` · `medium_qpd` · `high_qpd` |
-| `--memory-types` | auto-detect | `episodic semantic preference entity` |
-| `--no-plots` | off | Skip PNG generation (useful on headless servers) |
+| `--ollama-url URL` | none | Ollama / OpenAI-compatible judge endpoint |
+| `--judge-model MODEL` | none | LLM judge model, e.g. `nemotron-3-nano:4b` |
+| `--workload` | `medium_qpd` | `low_qpd` (14d) · `medium_qpd` (50d) · `high_qpd` (90d). **Different workloads evaluate different query subsets — results are not comparable across workloads.** |
+| `--memory-types` | `episodic semantic preference` | Memory types to benchmark (auto-pruned to types present in dataset) |
+| `--skip-models MODEL [MODEL ...]` | none | Exclude specific embedding models by name (e.g. models too large for your VRAM) |
+| `--only-models MODEL [MODEL ...]` | none | Whitelist: only run these embedding models |
+| `--skip-rerankers MODEL [MODEL ...]` | none | Exclude specific reranker models from Phase 5 |
+| `--evaluation-horizon N` | dataset max | Override the number of dataset days to evaluate. Defaults to the natural span of the dataset. |
+| `--study-config YAML` | `configs/study_defaults.yaml` | YAML file controlling which models are swept and default parameters |
+| `--no-plots` | off | Skip PNG generation (useful on headless / CI servers) |
 | `--output-dir PATH` | `data/output` | Output root directory |
-| `--merge CSV [CSV ...]` | — | Merge existing grid CSVs into one unified report |
-| `--doctor` | — | Print hardware analysis and copy-paste commands |
+| `--merge CSV [CSV ...]` | — | Merge existing grid CSVs into one unified report (no re-running) |
+| `--doctor` | — | Print hardware analysis and copy-paste commands, then exit |
 
 ---
 
@@ -595,7 +603,7 @@ to the authors of these datasets; full citations and license notices are in
 
 | Dataset | Path (`data/input/`) | Queries | License | What it tests |
 |---------|----------------------|---------|---------|---------------|
-| **LoCoMo** | `locomo10.json` | 1,986 | CC BY-NC 4.0 ([Snap Research](https://github.com/snap-research/locomo)) | Long-horizon episodic conversation memory |
+| **LoCoMo** | `locomo10.json` | 1,977 | CC BY-NC 4.0 ([Snap Research](https://github.com/snap-research/locomo)) | Long-horizon episodic conversation memory |
 | **LongMemEval** | `longmemeval_oracle_gold.json` | 470 | MIT ([Wu et al.](https://github.com/xiaowu0162/LongMemEval)) | Temporal reasoning + knowledge updates |
 | **SQuAD 2.0** | `squad_gold.json` | 11,873 | CC BY-SA 4.0 ([Stanford NLP](https://rajpurkar.github.io/SQuAD-explorer/)) | Reading comprehension |
 | **CoQA** | `coqa_gold.json` | 7,983 | Mixed ([Stanford NLP](https://stanfordnlp.github.io/coqa/)) | Conversational QA |
@@ -698,7 +706,7 @@ Typically saves 30–50% of Phase 4 cells when optimal λ is found at 0.01–0.0
 
 ## Results
 
-### LoCoMo (10 conversations, 1,986 queries, 5,879 memories)
+### LoCoMo (10 conversations, 1,977 queries, 5,879 memories)
 
 > Measured on Apple Silicon MPS. Phase 5 CrossEncoder cells require CUDA and were skipped on this machine.
 
@@ -981,7 +989,7 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph IN["data/input/"]
-        LCM["locomo10.json\n5,879 memories\n1,986 queries"]
+        LCM["locomo10.json\n5,879 memories\n1,977 queries"]
         LME["longmemeval_oracle_gold.json\n10,288 memories · 470 queries"]
         SQ["squad_gold.json\n11,873 queries"]
         CQ["coqa_gold.json\n7,983 queries"]
@@ -1062,7 +1070,7 @@ graph LR
 | BM25 corpus cache | `_BM25_CORPUS_CACHE` | Tokenize corpus once per unique corpus |
 | ANN index (faiss) | `EmbeddingsStrategy` | `IndexFlatIP` replaces numpy `@` for corpora ≥ 10K memories; ~25× faster per query; batch-search in `retrieve_batch()` |
 | BM25 punctuation stripping | `BM25Strategy`, `BM25LStrategy` | Compiled regex removes attached punct before tokenizing — "memory." and "memory" match |
-| User mask cache | `BM25Strategy`, `EmbeddingsStrategy` | Boolean mask built once per (user, corpus); reused for all 1,986 queries |
+| User mask cache | `BM25Strategy`, `EmbeddingsStrategy` | Boolean mask built once per (user, corpus); reused for all 1,977 queries |
 | Gold oracle O(1) lookups | `GoldOracle` | Pre-built `{(day, query): result}` index; eliminates O(N) scan per query call |
 | NDCG IDCG table | `NDCGEvaluator` | Precomputed at init; O(1) per query vs O(K) log2 calls |
 | Vectorized bootstrap CI | `StudyAggregator` | NumPy resample replaces 30K Python RNG calls; ~10–50× faster |

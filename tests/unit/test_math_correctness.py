@@ -143,9 +143,16 @@ class TestDecayFormulas:
 
     # --- tiered special cases ---
 
-    def test_tiered_is_1_at_t_ge_90(self) -> None:
-        """tiered at t=90 enters archival zone and restores to 1.0."""
-        store = self._store("tiered")
+    def test_tiered_is_archival_floor_at_t_ge_90(self) -> None:
+        """tiered at t>=90 uses archival_floor (default 0.65), not hard-coded 1.0.
+        This ensures Phase 4b floor sweep actually varies tiered cells."""
+        store = self._store("tiered")  # archival_floor=0.65 default
+        assert store._compute_decay_factor(90) == pytest.approx(0.65)
+        assert store._compute_decay_factor(200) == pytest.approx(0.65)
+
+    def test_tiered_is_1_when_no_archival_floor(self) -> None:
+        """tiered with archival_floor=None → 1.0 in archival zone (backward-compat)."""
+        store = self._store("tiered", floor=None)
         assert store._compute_decay_factor(90) == 1.0
 
     def test_tiered_decays_between_7_and_90(self) -> None:

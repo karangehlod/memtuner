@@ -92,7 +92,7 @@ class PersonaChatAdapter(DatasetAdapter):
                         utt_history = utt.get("history", [])
                         if utt_history:
                             query_text = utt_history[-1]
-                            expected = GoldExpectedResult(memory_ids=relevant_memories)
+                            expected = GoldExpectedResult(memory_ids=relevant_memories) if relevant_memories else None
                             all_queries.append(GoldQuery(
                                 day=day,
                                 query=query_text,
@@ -106,7 +106,9 @@ class PersonaChatAdapter(DatasetAdapter):
                     for turn in history:
                         if isinstance(turn, list) and len(turn) >= 2:
                             query_text = turn[0]
-                            expected = GoldExpectedResult(memory_ids=relevant_memories)
+                            expected = GoldExpectedResult(memory_ids=relevant_memories) if relevant_memories else None
+                            if expected is None:
+                                continue
                             all_queries.append(GoldQuery(
                                 day=day,
                                 query=query_text,

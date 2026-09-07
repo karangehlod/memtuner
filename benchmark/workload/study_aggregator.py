@@ -27,8 +27,9 @@ bootstrap_ci(): Non-parametric percentile bootstrap confidence intervals.
   Reference: Sakai 2006 "Evaluating Evaluation Metrics", SIGIR.
              Voorhees & Harman 2005 "TREC: Experiment and Evaluation in IR".
 significance_table(): sig_vs_next=True when ci_low > next_ci_high (non-overlapping CIs).
-  This is a conservative test; a better test would use a paired t-test or
-  Wilcoxon signed-rank over per-query values (future work).
+  This is a conservative test; when scipy is installed, wilcoxon_pairwise() provides
+  a paired Wilcoxon signed-rank test over per-cell values, which is more powerful
+  for non-normal distributions and small N.
 
 KEY OUTPUT PATHS
 ----------------
@@ -475,6 +476,99 @@ class StudyAggregator(MatrixAggregator):
                 "ci_reliable": n >= 10,  # callers can display a warning when False
             })
         return out
+
+    def wilcoxon_pairwise(
+        self,
+        metric: str = "recall_at_k",
+        group_by: str = "retrieval_strategy",
+        alpha: float = 0.05,
+    ) -> list[dict]:
+        """Paired Wilcoxon signed-rank test between every pair of groups.
+
+        More powerful than non-overlapping CI test for non-normal distributions
+        and small N (< 30 observations per group). Requires scipy.
+
+        Uses paired observations: for each (group_a, group_b) pair, we align
+        cells by memory_type and dataset so the test measures within-cell
+        differences rather than overall level shifts. Falls back to unpaired
+        Mann-Whitney U when cell-level pairing is not possible.
+
+        Returns list of dicts sorted by p-value ascending:
+          group_a, group_b, statistic, p_value, significant (p < alpha),
+          mean_a, mean_b, mean_diff, effect_size (r = Z / sqrt(N)).
+
+        Requires: pip install 'memtuner[stats]'  (scipy >= 1.11)
+        """
+        try:
+            from scipy import stats as _sp_stats
+        except ImportError:
+            return [{"error": "scipy not installed — run: pip install 'memtuner[stats]'"}]
+
+        by_group: dict[str, list[float]] = defaultdict(list)
+        # Build key → value mapping for pairing: (memory_type, dataset, seed) → value
+        pair_keys: dict[str, dict[str, float]] = defaultdict(dict)
+
+        for r in self._study_results:
+            g = str(getattr(r, group_by, "unknown"))
+            val = float(getattr(r, metric, 0.0))
+            by_group[g].append(val)
+            # Pairing key: same memory type + dataset within a run
+            _ds = getattr(r, "dataset_name", "") or ""
+            _mt = getattr(r, "memory_type", "") or ""
+            _seed = str(getattr(r, "seed", "0"))
+            pair_key = f"{_ds}:{_mt}:{_seed}"
+            pair_keys[g][pair_key] = val
+
+        groups = sorted(by_group.keys())
+        results = []
+        for i, ga in enumerate(groups):
+            for gb in groups[i + 1:]:
+                # Attempt paired test using aligned keys
+                common_keys = set(pair_keys[ga]) & set(pair_keys[gb])
+                if len(common_keys) >= 5:
+                    a_vals = [pair_keys[ga][k] for k in sorted(common_keys)]
+                    b_vals = [pair_keys[gb][k] for k in sorted(common_keys)]
+                    diffs = [a - b for a, b in zip(a_vals, b_vals)]
+                    # Wilcoxon signed-rank on differences
+                    if len(set(diffs)) > 1:  # skip if all differences are zero
+                        stat, p = _sp_stats.wilcoxon(diffs, alternative="two-sided")
+                        n = len(diffs)
+                        z = _sp_stats.norm.ppf(1 - p / 2)  # approximate Z from p
+                        effect_r = abs(z) / math.sqrt(n)
+                        test_type = "wilcoxon_paired"
+                    else:
+                        stat, p, effect_r, test_type = 0.0, 1.0, 0.0, "no_variance"
+                else:
+                    # Unpaired: Mann-Whitney U
+                    a_vals = by_group[ga]
+                    b_vals = by_group[gb]
+                    if len(a_vals) >= 3 and len(b_vals) >= 3:
+                        stat, p = _sp_stats.mannwhitneyu(a_vals, b_vals, alternative="two-sided")
+                        n = len(a_vals) + len(b_vals)
+                        z = _sp_stats.norm.ppf(1 - p / 2)
+                        effect_r = abs(z) / math.sqrt(n)
+                        test_type = "mannwhitney_unpaired"
+                    else:
+                        stat, p, effect_r, test_type = 0.0, 1.0, 0.0, "insufficient_n"
+
+                mean_a = sum(by_group[ga]) / len(by_group[ga]) if by_group[ga] else 0.0
+                mean_b = sum(by_group[gb]) / len(by_group[gb]) if by_group[gb] else 0.0
+                results.append({
+                    "group_a": ga,
+                    "group_b": gb,
+                    "statistic": round(float(stat), 4),
+                    "p_value": round(float(p), 6),
+                    "significant": bool(p < alpha),
+                    "alpha": alpha,
+                    "mean_a": round(mean_a, 4),
+                    "mean_b": round(mean_b, 4),
+                    "mean_diff": round(mean_a - mean_b, 4),
+                    "effect_size_r": round(effect_r, 4),
+                    "n_paired": len(common_keys) if len(common_keys) >= 5 else 0,
+                    "test_type": test_type,
+                })
+
+        return sorted(results, key=lambda x: x["p_value"])
 
     # ─── Phase summary ───────────────────────────────────────────────────────
 

@@ -207,7 +207,7 @@ class ResourceTracker:
                     disk_r = io.read_bytes / 1024 / 1024
                     disk_w = io.write_bytes / 1024 / 1024
                 except Exception:
-                    pass
+                    pass  # io_counters() unavailable on some Linux containers/WSL — disk stats omitted
 
             vm = self._psutil.virtual_memory()
             self._snapshots.append(
@@ -221,7 +221,7 @@ class ResourceTracker:
                 )
             )
         except Exception:
-            pass
+            pass  # snapshot silenced — psutil unavailable or process already exited
 
     def _poll_loop(self) -> None:
         """Background polling loop."""

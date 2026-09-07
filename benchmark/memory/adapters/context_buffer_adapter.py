@@ -1,3 +1,5 @@
+from difflib import SequenceMatcher
+
 """Adapter for Context Buffer - active context management."""
 
 import json
@@ -61,7 +63,8 @@ class ContextBufferAdapter(MemoryAdapter):
             content = memory.get("content", "")
             importance = memory.get("importance", 0.5)
 
-            # Compute relevance (importance for now, in production would be semantic)
+            # Relevance at write time is importance-based (no query available yet).
+            # Query-time relevance uses text similarity in query_memories().
             relevance = importance
 
             # Only add if above threshold
@@ -119,18 +122,22 @@ class ContextBufferAdapter(MemoryAdapter):
             scores: dict[str, tuple[float, str]] = {}
             current_time = time.time()
 
+            query_lower = query.lower()
             for memory_id, item in self.context.items():
-                relevance = item.get("relevance", 0.5)
                 importance = item.get("importance", 0.5)
                 timestamp = item.get("timestamp", time.time())
+                content = item.get("content", "")
+
+                # Text similarity to the actual query (was: ignored query entirely)
+                text_sim = SequenceMatcher(None, query_lower, content.lower()).ratio()
 
                 # Recency decay (more recent = higher score)
                 age = current_time - timestamp
                 recency_score = 1.0 / (1.0 + age / 60.0)  # 60s half-life
 
-                # Combined score: 50% relevance, 30% importance, 20% recency
+                # Combined score: 50% query similarity, 30% importance, 20% recency
                 score = (
-                    0.5 * relevance +
+                    0.5 * text_sim +
                     0.3 * importance +
                     0.2 * recency_score
                 )

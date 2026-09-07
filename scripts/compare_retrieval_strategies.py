@@ -20,7 +20,17 @@ import sys
 from pathlib import Path
 from subprocess import run
 
-from tabulate import tabulate
+# tabulate is optional; use a simple fallback if not installed
+try:
+    from tabulate import tabulate
+except ImportError:
+    def tabulate(rows, headers=None, tablefmt=None):
+        if headers:
+            rows = [headers] + list(rows)
+        col_w = [max(len(str(r[i])) for r in rows) for i in range(len(rows[0]))]
+        lines = ["  ".join(str(r[i]).ljust(col_w[i]) for i in range(len(r))) for r in rows]
+        sep = "-" * max(len(ln) for ln in lines)
+        return sep + "\n" + "\n".join(lines) + "\n" + sep
 
 
 def generate_gold_dataset(output_path: str, seed: int = 42) -> str:
@@ -28,7 +38,7 @@ def generate_gold_dataset(output_path: str, seed: int = 42) -> str:
     print(f"📊 Generating gold dataset: {output_path}")
 
     result = run([
-        "benchmark",
+        "memtuner",
         "generate-gold",
         "--seed", str(seed),
         "--users", "3",
@@ -57,7 +67,7 @@ def run_benchmark_strategy(
     print(f"   Gold: {gold_dataset}")
 
     result = run([
-        "benchmark",
+        "memtuner",
         "run",
         "--config", config_path,
         "--gold-dataset", gold_dataset,
@@ -225,11 +235,11 @@ def main():
     for strategy, benchmark_results in results.items():
         metrics = extract_metrics(benchmark_results)
         row = [strategy] + [metrics.get(k, 'N/A') for k in [
-            'Recall@K', 'False Pos Rate', 'Temporal Acc', 'Module Acc', 'Total Cost', 'Correct Recalls'
+            'Recall@K', 'Noise Ratio', 'Temporal Acc', 'Module Acc', 'Total Cost', 'Correct Recalls'
         ]]
         rows.append(row)
 
-    headers = ['Strategy', 'Recall@K', 'False Pos Rate', 'Temporal Acc', 'Module Acc', 'Total Cost', 'Correct']
+    headers = ['Strategy', 'Recall@K', 'Noise Ratio', 'Temporal Acc', 'Module Acc', 'Total Cost', 'Correct']
     print(tabulate(rows, headers=headers, tablefmt='grid'))
 
     # Recommendations

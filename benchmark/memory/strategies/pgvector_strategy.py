@@ -201,10 +201,14 @@ class PgVectorStrategy(RetrievalStrategy):
         return ranked[:top_k]
 
     def _build_ivf_clusters(self) -> None:
-        """Build IVF-like clusters using k-means-lite (deterministic).
+        """Build IVF clusters using mini-batch k-means (numpy, no external dep).
 
-        Uses simple random projection for cluster assignment to ensure
-        reproducibility without scipy/sklearn dependency.
+        Replaced the previous random-assignment approach which assigned vectors
+        to clusters by RNG rather than by geometric proximity. That made the
+        approximation meaningless: missing vectors were random, not distant.
+        Now uses 10 iterations of Lloyd's algorithm (k-means) so clusters are
+        geometrically coherent and the 70% probe strategy actually approximates
+        exact search rather than randomly sampling the corpus.
         """
         if not self._embeddings:
             self._clusters = {}
@@ -213,33 +217,52 @@ class PgVectorStrategy(RetrievalStrategy):
 
         all_ids = list(self._embeddings.keys())
         n = len(all_ids)
+        embs = np.array([self._embeddings[mid] for mid in all_ids], dtype=np.float32)
 
         # Number of clusters: sqrt(n), matching pgvector ivfflat default
-        self._nlist = max(4, int(np.sqrt(n)))
-        # Probe 70% of clusters (leaving 30% unsearched = approximation)
+        self._nlist = max(4, min(int(np.sqrt(n)), n))
         self._nprobe = max(1, int(self._nlist * 0.7))
 
-        # Simple deterministic clustering: assign by hash of embedding sum
-        # This gives stable cluster assignments without k-means
+        # Initialise centroids with k-means++ (spread initial seeds)
         rng = np.random.default_rng(seed=42)
-        assignments = rng.integers(0, self._nlist, size=n)
+        centroid_indices = [rng.integers(0, n)]
+        for _ in range(self._nlist - 1):
+            dists = np.array([
+                min(float(np.dot(embs[i] - embs[c], embs[i] - embs[c])) for c in centroid_indices)
+                for i in range(n)
+            ])
+            probs = dists / (dists.sum() + 1e-12)
+            centroid_indices.append(int(rng.choice(n, p=probs)))
+        centroids = embs[centroid_indices].copy()
 
-        self._clusters: dict[int, list[str]] = {i: [] for i in range(self._nlist)}
+        # Lloyd's algorithm — 10 iterations is enough for convergence on IR corpora
+        for _ in range(10):
+            # Assign each embedding to its nearest centroid
+            sims = embs @ centroids.T          # (n, k) cosine-like scores (unnorm)
+            assignments = np.argmax(sims, axis=1)
+
+            # Update centroids
+            new_centroids = np.zeros_like(centroids)
+            np.bincount(assignments, minlength=self._nlist)  # tracked for future empty-cluster reassignment
+            for k in range(self._nlist):
+                mask = assignments == k
+                if mask.any():
+                    new_centroids[k] = embs[mask].mean(axis=0)
+                else:
+                    new_centroids[k] = centroids[k]  # keep if empty
+            # Normalise
+            norms = np.linalg.norm(new_centroids, axis=1, keepdims=True) + 1e-8
+            centroids = (new_centroids / norms).astype(np.float32)
+            if np.allclose(new_centroids / norms, centroids, atol=1e-5):
+                break  # converged
+
+        # Build final cluster lookup
+        sims = embs @ centroids.T
+        assignments = np.argmax(sims, axis=1)
+        self._clusters = {i: [] for i in range(self._nlist)}
         for idx, mem_id in enumerate(all_ids):
-            cluster_idx = int(assignments[idx])
-            self._clusters[cluster_idx].append(mem_id)
-
-        # Compute centroids
-        self._centroids = []
-        for i in range(self._nlist):
-            if self._clusters[i]:
-                cluster_embs = np.array([self._embeddings[mid] for mid in self._clusters[i]])
-                centroid = cluster_embs.mean(axis=0)
-                centroid = centroid / (np.linalg.norm(centroid) + 1e-8)
-                self._centroids.append(centroid)
-            else:
-                # Empty cluster: use random vector
-                self._centroids.append(rng.standard_normal(self._dimension).astype(np.float32))
+            self._clusters[int(assignments[idx])].append(mem_id)
+        self._centroids = [centroids[i] for i in range(self._nlist)]
 
     def name(self) -> str:
         return "pgvector"

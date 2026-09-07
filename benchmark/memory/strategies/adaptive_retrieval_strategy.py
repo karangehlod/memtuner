@@ -76,7 +76,10 @@ class AdaptiveRetrievalStrategy(RetrievalStrategy):
     at startup so routing is zero-cost at query time.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str | None = None) -> None:
+        # model_name forwarded to the embeddings sub-strategy so Phase 2 sweeps
+        # produce distinct results per model (not always the env-var default).
+        self._model_name = model_name
         self._selector = AdaptiveStrategySelector(
             strategies=["bm25", "embeddings", "hybrid"]
         )
@@ -95,7 +98,6 @@ class AdaptiveRetrievalStrategy(RetrievalStrategy):
             "bm25": 0, "embeddings": 0, "hybrid": 0
         }
 
-    @property
     def name(self) -> str:
         return "adaptive"
 
@@ -107,7 +109,12 @@ class AdaptiveRetrievalStrategy(RetrievalStrategy):
 
     def index(self, memories: list[MemoryEvent]) -> None:
         bm25_inst = _get_bm25()
-        embed_inst = _get_embed()
+        # Pass model_name from constructor so Phase 2 sweeps use the configured model
+        if self._model_name:
+            from benchmark.memory.strategies.embeddings_strategy import EmbeddingsStrategy
+            embed_inst = EmbeddingsStrategy(model_name=self._model_name)
+        else:
+            embed_inst = _get_embed()
         hybrid_inst = _get_hybrid(bm25_inst=bm25_inst, embed_inst=embed_inst)
 
         bm25_inst.index(memories)

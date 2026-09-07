@@ -146,7 +146,7 @@ class LongMemEvalPack(BenchmarkPack):
 
         # Determine evaluation horizon
         if evaluation_horizon is None:
-            evaluation_horizon = max(len(q.get("haystack_sessions", [])) for q in questions)
+            evaluation_horizon = max((len(q.get("haystack_sessions", [])) for q in questions), default=1)
             evaluation_horizon = min(evaluation_horizon, 100)
 
         # Generate user IDs (one per question for isolation)
@@ -214,6 +214,9 @@ class LongMemEvalPack(BenchmarkPack):
 
             # Query arrives after all sessions are injected
             query_day = min((len(sessions)) * days_per_session, evaluation_horizon - 1)
+            if not expected_memory_ids:
+                continue  # no traceable memory — skip
+
 
             query = GoldQuery(
                 day=query_day,

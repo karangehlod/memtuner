@@ -232,9 +232,13 @@ class StatisticsComputer:
             len(unique_entities) / entity_count if entity_count > 0 else 0.0
         )
 
-        # Normalize temporal density (0-1)
-        # Perfect density = 1 memory/day
-        temporal_density = min(avg_memories_per_day, 1.0)
+        # Temporal density: fraction of simulated days that have at least one memory.
+        # Range [0,1]; 1.0 = every day has memories; 0.0 = no day has memories.
+        # Previous formula (min(avg_memories_per_day, 1.0)) saturated at 1.0 for any
+        # dataset with ≥1 memory/day, conveying no information for most datasets.
+        temporal_density = (
+            day_count / (day_span + 1) if day_span > 0 else (1.0 if day_count > 0 else 0.0)
+        )
 
         query_to_memory_ratio = (
             query_count / memory_count if memory_count > 0 else 0.0

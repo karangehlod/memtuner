@@ -114,14 +114,17 @@ Memories:
 
         for attempt in range(max_retries + 1):
             try:
-                response = self._client.messages.create(
+                response = self._client.chat.completions.create(
                     model=self._model,
                     max_tokens=100,
                     messages=[{"role": "user", "content": prompt}],
                 )
 
-                # Parse response
-                response_text = response.content[0].text if response.content else ""
+                # Parse response — OpenAI/compatible API format
+                response_text = (
+                    response.choices[0].message.content
+                    if response.choices else ""
+                ) or ""
                 retrieved_ids = []
 
                 for line in response_text.split("\n"):

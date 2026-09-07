@@ -158,8 +158,12 @@ class BaseLongTermStore(MemoryWriter, MemoryReader):
 
         if self._decay_type == "linear":
             raw = max(0.0, 1.0 - lam * t)
-            if archival_floor is not None and t >= archival_day_threshold:
-                result = max(archival_floor, raw)
+            # Apply archival floor to ALL times, not just t >= threshold.
+            # Without this, linear decay reaches 0.0 at t=1/λ, then resurrects
+            # to 0.65 at the archival threshold — a discontinuous step that produces
+            # anomalous survival-rate spikes in Phase 4 sweep results.
+            if archival_floor is not None:
+                result = max(archival_floor, raw) if t >= archival_day_threshold else raw
             else:
                 result = raw
         elif self._decay_type == "logarithmic":
@@ -169,8 +173,12 @@ class BaseLongTermStore(MemoryWriter, MemoryReader):
             else:
                 result = raw
         elif self._decay_type == "tiered":
-            if t <= tiered_working_days or t >= archival_day_threshold:
-                result = 1.0
+            if t <= tiered_working_days:
+                result = 1.0  # working memory window: no decay
+            elif t >= archival_day_threshold:
+                # Use archival_floor (not hard-coded 1.0) so Phase 4b sweep cells
+                # that vary archival_floor actually affect tiered cells.
+                result = archival_floor if archival_floor is not None else 1.0
             else:
                 result = math.exp(-lam * (t - tiered_working_days))
         else:
@@ -437,6 +445,21 @@ class BaseLongTermStore(MemoryWriter, MemoryReader):
             scores[memory_id] = event.importance * decay_factor
         return scores
 
+    def compute_scores(self, memory_ids: list[str]) -> dict[str, float]:
+        """Implement MemoryScoreComputer protocol — required for isinstance() check.
+
+        The orchestrator uses isinstance(module, MemoryScoreComputer) at runtime
+        to decide whether to call scoring before pruning. This method bridges the
+        protocol (compute_scores) with the store's internal (get_memory_scores).
+
+        Uses the current simulated day from the time provider if available.
+        Falls back to day=0 (no decay applied) if not set — safe for callers that
+        only need to compare relative scores across memories.
+        """
+        current_day = getattr(self, "_current_day", 0)
+        all_scores = self.get_memory_scores(current_day)
+        return {mid: all_scores.get(mid, 0.0) for mid in memory_ids}
+
     def get_creation_day(self, memory_id: str) -> int | None:
         """Return the creation day for a memory, or None if not found.
 
@@ -495,9 +518,17 @@ class BaseLongTermStore(MemoryWriter, MemoryReader):
         return len(self._memories)
 
     def clear(self) -> None:
-        """Clear all memories."""
+        """Clear all memories and reset the retrieval index.
+
+        Clears _user_memories so _filter_candidates() doesn't return ghost IDs,
+        and sets _index_dirty=True so the next read() rebuilds the strategy index
+        against the now-empty store rather than returning stale results.
+        """
         self._memories.clear()
         self._creation_days.clear()
+        self._user_memories.clear()   # ghost IDs in user index cause zero-result reads
+        self._decay_cache.clear()
+        self._index_dirty = True      # force index rebuild on next read()
 
     # ------------------------------------------------------------------
     # Template method — subclasses override this

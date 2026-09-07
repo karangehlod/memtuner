@@ -13,7 +13,7 @@ from __future__ import annotations
 from difflib import SequenceMatcher
 
 from benchmark.memory.long_term.base_store import BaseLongTermStore
-from benchmark.models.memory_event import MemoryEvent
+from benchmark.models.memory_event import MemoryEvent, MemoryType
 from benchmark.models.query import ReadQuery
 
 
@@ -62,12 +62,16 @@ class EpisodicStore(BaseLongTermStore):
         )
 
     def write(self, event: MemoryEvent) -> None:
-        """Write all memory types — episodic is the primary/universal store."""
-        super().write(event)
+        """Write EPISODIC memories only. ENTITY goes to EntityStore, SEMANTIC to SemanticStore,
+        PREFERENCE to PreferenceStore. Routing is enforced at write time to prevent
+        double-indexing the same memory under different scoring formulas."""
+        if event.type in (MemoryType.EPISODIC,):  # ENTITY goes to EntityStore only
+            super().write(event)
 
     def write_on_day(self, event: MemoryEvent, day: int) -> None:
-        """Write all memory types — episodic is the primary/universal store."""
-        super().write_on_day(event, day)
+        """Write EPISODIC memories only (day-stamped). See write()."""
+        if event.type in (MemoryType.EPISODIC,):  # ENTITY goes to EntityStore only
+            super().write_on_day(event, day)
 
     def _compute_relevance_score(
         self,

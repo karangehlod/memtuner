@@ -202,6 +202,11 @@ class StudyCell:
                 "confidence_threshold": 0.5,
             }
 
+        elif internal_strategy in ("colbert", "adaptive", "session_embeddings"):
+            # These strategies use sentence-transformers internally.
+            # Emit the embeddings config so the resolver can wire the correct model.
+            retrieval["embeddings"] = {"model_name": self.embedding_model}
+
         elif internal_strategy == "llm_rerank":
             # Phase 5 reranker: BM25 fetches candidates; cross-encoder re-scores
             retrieval["embeddings"] = {"model_name": self.embedding_model}

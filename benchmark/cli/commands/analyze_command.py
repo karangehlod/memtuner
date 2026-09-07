@@ -1272,7 +1272,10 @@ def analyze_benchmark(
             "memory_type_comparison": memory_results,
             "decay_sweep": decay_results,
             "decay_response": decay_response,
-            "isolation": {"rate": interference.isolation_rate, "leaks": interference.leaked_queries},
+            "isolation": (
+                {"rate": interference.isolation_rate, "leaks": interference.leaked_queries}
+                if interference is not None else None
+            ),
             "artifact_manifest": artifact_manifest,
             "llm_judge": {
                 "enabled": with_llm_judge,
@@ -1307,7 +1310,8 @@ def analyze_benchmark(
         if memory_results:
             best_m = max(memory_results, key=lambda r: r["recall"])
             click.echo(f"  Best memory type: {best_m['module']} (Recall={best_m['recall']:.1%})")
-            click.echo(f"  Isolation: {'✓ PASS' if interference.leaked_queries == 0 else '✗ FAIL'}")
+            if interference is not None:
+                click.echo(f"  Isolation: {'✓ PASS' if interference.leaked_queries == 0 else '✗ FAIL'}")
         click.echo(f"{'═' * 60}")
     except Exception as exc:
         _write_partial_report(str(exc))

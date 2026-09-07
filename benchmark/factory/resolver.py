@@ -203,6 +203,16 @@ class ConfigResolver:
             kwargs["batch_size"] = api_config.batch_size
             return kwargs
 
+        if strategy_name in ("colbert", "adaptive", "session_embeddings"):
+            # These strategies use sentence-transformers; forward the configured model name
+            # so Phase 2 embedding sweeps produce distinct results per model, not always
+            # the env-var default.
+            embeddings_config = retrieval_config.embeddings
+            kwargs: dict[str, Any] = {}
+            if embeddings_config.model_name:
+                kwargs["model_name"] = embeddings_config.model_name
+            return kwargs
+
         if strategy_name == "llm_rerank" and config is not None:
             reranker_config = config.benchmark.reranker
             kwargs = {

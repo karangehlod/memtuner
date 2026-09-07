@@ -60,9 +60,20 @@ def _gate(r: float) -> float:
     return 1.0 if r >= cfg.composite.recall_gate else 0.0
 
 def composite(r: float, p: float, m: float, t: float) -> float:
+    """Composite score matching MatrixRunResult.composite_score().
+
+    For non-temporal datasets t=0.0, so we renormalize by the active weight
+    sum (0.85) to keep the composite in [0,1]. Without renormalization the
+    max achievable composite would be 0.85 instead of 1.0, making the
+    master_results.csv 17.6% lower than the leaderboard rankings.
+    """
     g = _gate(r)
-    return g * (COMPOSITE_W["recall"] * r + COMPOSITE_W["precision"] * p
-                + COMPOSITE_W["mrr"] * m + COMPOSITE_W["temporal"] * t)
+    raw = g * (COMPOSITE_W["recall"] * r + COMPOSITE_W["precision"] * p
+               + COMPOSITE_W["mrr"] * m + COMPOSITE_W["temporal"] * t)
+    # Renormalize: exclude the temporal weight when temporal_accuracy == 0
+    active_w = (COMPOSITE_W["recall"] + COMPOSITE_W["precision"] + COMPOSITE_W["mrr"]
+                + (COMPOSITE_W["temporal"] if t > 0 else 0.0))
+    return raw / active_w if active_w > 0 else 0.0
 
 
 # ── Master CSV ────────────────────────────────────────────────────────────────
@@ -96,7 +107,8 @@ def write_master_csv(cells: list[dict], out_path: Path) -> None:
             f"# Total cells: {len(cells)}",
             "# ============================================================",
             "# COMPOSITE SCORE FORMULA",
-            "#   composite = gate × (w_R×R@10 + w_P×P@10 + w_M×MRR + w_T×TA)",
+            "#   composite = gate × (w_R×R@10 + w_P×P@10 + w_M×MRR + w_T×TA) / active_weight_sum",
+            "#   active_weight_sum = 0.85 when TA=0 (non-temporal), 1.00 when TA>0",
             "#   gate      = 1  if R@10 ≥ 0.01  else  0",
             "#   w_R=0.40  w_P=0.25  w_M=0.20  w_T=0.15  (sum=1.00)",
             "#",

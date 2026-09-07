@@ -110,7 +110,7 @@ def create_explorer_app(results_directory: Path) -> Any:
 
 
 def run_explorer_server(
-    results_directory: Path,
+    results_directory: Path | str,
     host: str = "127.0.0.1",
     port: int = 8501,
 ) -> None:
@@ -131,5 +131,7 @@ def run_explorer_server(
             "Explorer requires uvicorn. Install with: pip install -e '.[explorer]'"
         ) from import_error
 
-    app = create_explorer_app(results_directory)
+    results_path = Path(results_directory)
+    results_path.mkdir(parents=True, exist_ok=True)  # create if first run, not crash
+    app = create_explorer_app(results_path)
     uvicorn.run(app, host=host, port=port)

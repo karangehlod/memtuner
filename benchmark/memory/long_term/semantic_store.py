@@ -94,3 +94,13 @@ class SemanticStore(BaseLongTermStore):
         """
         similarity = SequenceMatcher(None, query.query.lower(), event.content.lower()).ratio()
         return similarity * decay_factor
+
+    def _apply_module_weight(self, strategy_score: float, event: MemoryEvent) -> float:
+        """Override: semantic facts are equally important — do NOT multiply by importance.
+
+        The base class multiplies by event.importance, but semantic knowledge should
+        be ranked by similarity + decay only, not by how "important" the fact was
+        marked at injection time. Without this override, strategy-path and
+        fallback-path semantic scores are on different scales.
+        """
+        return strategy_score

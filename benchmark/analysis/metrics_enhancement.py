@@ -266,7 +266,9 @@ class MetricsEnhancer:
             DecayOptimization with best config and recommendations
         """
         if not sweep_results:
-            return DecayOptimization()
+            # Return zero-default dataclass — callers check configurations_tested == 0
+            # to detect the empty-input case and skip recommendations display.
+            return DecayOptimization(recommendations=["No sweep results — run Phase 4 first"])
 
         baseline_recall = sweep_results[0].get("recall", 0.0)
         best_result = max(

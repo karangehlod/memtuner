@@ -71,7 +71,7 @@ try:
     from mlx_embeddings.utils import load as _mlx_load  # type: ignore  # noqa: F401
     MLX_AVAILABLE = True
 except ImportError:
-    pass
+    pass  # MLX optional — pip install 'memtuner[mlx]' for Apple Neural Engine support
 
 
 def embed_batch_size(model_dim: int = 384) -> int:
