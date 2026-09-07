@@ -144,7 +144,7 @@ class StudyCell:
         if self._cell_id_cache is not None:
             return self._cell_id_cache
         key = (
-            f"{self.memory_type}:{self.retrieval_strategy}:{self.decay.label}"
+            f"{self.study_phase}:{self.memory_type}:{self.retrieval_strategy}:{self.decay.label}"
             f":{self.embedding_model}:{self.embedding_backend}:{self.bm25_weight:.2f}"
             f":{self.reranker_model}:{self.workload_profile}:{self.seed}"
         )

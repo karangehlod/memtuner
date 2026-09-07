@@ -70,6 +70,15 @@ class GoldDatasetScenario(BenchmarkScenario):
             int(self._total_days * (1 - test_frac)) if test_frac > 0.0 else None
         )
 
+    def active_days(self) -> list[int]:
+        """Return sorted list of days that have events or queries.
+
+        Used by the scenario runner to skip empty days and avoid iterating
+        the full day range when only a small fraction of days have data
+        (e.g. LoCoMo: 9 active days out of 722 total → 99% of iterations are empty).
+        """
+        return sorted(set(self._events_by_day.keys()) | set(self._queries_by_day.keys()))
+
     def name(self) -> str:
         """Return the scenario name from the gold dataset.
 

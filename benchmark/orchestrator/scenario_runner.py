@@ -138,6 +138,16 @@ class ScenarioRunner:
             self._memory_content_by_id.clear()
 
             for day in range(scenario.total_days()):
+                # Fast-skip days with no events AND no queries: avoid OTel span
+                # creation (~19ms/iteration) and per-day function call overhead.
+                # Two O(1) dict lookups replace a full _run_day() call.
+                # For LoCoMo (722 days, 9 active), this saves ~13s per cell.
+                _day_events = scenario.get_events_for_day(day)
+                _day_queries = scenario.get_queries_for_day(day)
+                if _day_events is None and not _day_queries:
+                    self._time_provider.advance_day()
+                    continue
+
                 day_results = self._run_day(scenario, day, run_id)
                 all_evaluation_results.extend(day_results["evaluations"])
                 total_queries += day_results["query_count"]
@@ -277,6 +287,15 @@ class ScenarioRunner:
             if not isinstance(module, MemoryScoreComputer):
                 continue
 
+            # Debounce: skip lifecycle check if no memory can have crossed the
+            # pruning threshold since the last check. Avoids calling compute_scores()
+            # (O(N) over all memories) on every active day when pruning rarely triggers.
+            # For λ=0.01, the minimum score changes by ~1%/day; with threshold=0.15
+            # and typical importance≥0.5, memories take ~120 days to first prune.
+            _next_check_key = f"_lifecycle_next_{module_name}"
+            if day < getattr(self, _next_check_key, 0):
+                continue  # definitely nothing to prune yet
+
             with create_span(
                 "lifecycle.apply",
                 attributes={
@@ -286,6 +305,22 @@ class ScenarioRunner:
             ):
                 scores = module.get_memory_scores(day)
                 flagged_ids = policy.apply(day, scores)
+
+                # Schedule next check: when the current weakest surviving memory
+                # can first cross the pruning threshold. For exponential decay with
+                # λ, score = importance × exp(-λ × t). It crosses threshold T when
+                # t = ln(importance / T) / λ. We use min_score from this check
+                # to estimate how many days until ANY memory could cross the threshold.
+                if scores:
+                    _min_score = min(scores.values())
+                    _threshold = getattr(policy, "threshold", 0.15)
+                    if _min_score > _threshold * 1.05:  # 5% buffer
+                        # Estimate days until min_score could reach threshold
+                        # For exponential: days ≈ ln(current/threshold) / λ
+                        import math as _math
+                        _lam = getattr(module, "_decay_lambda", 0.01)
+                        _days_until = max(1, int(_math.log(max(_min_score / _threshold, 1.001)) / max(_lam, 0.001)))
+                        setattr(self, _next_check_key, day + _days_until)
 
                 if flagged_ids:
                     pruned = module.prune(flagged_ids)
@@ -627,18 +662,45 @@ class ScenarioRunner:
             cache = strategy._query_embedding_cache
             prewarmed_texts = getattr(strategy, "_prewarmed_texts", None)
             if prewarmed_texts is None:
-                # Build the text set from existing cache keys on first call
                 prewarmed_texts = set()
                 strategy._prewarmed_texts = prewarmed_texts
-            new_texts = [t for t in query_texts if t not in prewarmed_texts]
+
+            # Module-level cache: query embeddings for this model persist across
+            # strategy instances. Phase 2 runs 2 cells per model (episodic + preference);
+            # cell 2 skips the ~3s batch prewarm by using cell 1's cached embeddings.
+            _model_name = getattr(strategy, "_model_name", "") or ""
+            _backend = getattr(strategy, "_backend", "") or ""
+            try:
+                from benchmark.memory.strategies.embeddings_strategy import _QUERY_EMB_CACHE as _QEC
+                _use_global = bool(_model_name)
+            except ImportError:
+                _QEC = {}
+                _use_global = False
+
+            new_texts = []
+            for text in query_texts:
+                if text in prewarmed_texts:
+                    continue
+                _gk = f"{_model_name}:{_backend}:{hashlib.md5(text.encode()).hexdigest()}"
+                if _use_global and _gk in _QEC:
+                    # Global cache hit: populate instance cache directly
+                    cache[hashlib.md5(text.encode()).hexdigest()] = _QEC[_gk]
+                    prewarmed_texts.add(text)
+                else:
+                    new_texts.append(text)
+
             if not new_texts:
                 continue
 
             try:
                 embeddings = strategy.encode_batch(new_texts)
                 for text, emb in zip(new_texts, embeddings):
-                    cache[hashlib.md5(text.encode()).hexdigest()] = emb
+                    qhash = hashlib.md5(text.encode()).hexdigest()
+                    cache[qhash] = emb
                     prewarmed_texts.add(text)
+                    if _use_global and len(_QEC) < 4000:
+                        _gk = f"{_model_name}:{_backend}:{qhash}"
+                        _QEC[_gk] = emb
             except Exception:
                 pass  # non-fatal — retrieve() will encode on demand
 

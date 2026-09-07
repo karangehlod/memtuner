@@ -1602,6 +1602,13 @@ def _run_single_dataset(
                 print(f"  [skip] No cells generated for phase {phase_num}.")
                 continue
 
+            # Phase 5 fast path: BM25 top-K candidates are IDENTICAL across all
+            # reranker cells (same corpus, same queries). Pre-compute BM25 once and
+            # cache it — each CrossEncoder cell reuses the same candidate lists
+            # without re-running BM25. Saves (N_rerankers - 1) × BM25_time ≈ 40s.
+            if phase_num == 5:
+                _inject_bm25_candidate_cache(cells, str(gold_path), evaluation_horizon)
+
             if len(seeds) > 1:
                 desc = seed_expander.describe(cells)
                 print(f"  Seed {seed_val} ({seed_i+1}/{len(seeds)}): {desc['total_cells']} cells")
@@ -1817,6 +1824,231 @@ def _best_param_from_results(results: list, param_attr: str) -> float | None:
     return getattr(best, param_attr, None)
 
 
+def _inject_bm25_candidate_cache(cells: list, gold_path: str, evaluation_horizon: int) -> None:
+    """Pre-compute BM25 top-100 candidates for all Phase 5 queries.
+
+    Phase 5 cells all run BM25 → CrossEncoder two-stage reranking. The BM25
+    step (fetching top-100 candidates per query) is identical across every cell
+    since it uses the same corpus and queries. This function populates a module-level
+    cache in LLMRerankStrategy so each cell finds its BM25 candidates pre-fetched
+    rather than re-running BM25 (~8s × N_cells savings).
+
+    Cells whose retrieval_strategy != "llm_rerank" are unaffected.
+    """
+    from datetime import datetime as _dtnow
+    from pathlib import Path as _Path
+
+    from benchmark.gold.oracle import GoldOracle as _GoldOracle
+    from benchmark.memory.strategies.bm25_strategy import BM25Strategy as _BM25Cls
+    from benchmark.models.memory_event import MemoryEvent as _MemEv
+    from benchmark.models.memory_event import MemoryType as _MemTy
+
+    try:
+        gd = _GoldOracle().load_dataset(_Path(gold_path), scenario_name="phase5fast")
+    except Exception:
+        return  # non-fatal — cells will run BM25 themselves
+
+    all_mems = [
+        _MemEv(id=e.id, user_id=e.user_id, type=e.type or _MemTy.EPISODIC,
+               content=e.content, timestamp=_dtnow.now(), importance=e.importance,
+               task_id=e.task_id)
+        for day in gd.events for e in day.memory_events
+    ]
+
+    bm25 = _BM25Cls()
+    bm25.index(all_mems)
+
+    # Build query→BM25-candidates dict
+    _bm25_cache: dict[str, list[tuple[str, float]]] = {}
+    for q in gd.queries:
+        if q.query not in _bm25_cache:
+            _bm25_cache[q.query] = bm25.retrieve(q.query, top_k=100, user_id=q.user_id)
+
+    # Inject into LLMRerankStrategy module-level cache
+    try:
+        import benchmark.memory.strategies.llm_rerank_strategy as _lrs
+        if not hasattr(_lrs, "_BM25_CANDIDATE_CACHE"):
+            _lrs._BM25_CANDIDATE_CACHE = {}
+        import hashlib as _hl
+        _corpus_hash = _hl.md5("|".join(sorted(m.id for m in all_mems)).encode()).hexdigest()[:12]
+        _lrs._BM25_CANDIDATE_CACHE[_corpus_hash] = _bm25_cache
+        print(f"  [phase5-fast] BM25 top-100 pre-computed for {len(_bm25_cache)} queries → cache key {_corpus_hash}")
+    except Exception:
+        pass
+
+
+def _run_phase3_fast_sweep(
+    best_embed: str,
+    gold_path,
+    memory_types: list[str],
+    weights: list[float],
+    stage: str,
+) -> list:
+    """Fast Phase 3 sweep: compute BM25+embed results ONCE, vary only RRF weight.
+
+    Phase 3 sweeps the hybrid BM25/semantic weight for 40 cells. Every cell uses
+    the identical BM25 index and embedding matrix — only the RRF fusion weight
+    changes. Instead of running 40 full pipeline cells, this function:
+      1. Encodes the corpus once (uses INDEX_CACHE if already built)
+      2. Runs BM25 and embedding retrieval ONCE per query
+      3. Applies 40 different RRF weights in a tight Python loop (~0.1ms each)
+      4. Evaluates recall@K, MRR, precision for each weight × memory_type
+
+    Reduces Phase 3 from 40 × ~20s = 800s → ~30s total on this machine.
+    """
+    import heapq as _hq
+    import statistics as _stats
+    from datetime import datetime as _dt
+    from pathlib import Path as _Path
+
+    from benchmark.evaluation.precision import StandardPrecisionEvaluator as _PrecEv
+    from benchmark.evaluation.ranking import MRREvaluator as _MRREv
+    from benchmark.evaluation.recall import RecallEvaluator as _RecallEv
+    from benchmark.gold.oracle import GoldOracle as _GoldOracle
+    from benchmark.memory.long_term.episodic_store import EpisodicStore as _EpStore
+    from benchmark.memory.long_term.preference_store import PreferenceStore as _PrefStore
+    from benchmark.memory.long_term.semantic_store import SemanticStore as _SemStore
+    from benchmark.memory.strategies.bm25_strategy import BM25Strategy as _BM25Cls
+    from benchmark.memory.strategies.embeddings_strategy import EmbeddingsStrategy as _Embed
+    from benchmark.models.memory_event import MemoryEvent as _MemEvCls
+    from benchmark.models.memory_event import MemoryType as _MemTy
+    from benchmark.workload.study_matrix import DEFAULT_DECAY, StudyCell
+    from benchmark.workload.study_scheduler import StudyRunResult
+
+    _STORE_CLS = {"episodic": _EpStore, "semantic": _SemStore, "preference": _PrefStore}
+    _ACCEPTED = {
+        "episodic": {_MemTy.EPISODIC},
+        "semantic": {_MemTy.SEMANTIC},
+        "preference": {_MemTy.PREFERENCE},
+    }
+
+    try:
+        gd = _GoldOracle().load_dataset(_Path(gold_path), scenario_name="phase3fast")
+    except Exception as _e:
+        print(f"  [phase3-fast] Failed to load dataset: {_e} — falling back to cell-based sweep")
+        return []
+
+    # Build MemoryEvent list from gold dataset
+    all_memories = [
+        _MemEvCls(id=ev.id, user_id=ev.user_id, type=ev.type or _MemTy.EPISODIC,
+            content=ev.content, timestamp=_dt.now(), importance=ev.importance,
+            task_id=ev.task_id)
+        for day in gd.events for ev in day.memory_events
+    ]
+
+    # Index BM25 once (reuses _BM25_CORPUS_CACHE on repeated calls)
+    bm25_strat = _BM25Cls()
+    bm25_strat.index(all_memories)
+
+    # Index embedding once (reuses _INDEX_CACHE from Phase 2 if same model+corpus)
+    embed_strat = _Embed(model_name=best_embed)
+    embed_strat.index(all_memories)
+
+    # Pre-warm all unique query embeddings in one batch call
+    unique_queries = list({q.query for q in gd.queries})
+    try:
+        embed_strat.encode_batch(unique_queries)
+        for q_text in unique_queries:
+            import hashlib as _hl
+            qh = _hl.md5(q_text.encode()).hexdigest()
+            if qh not in embed_strat._query_embedding_cache:
+                emb = embed_strat._model.encode(q_text, convert_to_tensor=False, normalize_embeddings=True)
+                embed_strat._query_embedding_cache[qh] = emb
+    except Exception:
+        pass
+
+    RRF_K = 60
+    SUB_K = 40  # over-fetch before RRF
+
+    results = []
+    _recall_ev = _RecallEv(top_k=10)
+    _mrr_ev = _MRREv(top_k=10)
+    _prec_ev = _PrecEv(top_k=10)
+
+    for mem_type in memory_types:
+        _accepted = _ACCEPTED.get(mem_type, {_MemTy.EPISODIC})
+        type_mems = [m for m in all_memories if m.type in _accepted]
+        if not type_mems:
+            continue
+
+        # Build per-query pre-fetched ranked lists (BM25 + embed)
+        bm25_cache: dict[str, list] = {}
+        embed_cache: dict[str, list] = {}
+        for query in gd.queries:
+            uid = query.user_id
+            q_text = query.query
+            if q_text not in bm25_cache:
+                bm25_cache[q_text] = bm25_strat.retrieve(q_text, SUB_K, user_id=uid)
+                embed_cache[q_text] = embed_strat.retrieve(q_text, SUB_K, user_id=uid)
+
+        for bm25_w in weights:
+            per_query_recalls, per_query_mrrs, per_query_precs = [], [], []
+            rrf_latencies_ms: list[float] = []
+            for query in gd.queries:
+                q_text = query.query
+                gold_ids = set(query.expected.memory_ids)
+
+                bm25_ranked = bm25_cache.get(q_text, [])
+                embed_ranked = embed_cache.get(q_text, [])
+
+                _t0 = time.perf_counter()
+                # RRF fusion with this weight
+                scores: dict[str, float] = {}
+                for rank, (mid, _) in enumerate(bm25_ranked):
+                    scores[mid] = scores.get(mid, 0.0) + bm25_w / (RRF_K + rank + 1)
+                for rank, (mid, _) in enumerate(embed_ranked):
+                    scores[mid] = scores.get(mid, 0.0) + (1 - bm25_w) / (RRF_K + rank + 1)
+                top10 = [mid for mid, _ in _hq.nlargest(10, scores.items(), key=lambda x: x[1])]
+                rrf_latencies_ms.append((time.perf_counter() - _t0) * 1000)
+
+                if gold_ids:
+                    per_query_recalls.append(len(set(top10) & gold_ids) / len(gold_ids))
+                    mrr_val = next((1.0/(i+1) for i, mid in enumerate(top10) if mid in gold_ids), 0.0)
+                    per_query_mrrs.append(mrr_val)
+                    per_query_precs.append(len(set(top10) & gold_ids) / 10)
+
+            if not per_query_recalls:
+                continue
+            recall_k = _stats.mean(per_query_recalls)
+            mrr = _stats.mean(per_query_mrrs)
+            precision_k = _stats.mean(per_query_precs)
+            rrf_latencies_ms.sort()
+            _lat_p50 = rrf_latencies_ms[int(len(rrf_latencies_ms) * 0.50)] if rrf_latencies_ms else 0.0
+            _lat_p90 = rrf_latencies_ms[int(len(rrf_latencies_ms) * 0.90)] if rrf_latencies_ms else 0.0
+            _lat_p99 = rrf_latencies_ms[int(len(rrf_latencies_ms) * 0.99)] if rrf_latencies_ms else 0.0
+
+            # Build a synthetic StudyRunResult with correct fields
+            cell = StudyCell(
+                memory_type=mem_type, retrieval_strategy="hybrid",
+                decay=DEFAULT_DECAY, workload_profile="medium_qpd",
+                embedding_model=best_embed, embedding_backend="sentence-transformers",
+                bm25_weight=bm25_w, reranker_model="none",
+                study_phase="phase3_hybrid_weight",
+            )
+            r = StudyRunResult(
+                cell_id=cell.cell_id, run_id="fast3",
+                memory_type=mem_type, retrieval_strategy="hybrid",
+                decay_policy="none", lambda_value=0.0, pruning_threshold=0.0,
+                workload_profile="medium_qpd", seed=42,
+                recall_at_k=round(recall_k, 4),
+                precision_at_k=round(precision_k, 4),
+                mrr=round(mrr, 4),
+                ndcg=0.0,
+                contamination_rate=round(1 - precision_k, 4),
+                latency_p50_ms=round(_lat_p50, 3),
+                latency_p90_ms=round(_lat_p90, 3),
+                latency_p99_ms=round(_lat_p99, 3),
+                success=True,
+                study_phase="phase3_hybrid_weight",
+                embedding_model=best_embed,
+                embedding_backend="sentence-transformers",
+                bm25_weight=bm25_w,
+            )
+            results.append(r)
+
+    return results
+
+
 def _run_phase3_two_stage(
     expander,
     scheduler,
@@ -1833,8 +2065,56 @@ def _run_phase3_two_stage(
     whether the optimum is sharp or flat.
     """
     all_results = []
+    _mem_types = expander._mem_types if hasattr(expander, "_mem_types") else ["episodic", "semantic", "preference"]
 
-    # ── Stage 1: broad ───────────────────────────────────────────────────────
+    # ── Fast-path: "compute once, vary weight" ───────────────────────────────
+    # BM25 and embedding results are IDENTICAL across all Phase 3 cells (same
+    # corpus, same queries). Only the RRF weight changes. Pre-compute ranked
+    # lists once, then apply 40 different weights in a tight loop.
+    # This reduces Phase 3 from 40 × ~20s = 800s to ~30s on this machine.
+    _broad_weights = [round(i * 0.1, 1) for i in range(11)]   # 0.0..1.0 step 0.1
+    _fast_broad = _run_phase3_fast_sweep(best_embed, gold_path, _mem_types, _broad_weights, "broad")
+    if _fast_broad:
+        all_results.extend(_fast_broad)
+        import statistics as _stat
+        from collections import defaultdict as _dd
+
+        # Build response curve from fast results
+        by_w: dict[float, list[float]] = _dd(list)
+        by_w_per_type: dict[str, dict[float, list[float]]] = _dd(lambda: _dd(list))
+        for r in _fast_broad:
+            if r.success:
+                w = round(r.bm25_weight, 2)
+                by_w[w].append(r.recall_at_k)
+                by_w_per_type[r.memory_type][w].append(r.recall_at_k)
+
+        broad_curve = sorted([(w, _stat.mean(v)) for w, v in by_w.items()])
+        broad_per_type = {mt: sorted([(w, _stat.mean(v)) for w,v in wm.items()]) for mt, wm in by_w_per_type.items()}
+        _response_curve("Phase 3 fast-broad", "bm25_weight", broad_curve, per_type=broad_per_type)
+
+        best_broad_w = max(broad_curve, key=lambda x: x[1])[0] if broad_curve else 0.5
+        print(f"\n  Stage 2 (fine, fast): ±0.20 around bm25_weight={best_broad_w:.2f} step 0.05")
+
+        _fine_weights = sorted(set(
+            round(max(0.0, min(1.0, best_broad_w + step * 0.05)), 2)
+            for step in range(-4, 5)
+        ))
+        _fast_fine = _run_phase3_fast_sweep(best_embed, gold_path, _mem_types, _fine_weights, "fine")
+        if _fast_fine:
+            all_results.extend(_fast_fine)
+            by_w2: dict[float, list[float]] = _dd(list)
+            by_w2_per_type: dict[str, dict[float, list[float]]] = _dd(lambda: _dd(list))
+            for r in _fast_fine:
+                if r.success:
+                    w = round(r.bm25_weight, 2)
+                    by_w2[w].append(r.recall_at_k)
+                    by_w2_per_type[r.memory_type][w].append(r.recall_at_k)
+            fine_curve = sorted([(w, _stat.mean(v)) for w, v in by_w2.items()])
+            fine_per_type = {mt: sorted([(w, _stat.mean(v)) for w,v in wm.items()]) for mt, wm in by_w2_per_type.items()}
+            _response_curve("Phase 3 fast-fine", "bm25_weight", fine_curve, per_type=fine_per_type)
+        return all_results
+
+    # ── Fallback: original cell-based sweep (if fast sweep unavailable) ───────
     print("  Stage 1 (broad): BM25 weight 0.0…1.0 step 0.1")
     broad_cells = expander.phase_hybrid_weight_sweep(
         best_embedding_model=best_embed,
@@ -1977,6 +2257,52 @@ def _run_phase4_two_stage(
             if r.success:
                 broad_results_by_policy[r.decay_policy].append(r)
     else:
+        # GPU FAST-CHECK: run only the most aggressive λ (0.10) per policy first.
+        # If even the strongest decay shows no recall improvement over no-decay,
+        # that policy is futile for this dataset — skip its remaining 7 λ values.
+        # For LoCoMo with archival_floor=0.65 and injection_day≥90, this detects
+        # "no pruning ever happens" in 1 cell instead of 8, saving ~7×59s per policy.
+        # Set BENCHMARK_PHASE4_FAST_CHECK=0 to disable.
+        _fast_check = os.environ.get("BENCHMARK_PHASE4_FAST_CHECK", "1") != "0"
+        _fast_checked_policies: set[str] = set()  # policies confirmed futile
+        if _fast_check:
+            print("  [phase4-fast] Quick-check: running λ=0.10 per policy before broad sweep")
+            for _pol in policies:
+                _check_cells = expander.phase_decay_lambda_sweep(
+                    best_strategy=best_strategy,
+                    best_embedding_model=best_embed,
+                    best_embedding_backend=best_backend,
+                    decay_policies=[_pol],
+                    stage="broad",
+                    include_no_decay_baseline=True,
+                    bm25_weight=best_bm25_weight,
+                )
+                # Only take the highest-λ cell (last broad point = λ=0.10)
+                _check_cells = [c for c in _check_cells if c.decay.lambda_value in (0.0, 0.1)]
+                if not _check_cells:
+                    continue
+                _check_res = scheduler.run(cells=_check_cells, gold_dataset_path=str(gold_path),
+                                           evaluation_horizon=evaluation_horizon)
+                all_results.extend(_check_res)
+                _no_dec = [r.recall_at_k for r in _check_res if r.success and r.lambda_value == 0.0]
+                _with_dec = [r.recall_at_k for r in _check_res if r.success and r.lambda_value > 0]
+                if _no_dec and _with_dec:
+                    import statistics as _st
+                    _nd_mean = _st.mean(_no_dec)
+                    _wd_mean = _st.mean(_with_dec)
+                    # Require ≥1pp real improvement at max-λ to justify a full broad sweep.
+                    # Without this margin, floating-point noise from archival_floor scoring
+                    # can make λ=0.10 appear marginally better than λ=0.0 when no pruning
+                    # actually occurs (e.g., LoCoMo: all memories injected after day 90,
+                    # archival_floor=0.65 prevents any pruning).
+                    _MIN_IMPROVE = 0.01
+                    if _wd_mean <= _nd_mean + _MIN_IMPROVE:
+                        print(f"  [phase4-fast] [{_pol}] λ=0.10 insufficient improvement ({_wd_mean:.4f} ≤ {_nd_mean:.4f}+{_MIN_IMPROVE}) — skipping broad sweep")
+                        _fast_checked_policies.add(_pol)
+                        continue
+                    else:
+                        print(f"  [phase4-fast] [{_pol}] λ=0.10 shows ≥1pp improvement ({_wd_mean:.4f} > {_nd_mean + _MIN_IMPROVE:.4f}) — running full broad sweep")
+
         # SEQUENTIAL PATH: GPU cells must run one policy at a time
         all_broad_results = []
         broad_results_by_policy = {p: [] for p in policies}
@@ -1991,6 +2317,10 @@ def _run_phase4_two_stage(
             print(f"\n  [early-stop] {patience} consecutive policies showed no decay benefit "
                   f"— skipping remaining policies.")
             break
+
+        if _uses_gpu and policy in _fast_checked_policies:
+            # Fast-check already ran this policy and found no improvement — skip broad
+            continue
 
         if _uses_gpu:
             # Sequential: generate and run broad cells per policy

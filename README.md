@@ -1105,7 +1105,18 @@ pip install ".[ann]"   # installs faiss-cpu
 - Use `--skip-models` to exclude large embedding models (bge-m3, Qwen3-4B) on memory-constrained machines.
 - The RAM guard in `EmbeddingsStrategy` warns before attempting an allocation that would OOM the process.
 
-**Phase 2 GPU cell throughput**: embedding cells run sequentially (one at a time, in-process), which is required for stable MPS/CUDA context management. A 6-model × 3-memory-type Phase 2 sweep = 18 sequential cells of ~15s each = ~5 minutes on a GPU. Phase 1 (BM25/recency) runs in a thread pool and fully parallelises.
+**Measured phase times on Apple Silicon MPS** (representative; CUDA is 8–10× faster for GPU phases):
+
+| Phase | Description | Cells | MPS time | CUDA est. |
+|---|---|---|---|---|
+| 1 | BM25 + Recency (parallel threads) | 6 | **25s** | 25s |
+| 2 | Embedding sweep (5 models + ColBERT + Adaptive, sequential GPU) | 14 | **54min** | ~5min |
+| 3 | Hybrid weight sweep (fast path: compute-once, vary weight) | 40 | **2min** | ~1min |
+| 4 | Decay × λ sweep (BM25, parallel threads) | 72 | **6min** | 6min |
+
+`--mode default` (Ph1–3): **~57min on MPS / ~7min on CUDA**
+
+Phase 2 dominates on MPS because encoding 5,879 memories with bge-m3 (1.1GB) takes ~80s on Apple GPU vs ~8s on CUDA.
 
 ---
 

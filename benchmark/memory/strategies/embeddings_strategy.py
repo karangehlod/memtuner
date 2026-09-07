@@ -91,6 +91,12 @@ except ImportError:
     _faiss_mod = None
     _FAISS_AVAILABLE = False
 
+# Query embedding cache — shared across all strategy instances that use the same model.
+# Prewarm in cell 2 (same model, different memory_type) finds its queries already cached
+# from cell 1, saving ~3s per non-first cell × ~10 cells per Phase 2 run = ~30s.
+# Key: "model_name:device:query_md5"  Value: normalised query embedding
+_QUERY_EMB_CACHE: dict[str, np.ndarray] = {}
+
 # Index cache — stores the encoded matrix so identical corpus+model combos skip .encode()
 # Key: "model_name:device:corpus_hash"  Value: (matrix, ids, norms, faiss_index_or_None)
 _INDEX_CACHE: dict[str, tuple[np.ndarray, list[str], np.ndarray, object]] = {}

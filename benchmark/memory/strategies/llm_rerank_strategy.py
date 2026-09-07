@@ -188,9 +188,29 @@ class LLMRerankStrategy(RetrievalStrategy):
             List of (memory_id, combined_score) sorted descending.
         """
         # Stage 1 — BM25 candidate fetch.
-        # _bm25_fetch_k=0 means "all"; any positive value caps candidate depth.
-        fetch_k = len(self._memories) if self._bm25_fetch_k == 0 else self._bm25_fetch_k
-        candidates = self._bm25.retrieve(query, top_k=max(fetch_k, top_k), user_id=user_id)
+        # Check module-level cache pre-populated by _inject_bm25_candidate_cache().
+        # When Phase 5 cells share the same corpus, BM25 is computed once and cached;
+        # subsequent calls hit the cache instead of running BM25 again (~8s savings/cell).
+        _corp_hash = getattr(self, "_corpus_hash_cache", None)
+        if _corp_hash is None and self._memories:
+            import hashlib as _hl
+            _corp_hash = _hl.md5("|".join(sorted(self._memories.keys())).encode()).hexdigest()[:12]
+            self._corpus_hash_cache = _corp_hash  # type: ignore[attr-defined]
+
+        _module_cache = getattr(__import__("benchmark.memory.strategies.llm_rerank_strategy",
+                                           fromlist=["_BM25_CANDIDATE_CACHE"]),
+                                "_BM25_CANDIDATE_CACHE", {})
+        _cached_candidates = None
+        if _corp_hash and _corp_hash in _module_cache:
+            _cached_candidates = _module_cache[_corp_hash].get(query)
+
+        if _cached_candidates is not None:
+            candidates = _cached_candidates
+        else:
+            # _bm25_fetch_k=0 means "all"; any positive value caps candidate depth.
+            fetch_k = len(self._memories) if self._bm25_fetch_k == 0 else self._bm25_fetch_k
+            candidates = self._bm25.retrieve(query, top_k=max(fetch_k, top_k), user_id=user_id)
+
         if not candidates:
             return []
 
@@ -241,10 +261,21 @@ class LLMRerankStrategy(RetrievalStrategy):
         if not pairs:
             return []
 
-        # predict() handles internal batching; returns a numpy array of logits
+        # predict() handles internal batching; returns a numpy array of logits.
+        # FP16 via torch.autocast("cuda"): halves memory bandwidth → ~1.5-2× speedup
+        # on modern CUDA GPUs with negligible accuracy loss for binary relevance ranking.
         batch_size = int(os.environ.get("BENCHMARK_RERANKER_BATCH_SIZE", "512"))
         try:
-            scores = model.predict(pairs, batch_size=batch_size, show_progress_bar=False)
+            _use_fp16 = (
+                _CUDA_AVAILABLE
+                and os.environ.get("BENCHMARK_RERANKER_FP16", "auto") != "0"
+            )
+            if _use_fp16:
+                import torch as _tc
+                with _tc.autocast("cuda"):
+                    scores = model.predict(pairs, batch_size=batch_size, show_progress_bar=False)
+            else:
+                scores = model.predict(pairs, batch_size=batch_size, show_progress_bar=False)
         except RuntimeError as e:
             if "out of memory" in str(e).lower():
                 with contextlib.suppress(Exception):

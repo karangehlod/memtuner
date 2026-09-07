@@ -40,6 +40,17 @@ from benchmark.resources.hw_probe import DEVICE as _DEVICE
 _DEFAULT_MODEL = "all-MiniLM-L6-v2"
 _MODEL_CACHE: dict[str, _ST] = {}
 
+# ColBERT corpus cache — stores pre-computed chunk embeddings per corpus+model.
+# Phase 2 runs 2 memory_type cells for ColBERT (episodic + preference); without this
+# cache the second cell re-encodes all 5,879 memories × 10 chunks = ~86s wasted.
+# Key: "model_name:device:corpus_hash"  Value: (doc_vecs dict, user_index dict)
+import hashlib as _hashlib
+from collections import deque as _deque
+
+_COLBERT_INDEX_CACHE: dict[str, tuple[dict, dict]] = {}
+_COLBERT_INDEX_CACHE_ORDER: _deque[str] = _deque()
+_COLBERT_INDEX_CACHE_MAX = 4  # doc_vecs per entry can be 50-200 MB
+
 # Number of tokens to split each text into for MaxSim scoring.
 # Larger = more accurate but slower. 32 is a good balance.
 _CHUNK_TOKENS = int(os.environ.get("BENCHMARK_COLBERT_CHUNK", "32"))
@@ -108,6 +119,18 @@ class ColBERTStrategy(RetrievalStrategy):
         if not memories:
             return
 
+        # Check corpus cache — prevents re-encoding 5879 mems × 10 chunks (~86s)
+        # when the second memory-type cell has the same corpus+model as the first.
+        _corpus_hash = _hashlib.md5(
+            "|".join(sorted(m.id for m in memories)).encode()
+        ).hexdigest()[:16]
+        _model_key = getattr(self._model, "model_card_data", {}).get("model_name", "") or str(type(self._model))
+        _cache_key = f"colbert:{_model_key}:{_corpus_hash}"
+
+        if _cache_key in _COLBERT_INDEX_CACHE:
+            self._doc_vecs, self._user_index = _COLBERT_INDEX_CACHE[_cache_key]
+            return
+
         for m in memories:
             chunks = _chunk_text(m.content, _CHUNK_TOKENS)
             vecs = self._model.encode(chunks, batch_size=256, show_progress_bar=False)
@@ -115,6 +138,12 @@ class ColBERTStrategy(RetrievalStrategy):
             uid = m.user_id or "__none__"
             self._user_index.setdefault(uid, []).append(m.id)
             self._user_index.setdefault("__none__", [])
+
+        # Store in cache
+        while len(_COLBERT_INDEX_CACHE) >= _COLBERT_INDEX_CACHE_MAX:
+            _COLBERT_INDEX_CACHE.pop(_COLBERT_INDEX_CACHE_ORDER.popleft(), None)
+        _COLBERT_INDEX_CACHE[_cache_key] = (self._doc_vecs, self._user_index)
+        _COLBERT_INDEX_CACHE_ORDER.append(_cache_key)
 
     def retrieve(
         self,
