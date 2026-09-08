@@ -48,8 +48,8 @@ class RetrievalRerankAdapter(RetrievalStrategy):
             try:
                 from benchmark.resources.hw_probe import DEVICE as _HW_DEVICE
                 if _HW_DEVICE == "cuda":
-                    from sentence_transformers import CrossEncoder as _CE
-                    self._cross_encoder = _CE("cross-encoder/qnli-distilroberta-base")
+                    from sentence_transformers import CrossEncoder
+                    self._cross_encoder = CrossEncoder("cross-encoder/qnli-distilroberta-base")
             except Exception:
                 self._cross_encoder = None
 
@@ -57,10 +57,10 @@ class RetrievalRerankAdapter(RetrievalStrategy):
             # only needs transform() (O(C×V)) instead of fit_transform() (O(N×L×V))
             # on every query. The fallback is used on non-CUDA platforms (the common case).
             try:
-                from sklearn.feature_extraction.text import TfidfVectorizer as _TV
+                from sklearn.feature_extraction.text import TfidfVectorizer
                 _all_texts = list(self.documents.values())
                 if _all_texts:
-                    _vect = _TV(lowercase=True, stop_words="english")
+                    _vect = TfidfVectorizer(lowercase=True, stop_words="english")
                     _vect.fit(_all_texts)
                     self._fallback_vectorizer = _vect
             except Exception:

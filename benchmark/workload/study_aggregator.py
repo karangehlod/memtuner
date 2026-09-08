@@ -811,8 +811,8 @@ class StudyReporter:
             lines += [
                 "",
                 "HIGHEST RAW RECALL CONFIGURATION  (may differ from composite-score winner)",
-                f"  NOTE: Composite score balances Recall×0.40 + Precision×0.25 + MRR×0.20 + Temporal×0.15.",
-                f"        This config maximises Recall@K alone; the composite winner above has better overall balance.",
+                "  NOTE: Composite score balances Recall×0.40 + Precision×0.25 + MRR×0.20 + Temporal×0.15.",
+                "        This config maximises Recall@K alone; the composite winner above has better overall balance.",
                 f"  Memory:     {best_recall.memory_type}",
                 f"  Strategy:   {best_recall.retrieval_strategy}",
                 f"  Embedding:  {getattr(best_recall, 'embedding_model', '—')}",

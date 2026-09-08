@@ -618,7 +618,6 @@ class ScenarioRunner:
 
             self._cost_tracker.record(self._storage_cost.compute_read_cost())
 
-            all_retrieved_ids = [mem.memory_id for mem in retrieved_memories]
             evaluation_context = self._build_evaluation_context(
                 retrieved_memories=retrieved_memories,
                 gold_query=gold_query,
