@@ -926,7 +926,8 @@ def load_single_csv(csv_path: Path) -> dict[str, list[dict]]:
     return by_ds
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """CLI entry point — used by `memtuner plots` and `python scripts/plot_benchmark.py`."""
     parser = argparse.ArgumentParser(
         description="MemTuner plot generator — reads directly from study grid CSVs",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -988,3 +989,7 @@ Install dependencies:
         generate_plots(project_root=root, dpi=args.dpi)
         if args.out:
             print(f"  (use --out to redirect to {args.out})")
+
+
+if __name__ == "__main__":
+    main()

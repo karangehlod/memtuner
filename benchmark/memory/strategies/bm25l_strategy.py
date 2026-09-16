@@ -31,6 +31,12 @@ except ImportError:
 
 _CACHE: dict[str, tuple] = {}
 _CACHE_MAX = 16
+# Lock required: BM25L cells run in a ThreadPoolExecutor; without it, one thread's
+# eviction can delete a key between another thread's membership check and read
+# (observed as KeyError: 'bm25l:<hash>' on parallel Phase 4 sweeps).
+import threading as _threading
+
+_CACHE_LOCK = _threading.Lock()
 
 
 class BM25LStrategy(RetrievalStrategy):
@@ -67,8 +73,10 @@ class BM25LStrategy(RetrievalStrategy):
         ).hexdigest()[:16]
         _key = f"bm25l:{_hash}"
 
-        if _key in _CACHE:
-            self._bm25, self._id_list, self._user_index = _CACHE[_key]
+        with _CACHE_LOCK:
+            _cached = _CACHE.get(_key)
+        if _cached is not None:
+            self._bm25, self._id_list, self._user_index = _cached
             self._user_mask_cache = {}  # invalidate mask cache on corpus change
             return
 
@@ -82,9 +90,10 @@ class BM25LStrategy(RetrievalStrategy):
         token_lists = [_PUNCT_RE.sub(" ", m.content.lower()).split() for m in memories]
         self._bm25 = _BM25L(token_lists) if token_lists else None
 
-        if len(_CACHE) >= _CACHE_MAX:
-            del _CACHE[next(iter(_CACHE))]
-        _CACHE[_key] = (self._bm25, self._id_list, self._user_index)
+        with _CACHE_LOCK:
+            if len(_CACHE) >= _CACHE_MAX:
+                del _CACHE[next(iter(_CACHE))]
+            _CACHE[_key] = (self._bm25, self._id_list, self._user_index)
 
     @property
     def name(self) -> str:

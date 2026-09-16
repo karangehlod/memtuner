@@ -1157,8 +1157,12 @@ def _ensure_all_datasets(data_dir: Path, project_root: str) -> None:
     _sys.path.insert(0, str(scripts_dir))
     try:
         import prepare_datasets as _pd
-        # Patch DATA_DIR to match project root
-        _pd.DATA_DIR = data_dir
+        # Patch DATA_DIR to this project root's data/input dir. prepare_datasets
+        # resolves every source/output as DATA_DIR / <subdir> / <file> where
+        # DATA_DIR is the *input* dir — patching it to data/ (without /input)
+        # made converters look in data/squad/... while downloads landed in
+        # data/input/squad/..., so every conversion failed with FileNotFoundError.
+        _pd.DATA_DIR = data_dir / "input"
         for dest, url, desc in _pd.DOWNLOADS:
             dest = data_dir / dest.relative_to(_pd.project_root / "data")
             if dest.exists():
@@ -1180,11 +1184,9 @@ def _ensure_all_datasets(data_dir: Path, project_root: str) -> None:
                     continue
             print(f"  Converting {name}...")
             try:
-                # Temporarily patch DATA_DIR so converters resolve paths correctly
-                orig = _pd.DATA_DIR
-                _pd.DATA_DIR = data_dir
+                # DATA_DIR already patched to data/input above — converters
+                # resolve src/out paths correctly from module state.
                 result = converter_fn()
-                _pd.DATA_DIR = orig
                 print(f"  ✓ {name}: {Path(result).name}")
             except Exception as e:
                 print(f"  ✗ {name}: {e}")
@@ -2251,11 +2253,21 @@ def _run_phase4_two_stage(
             evaluation_horizon=evaluation_horizon,
         )
         all_results.extend(all_broad_results)
-        # Split results back per-policy for response curves and fine-zoom decisions
+        # Split results back per-policy for response curves and fine-zoom decisions.
+        # No-decay baseline cells carry decay_policy='none' (not in `policies`) —
+        # share them into every policy's bucket so each response curve sees the
+        # baseline, matching what the sequential path's per-policy runs produce.
         broad_results_by_policy: dict[str, list] = {p: [] for p in policies}
+        _shared_baseline: list = []
         for r in all_broad_results:
-            if r.success:
+            if not r.success:
+                continue
+            if r.decay_policy in broad_results_by_policy:
                 broad_results_by_policy[r.decay_policy].append(r)
+            else:
+                _shared_baseline.append(r)
+        for _p in policies:
+            broad_results_by_policy[_p].extend(_shared_baseline)
     else:
         # GPU FAST-CHECK: run only the most aggressive λ (0.10) per policy first.
         # If even the strongest decay shows no recall improvement over no-decay,
