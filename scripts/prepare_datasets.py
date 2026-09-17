@@ -91,7 +91,7 @@ def _convert_squad() -> Path:
     src = DATA_DIR / "squad" / "squad_dev-v2.0.json"
     out = DATA_DIR / "squad_gold.json"
     dataset = SQuADAdapter().load(src)
-    out.write_text(dataset.model_dump_json(indent=2))
+    out.write_text(dataset.model_dump_json(indent=2), encoding="utf-8")
     return out
 
 
@@ -100,7 +100,7 @@ def _convert_coqa() -> Path:
     src = DATA_DIR / "coqa" / "coqa-dev-v1.0.json"
     out = DATA_DIR / "coqa_gold.json"
     dataset = CoQAAdapter().load(src)
-    out.write_text(dataset.model_dump_json(indent=2))
+    out.write_text(dataset.model_dump_json(indent=2), encoding="utf-8")
     return out
 
 
@@ -112,14 +112,14 @@ def _convert_personachat() -> Path:
     out = DATA_DIR / "personachat_gold.json"
     # Use first 500 dialogues (~3,675 queries) — comparable to other benchmark splits.
     # Full train has 17,878 dialogues (88 MB gold) which is too large to commit.
-    with open(src) as _f:
+    with open(src, encoding="utf-8") as _f:
         full = _json.load(_f)
     subset_path = src.parent / "_subset_500.json"
-    with open(subset_path, "w") as _f:
+    with open(subset_path, "w", encoding="utf-8") as _f:
         _json.dump(full[:500], _f)
     dataset = PersonaChatAdapter().load(subset_path)
     subset_path.unlink()
-    out.write_text(dataset.model_dump_json(indent=2))
+    out.write_text(dataset.model_dump_json(indent=2), encoding="utf-8")
     return out
 
 
@@ -128,7 +128,7 @@ def _convert_hotpotqa() -> Path:
     src = DATA_DIR / "hotpotqa" / "hotpot_dev_distractor_v1.json"
     out = DATA_DIR / "hotpotqa_gold.json"
     dataset = HotpotQAAdapter().load(src)
-    out.write_text(dataset.model_dump_json(indent=2))
+    out.write_text(dataset.model_dump_json(indent=2), encoding="utf-8")
     return out
 
 
@@ -136,7 +136,7 @@ def _generate_synthetic() -> Path:
     from benchmark.gold.adapters.synthetic_adapter import SyntheticAdapter
     out = DATA_DIR / "synthetic_gold.json"
     dataset = SyntheticAdapter(query_count=200, user_count=5, day_range=50, seed=42).load()
-    out.write_text(dataset.model_dump_json(indent=2))
+    out.write_text(dataset.model_dump_json(indent=2), encoding="utf-8")
     return out
 
 
