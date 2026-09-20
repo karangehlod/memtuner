@@ -26,10 +26,15 @@ Outputs (inside --output-dir):
         phase1_bm25_baseline.png
         phase2_embedding_comparison.png
         phase3_hybrid_weight.png
-        phase4_reranker_comparison.png
         phase4_decay_heatmap.png
-        phase6_leaderboard.png
+        phase5_reranker_comparison.png
+        phase6_per_dataset.png     — merged multi-dataset runs only
+        phase7_leaderboard.png
         study_report.png           — all panels combined
+        (+ noise_quality, efficiency, resource_usage, recall_k_variation,
+           ci_comparison, parameter_sensitivity, decay_curves,
+           phase_progression, composite_breakdown; merged runs also get
+           cross_dataset_heatmap.png and narrative_report.txt)
 """
 
 from __future__ import annotations
@@ -1938,13 +1943,11 @@ def _run_phase3_fast_sweep(
         for day in gd.events for ev in day.memory_events
     ]
 
-    # Index BM25 once (reuses _BM25_CORPUS_CACHE on repeated calls)
+    # Shared strategy instances; the corpus is indexed per memory type inside
+    # the loop below. Both index caches are keyed by corpus hash, so the broad
+    # and fine sweep stages reuse each other's per-type indexes.
     bm25_strat = _BM25Cls()
-    bm25_strat.index(all_memories)
-
-    # Index embedding once (reuses _INDEX_CACHE from Phase 2 if same model+corpus)
     embed_strat = _Embed(model_name=best_embed)
-    embed_strat.index(all_memories)
 
     # Pre-warm all unique query embeddings in one batch call
     unique_queries = list({q.query for q in gd.queries})
@@ -1973,6 +1976,12 @@ def _run_phase3_fast_sweep(
         if not type_mems:
             continue
 
+        # Index only this memory type's corpus, matching how every other phase
+        # scopes retrieval to the cell's store. Indexing the full pool here
+        # would make the three memory_type rows one identical measurement.
+        bm25_strat.index(type_mems)
+        embed_strat.index(type_mems)
+
         # Build per-query pre-fetched ranked lists (BM25 + embed)
         bm25_cache: dict[str, list] = {}
         embed_cache: dict[str, list] = {}
@@ -1985,6 +1994,7 @@ def _run_phase3_fast_sweep(
 
         for bm25_w in weights:
             per_query_recalls, per_query_mrrs, per_query_precs = [], [], []
+            per_query_p1s: list[float] = []
             rrf_latencies_ms: list[float] = []
             for query in gd.queries:
                 q_text = query.query
@@ -2008,6 +2018,7 @@ def _run_phase3_fast_sweep(
                     mrr_val = next((1.0/(i+1) for i, mid in enumerate(top10) if mid in gold_ids), 0.0)
                     per_query_mrrs.append(mrr_val)
                     per_query_precs.append(len(set(top10) & gold_ids) / 10)
+                    per_query_p1s.append(1.0 if top10 and top10[0] in gold_ids else 0.0)
 
             if not per_query_recalls:
                 continue
@@ -2036,7 +2047,14 @@ def _run_phase3_fast_sweep(
                 precision_at_k=round(precision_k, 4),
                 mrr=round(mrr, 4),
                 ndcg=0.0,
+                precision_at_1=round(_stats.mean(per_query_p1s), 4) if per_query_p1s else 0.0,
                 contamination_rate=round(1 - precision_k, 4),
+                # total_queries identifies the dataset downstream (generate_reports.py
+                # maps query count → dataset name) — must reflect the full query set.
+                total_queries=len(gd.queries),
+                correct_recalls=sum(1 for rec in per_query_recalls if rec > 0),
+                duration_seconds=round(sum(rrf_latencies_ms) / 1000.0, 3),
+                platform=sys.platform,
                 latency_p50_ms=round(_lat_p50, 3),
                 latency_p90_ms=round(_lat_p90, 3),
                 latency_p99_ms=round(_lat_p99, 3),
@@ -2527,6 +2545,13 @@ def _run_merge(args) -> None:
         print("ERROR: No CSV files found for merging.", file=sys.stderr)
         sys.exit(1)
 
+    try:
+        sys.path.insert(0, str(Path(__file__).parent))
+        from config import cfg as _cfg
+        _ds_by_nq = _cfg.datasets.query_count_to_name
+    except Exception:
+        _ds_by_nq = {}
+
     print(f"\nMerging {len(csv_paths)} CSV file(s):")
     all_results = []
     for csv_path in csv_paths:
@@ -2534,6 +2559,19 @@ def _run_merge(args) -> None:
         source_id = csv_path.parent.name
         agg = StudyAggregator.from_csv(csv_path, source_run_id=source_id)
         n = len(agg._results)
+        # Backfill dataset attribution for legacy grids without a dataset_name
+        # column — query-count map first (canonical), else the CSV's label —
+        # so merged narratives/leaderboards never show "(unknown)" datasets.
+        _fallback = _dataset_label_from_csv(csv_path)
+        for _r in agg._results:
+            if not getattr(_r, "dataset_name", ""):
+                try:
+                    _nq = int(getattr(_r, "total_queries", 0) or 0)
+                except (TypeError, ValueError):
+                    _nq = 0
+                import contextlib
+                with contextlib.suppress(AttributeError, TypeError):
+                    object.__setattr__(_r, "dataset_name", _ds_by_nq.get(_nq) or _fallback)
         print(f"  {csv_path}  ({n} rows)")
         all_results.extend(agg._results)
 
@@ -2551,6 +2589,32 @@ def _run_merge(args) -> None:
     reporter = StudyReporter(output_dir)
     no_plots = getattr(args, "no_plots", False)
     paths = reporter.write_all(merged_agg, run_id, skip_plots=no_plots, all_results=all_results)
+
+    # Cross-dataset narrative + heatmap — same artefacts the auto-merge path
+    # produces; --merge previously skipped them entirely.
+    from collections import defaultdict as _dd
+    _by_ds: dict = _dd(list)
+    for _r in all_results:
+        _by_ds[getattr(_r, "dataset_name", "") or "unknown"].append(_r)
+    per_dataset_summaries = {
+        ds: StudyAggregator(rs, dataset_name=ds).study_summary()
+        for ds, rs in sorted(_by_ds.items())
+    }
+    if not no_plots and len(per_dataset_summaries) > 1:
+        try:
+            from benchmark.reporting.study_visualizer import StudyVisualizer
+            _hp = output_dir / "cross_dataset_heatmap.png"
+            StudyVisualizer.plot_cross_dataset_heatmap(per_dataset_summaries, _hp)
+            paths["cross_dataset_heatmap"] = str(_hp)
+        except Exception as _e:
+            paths["viz_error"] = str(_e)
+    try:
+        from benchmark.reporting.narrative_report import NarrativeReportGenerator
+        _np = output_dir / "narrative_report.txt"
+        NarrativeReportGenerator().generate(per_dataset_summaries, _np)
+        paths["narrative_report"] = str(_np)
+    except Exception as _e:
+        print(f"  [warn] Narrative report: {_e}")
 
     total = len(all_results)
     success = sum(1 for r in all_results if r.success)

@@ -230,6 +230,11 @@ class MatrixAggregator:
         for r in self._results:
             row = {
                 # ── Configuration dimensions (fully self-describing) ───────
+                # dataset_name makes each row attributable without the
+                # query-count inference heuristic (which breaks whenever
+                # total_queries is missing) — see generate_reports.py.
+                "dataset_name": getattr(r, "dataset_name", "")
+                                or getattr(self, "_dataset_name", None) or "",
                 "cell_id": r.cell_id,
                 "study_phase": getattr(r, "study_phase", ""),
                 "memory_type": r.memory_type,

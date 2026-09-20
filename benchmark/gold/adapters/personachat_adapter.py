@@ -26,9 +26,29 @@ from benchmark.models.memory_event import MemoryType
 
 
 class PersonaChatAdapter(DatasetAdapter):
-    """Adapter for PersonaChat persona-grounded dialogue dataset."""
+    """Adapter for PersonaChat persona-grounded dialogue dataset.
+
+    Task design: each dialogue turn is a query whose relevant memories are the
+    persona sentences of its source dialogue (PersonaChat does not annotate
+    which single persona grounds a turn, so all-personas-of-the-dialogue is the
+    standard proxy label). Dialogues are pooled round-robin into POOL_USERS
+    shared users, so each query must rank its dialogue's ~4-5 personas against
+    the ~110 personas of ~25 other dialogues sharing the user store. Without
+    this pooling (one user per dialogue) the candidate pool equals the gold set
+    and every strategy scores Recall@10 = 1.0 — a saturated, meaningless
+    benchmark.
+
+    Remaining caveat: persona sentences repeated verbatim across dialogues act
+    as unlabeled distractors, so a perfect Recall@10 is not attainable; scores
+    are comparable between configs, not absolute.
+    """
 
     name = "personachat"
+
+    # Dialogues per-user pooling factor. With the 500-dialogue benchmark subset
+    # this yields ~25 dialogues (~110 personas) per user — far above top_k, so
+    # retrieval quality actually differentiates configurations.
+    POOL_USERS = 20
 
     def load(self, source: Path | str) -> GoldDataset:
         """Load PersonaChat dataset."""
@@ -57,6 +77,7 @@ class PersonaChatAdapter(DatasetAdapter):
         for dialogue_idx, dialogue in enumerate(data):
             try:
                 day = dialogue_idx % 30
+                pool_user = f"user_{dialogue_idx % self.POOL_USERS}"
 
                 if day not in all_memories:
                     all_memories[day] = []
@@ -69,7 +90,7 @@ class PersonaChatAdapter(DatasetAdapter):
                 for persona_idx, persona_text in enumerate(personas):
                     memory = GoldMemoryEvent(
                         id=f"persona_{dialogue_idx}_{persona_idx}",
-                        user_id=f"user_{dialogue_idx}",
+                        user_id=pool_user,
                         type=MemoryType.EPISODIC,
                         content=persona_text,
                         importance=0.9,
@@ -78,7 +99,7 @@ class PersonaChatAdapter(DatasetAdapter):
                         conversation_turn=persona_idx,
                     )
                     all_memories[day].append(memory)
-                    user_ids.add(f"user_{dialogue_idx}")
+                    user_ids.add(pool_user)
 
                 relevant_memories = [
                     f"persona_{dialogue_idx}_{i}" for i in range(len(personas))
@@ -97,7 +118,7 @@ class PersonaChatAdapter(DatasetAdapter):
                                 day=day,
                                 query=query_text,
                                 task_id=f"dialogue_{dialogue_idx}",
-                                user_id=f"user_{dialogue_idx}",
+                                user_id=pool_user,
                                 expected=expected,
                             ))
                 else:
@@ -113,7 +134,7 @@ class PersonaChatAdapter(DatasetAdapter):
                                 day=day,
                                 query=query_text,
                                 task_id=f"dialogue_{dialogue_idx}",
-                                user_id=f"user_{dialogue_idx}",
+                                user_id=pool_user,
                                 expected=expected,
                             ))
 

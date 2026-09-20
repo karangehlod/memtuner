@@ -548,6 +548,14 @@ class MatrixScheduler:
     @staticmethod
     def _dict_to_result(d: dict) -> MatrixRunResult:
         """Reconstruct MatrixRunResult from dict returned by worker."""
+        def _precision_or_warn(metrics: dict, cell_id: str) -> float:
+            if "precision_at_k" in metrics:
+                return metrics["precision_at_k"]
+            print(f"  [warn] cell {cell_id}: worker reported no precision_at_k — "
+                  f"recording 0.0 (was previously fabricated as 1 − contamination)",
+                  file=sys.stderr)
+            return 0.0
+
         m = d.get("metrics", {})
         r = d.get("resources", {})
         c = d.get("cost", {})
@@ -565,10 +573,10 @@ class MatrixScheduler:
             seed=d.get("seed", 42),
             recall_at_k=m.get("recall_at_k", 0.0),
             contamination_rate=m.get("contamination_rate", m.get("false_positive_rate", 0.0)),
-            precision_at_k=m.get(
-                "precision_at_k",
-                1.0 - m.get("contamination_rate", m.get("false_positive_rate", 0.0)),
-            ),
+            # Never fabricate P@K from contamination: 1 − contamination divides
+            # by the RETURNED count, not K — a different metric that would get
+            # reported as Precision@K. A missing metric must be visibly missing.
+            precision_at_k=_precision_or_warn(m, d.get("cell_id", "")),
             temporal_accuracy=m.get("temporal_accuracy", 0.0),
             module_accuracy=m.get("module_accuracy", 1.0),
             mrr=m.get("mrr", 0.0),

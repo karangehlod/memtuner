@@ -69,6 +69,14 @@ class StudyAggregator(MatrixAggregator):
         self._study_results = [r for r in results if r.success]
         # Fallback dataset name used when results lack a dataset_name attribute
         self._dataset_name = dataset_name
+        # Stamp it onto rows that don't carry one, so the grid CSV records the
+        # dataset per row and merged narratives can label datasets correctly.
+        if dataset_name:
+            import contextlib
+            for r in results:
+                if not getattr(r, "dataset_name", ""):
+                    with contextlib.suppress(AttributeError, TypeError):
+                        object.__setattr__(r, "dataset_name", dataset_name)
 
     @classmethod
     def from_csv(cls, path: Path, source_run_id: str = "") -> StudyAggregator:
@@ -85,31 +93,69 @@ class StudyAggregator(MatrixAggregator):
         with open(path, newline="", encoding="utf-8") as f:
             for row in _csv.DictReader(f):
                 try:
-                    results.append(StudyRunResult.from_csv_row(row, source_run_id))
+                    r = StudyRunResult.from_csv_row(row, source_run_id)
+                    # Carry per-row dataset attribution through merges so
+                    # multi-grid narratives don't label datasets "(unknown)".
+                    ds = (row.get("dataset_name") or "").strip()
+                    if ds:
+                        object.__setattr__(r, "dataset_name", ds)
+                    results.append(r)
                 except Exception:
                     continue
         return cls(results)
 
     # ─── Strategy axis (override to exclude Phase 4 decay cells) ────────────
 
-    def rank_by_retrieval_strategy(self) -> list[dict]:
-        """Rank strategies by recall, excluding Phase 4 decay-sweep cells.
+    # Strategies whose scores actually depend on the embedding model — shared
+    # by rank_by_embedding_model() and the statistical helpers below.
+    _EMBEDDING_STRATEGIES = frozenset({"semantic", "hybrid", "colbert", "adaptive"})
 
-        Phase 4 uses the winning hybrid strategy across many sub-optimal
-        (λ, decay-policy) combinations. Including those cells in the strategy
-        ranking would unfairly penalise hybrid by averaging in high-decay
-        variants — the same contamination bug as rank_by_bm25_weight().
+    # Dimensions ranked head-to-head from equal-footing cells. CI/significance
+    # populations must match the corresponding rank_by_* population.
+    _HEAD_TO_HEAD_GROUPS = frozenset({"retrieval_strategy", "memory_type", "embedding_model"})
 
-        Strategy quality should be judged from Phase 1 and Phase 2 cells,
-        which measure each strategy at default decay with equal footing.
+    def _population_for(self, group_by: str) -> list:
+        """Rows to use when grouping by `group_by` for CIs/significance.
+
+        Must select the same cells as the corresponding rank_by_* method —
+        otherwise a leaderboard publishes a mean from one population with a
+        confidence interval (and sig_vs_next claim) from another."""
+        rows = self._study_results
+        if group_by in self._HEAD_TO_HEAD_GROUPS:
+            rows = [r for r in rows if not self._is_sweep_variant(r)]
+        if group_by == "embedding_model":
+            rows = [r for r in rows
+                    if getattr(r, "retrieval_strategy", "") in self._EMBEDDING_STRATEGIES
+                    and getattr(r, "embedding_model", "") not in ("", "none")]
+        return rows
+
+    @staticmethod
+    def _is_sweep_variant(r) -> bool:
+        """Cells from tuning sweeps that must not enter head-to-head rankings.
+
+        Phase 3 sweeps ONE strategy (hybrid) across the BM25-weight grid and
+        Phase 4 sweeps mostly-degraded decay settings of the winning strategy;
+        averaging either into a ranking skews that strategy against the rest.
+        Phase 4 cells at default decay ('none') stay — they are a normal
+        measurement of the tuned config. This is the same rule as
+        generate_reports._is_ranking_comparable, so the study-time report and
+        the offline report rank from the same population.
         """
-        _decay_phase_tags = {
-            "phase4_decay_broad", "phase4_decay_fine", "phase4_decay_sweep",
-            "phase4b_archival_floor",
-        }
+        phase = getattr(r, "study_phase", "general") or "general"
+        if phase in ("phase3_hybrid_broad", "phase3_hybrid_fine", "phase3_hybrid_weight"):
+            return True
+        return phase.startswith("phase4") and getattr(r, "decay_policy", "none") != "none"
+
+    def rank_by_retrieval_strategy(self) -> list[dict]:
+        """Rank strategies by recall, excluding tuning-sweep cells.
+
+        See _is_sweep_variant — strategy quality is judged from cells where
+        strategies compete on equal footing, not from one strategy's sweep
+        variants. Same contamination bug class as rank_by_bm25_weight().
+        """
         strategy_cells = [
             r for r in self._study_results
-            if getattr(r, "study_phase", "general") not in _decay_phase_tags
+            if not self._is_sweep_variant(r)
         ]
         if not strategy_cells:
             # Fallback: if all cells are decay-phase (shouldn't happen) use all
@@ -126,18 +172,14 @@ class StudyAggregator(MatrixAggregator):
     # ─── Per-memory-type breakdown ───────────────────────────────────────────
 
     def rank_by_memory_type(self) -> list[dict]:
-        """Rank memory types by recall, excluding Phase 4 decay-sweep cells.
+        """Rank memory types by recall, excluding tuning-sweep cells.
 
-        Same contamination concern as rank_by_retrieval_strategy — Phase 4
-        cells vary decay policy, not memory type.
+        Same contamination concern as rank_by_retrieval_strategy — sweep
+        cells vary weight/decay of one strategy, not memory type.
         """
-        _decay_phase_tags = {
-            "phase4_decay_broad", "phase4_decay_fine", "phase4_decay_sweep",
-            "phase4b_archival_floor",
-        }
         strategy_cells = [
             r for r in self._study_results
-            if getattr(r, "study_phase", "general") not in _decay_phase_tags
+            if not self._is_sweep_variant(r)
         ]
         original = self._successful
         try:
@@ -187,7 +229,12 @@ class StudyAggregator(MatrixAggregator):
         by_prec: dict[Key, list] = defaultdict(list)
         by_strat: dict[Key, set] = defaultdict(set)
 
-        for r in self._study_results:
+        # recency/bm25/bm25l/llm_rerank cells may carry an embedding tag from
+        # the sweep config but never consult it, and sweep cells vary the
+        # weight/decay of one already-chosen embedding — either would corrupt
+        # the ranking (and, via best_embedding_model(), steer later phases
+        # toward the wrong model). _population_for applies both exclusions.
+        for r in self._population_for("embedding_model"):
             m = getattr(r, "embedding_model", None)
             b = getattr(r, "embedding_backend", "") or "sentence-transformers"
             if not m or m in ("none", ""):
@@ -404,7 +451,7 @@ class StudyAggregator(MatrixAggregator):
         alpha = 1.0 - ci_level
 
         by_group: dict[str, list[float]] = defaultdict(list)
-        for r in self._study_results:
+        for r in self._population_for(group_by):
             group_val = str(getattr(r, group_by, "unknown"))
             val = getattr(r, metric, None)
             if val is not None:
@@ -508,7 +555,7 @@ class StudyAggregator(MatrixAggregator):
         # Build key → value mapping for pairing: (memory_type, dataset, seed) → value
         pair_keys: dict[str, dict[str, float]] = defaultdict(dict)
 
-        for r in self._study_results:
+        for r in self._population_for(group_by):
             g = str(getattr(r, group_by, "unknown"))
             val = float(getattr(r, metric, 0.0))
             by_group[g].append(val)

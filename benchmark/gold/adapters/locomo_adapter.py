@@ -69,3 +69,14 @@ class LoCoMoAdapter(DatasetAdapter):
         """Compute dataset statistics."""
         from benchmark.gold.statistics import StatisticsComputer
         return StatisticsComputer.compute(dataset)
+
+    def metadata(self) -> dict[str, Any]:
+        """Return LoCoMo metadata."""
+        return {
+            "name": "LoCoMo",
+            "version": "1.0",
+            "description": "Long Context conversational memory — multi-session dialogues over months",
+            "source": "LoCoMo benchmark (Maharana et al.)",
+            "format": "JSON with multi-session conversations and QA pairs",
+            "focus": "Episodic memory over long time spans",
+        }

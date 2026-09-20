@@ -31,26 +31,182 @@ from config import cfg
 DATASET_MAP: dict[int, str] = cfg.datasets.query_count_to_name
 COMPOSITE_W: dict[str, float] = cfg.composite.weights
 
+# Strategies whose results actually depend on the embedding model: semantic and
+# hybrid embed with it, colbert uses it as the token encoder, adaptive forwards
+# it to its embeddings sub-strategy. Cells for other strategies (recency, bm25,
+# bm25l, llm_rerank — BM25 fetch + CrossEncoder rerank, no embedding involved)
+# may still carry an embedding_model tag from the sweep config, but attributing
+# their scores to that embedding would corrupt the embedding ranking.
+EMBEDDING_STRATEGIES = {"semantic", "hybrid", "colbert", "adaptive"}
+
+# A dataset is "saturated" when most configs hit near-perfect recall: it can no
+# longer discriminate between strategies, so it is excluded from the global
+# rankings (its per-dataset section is kept, flagged `saturated: true`).
+SATURATION_RECALL   = 0.99
+SATURATION_FRACTION = 0.5
+SATURATION_MIN_N    = 5
+
+# Minimum cells a strategy needs before it can be declared a dataset "winner".
+# A single lucky run must not outrank a strategy averaged over dozens of cells.
+WINNER_MIN_N = 3
+
 
 # ── Data loading ──────────────────────────────────────────────────────────────
+
+def _resolve_dataset_name(row: dict) -> str:
+    """Canonical dataset name for one grid row.
+
+    Preference order:
+      1. query-count map — measurement-derived and canonical;
+      2. the row's explicit dataset_name column (newer grid CSVs record it),
+         canonicalized by case-insensitive containment so a gold-file stem
+         like 'longmemeval_oracle_gold' groups with 'LongMemEval';
+      3. unknown_<nq> (backfilled per study later when possible).
+    """
+    try:
+        nq = int(float(row.get("total_queries") or 0))
+    except (TypeError, ValueError):
+        nq = 0
+    if nq in DATASET_MAP:
+        return DATASET_MAP[nq]
+
+    explicit = (row.get("dataset_name") or "").strip()
+    if explicit and not explicit.startswith("unknown"):
+        low = explicit.lower()
+        for canon in DATASET_MAP.values():
+            if canon.lower() in low or low in canon.lower():
+                return canon
+        return explicit
+
+    return f"unknown_{nq}"
+
+
+def _backfill_unknown_datasets(rows: list[dict], group_label: str) -> None:
+    """Assign a dataset name to rows that couldn't be identified by query count.
+
+    Each study runs exactly one dataset, so when a study's identifiable rows all
+    belong to a single dataset, its unidentifiable rows (e.g. phase-3 fast-sweep
+    cells that recorded total_queries=0) must belong to it too.
+    """
+    unknown = [r for r in rows if r["dataset_name"].startswith("unknown")]
+    if not unknown:
+        return
+    known = {r["dataset_name"] for r in rows if not r["dataset_name"].startswith("unknown")}
+    if len(known) == 1:
+        name = known.pop()
+        for r in unknown:
+            r["dataset_name"] = name
+        print(f"  [fix] {group_label}: {len(unknown)} cells lacked a query count → "
+              f"assigned '{name}' (a study runs a single dataset)")
+    else:
+        print(f"  [warn] {group_label}: {len(unknown)} cells have no identifiable dataset "
+              f"(candidates: {sorted(known) or 'none'}) — excluded from rankings",
+              file=sys.stderr)
+
+
+def _dedup_fast_sweep(rows: list[dict], group_label: str) -> list[dict]:
+    """Collapse duplicated phase-3 fast-sweep measurements.
+
+    Fast-sweep cells produced before the per-type indexing fix recorded one
+    full-pool measurement once per memory type, and again wherever the broad
+    and fine weight grids overlapped. Rows with identical config AND identical
+    metrics are the same measurement; keeping the copies triple-counts hybrid
+    in every average. Genuinely distinct runs always differ in some metric,
+    so only provable duplicates are dropped.
+    """
+    seen: dict[tuple, dict] = {}
+    kept: list[dict] = []
+    dropped = 0
+    for r in rows:
+        if r.get("study_phase") == "phase3_hybrid_weight":
+            key = (r.get("source_study"), r.get("retrieval_strategy"),
+                   r.get("embedding_model"), r.get("bm25_weight"),
+                   r.get("decay_policy"), r.get("lambda"),
+                   r.get("recall_at_k"), r.get("precision_at_k"),
+                   r.get("mrr"), r.get("ndcg"))
+            if key in seen:
+                # Identical metrics under a DIFFERENT memory type ⇒ the old
+                # full-pool bug: relabel the kept row so the per-type tag
+                # doesn't misattribute it. Same memory type (e.g. broad/fine
+                # grids sharing a weight) is just a recompute — keep the label.
+                if seen[key].get("memory_type") != r.get("memory_type"):
+                    seen[key]["memory_type"] = "all"
+                dropped += 1
+                continue
+            seen[key] = r
+        kept.append(r)
+    if dropped:
+        print(f"  [fix] {group_label}: dropped {dropped} duplicated phase-3 "
+              f"fast-sweep rows (same measurement recorded twice — legacy "
+              f"per-memory-type copies or broad/fine grid overlap)")
+    return kept
+
 
 def load_all_cells(output_dir: Path) -> list[dict]:
     cells: list[dict] = []
     for study_dir in sorted(output_dir.iterdir()):
         if not study_dir.is_dir() or not study_dir.name.startswith("study_"):
             continue
+        study_cells: list[dict] = []
         for csv_path in study_dir.glob("*_grid.csv"):
             try:
                 with open(csv_path, newline="", encoding="utf-8") as f:
                     for row in csv.DictReader(f):
                         if row.get("success", "True").lower() != "true":
                             continue
-                        nq = int(row.get("total_queries", 0))
-                        row["dataset_name"]  = DATASET_MAP.get(nq, f"unknown_{nq}")
+                        row["dataset_name"]  = _resolve_dataset_name(row)
                         row["source_study"]  = study_dir.name
-                        cells.append(row)
+                        study_cells.append(row)
             except Exception as exc:
                 print(f"  [warn] {csv_path.name}: {exc}", file=sys.stderr)
+        _backfill_unknown_datasets(study_cells, study_dir.name)
+        cells.extend(_dedup_fast_sweep(study_cells, study_dir.name))
+    return cells
+
+
+def _warn_if_dropping_datasets(master_path: Path, new_datasets: set[str]) -> None:
+    """A directory scan only sees the study_* dirs on THIS machine. If the
+    existing master covers datasets the scan can't see (e.g. it was rebuilt
+    from another machine's results via --from-master), overwriting it silently
+    discards them — warn loudly so the loss is a choice, not an accident."""
+    if not master_path.exists():
+        return
+    try:
+        with open(master_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(line for line in f if not line.startswith("#"))
+            old = {row.get("dataset_name", "") for row in reader}
+    except Exception:
+        return
+    missing = sorted(d for d in old
+                     if d and not d.startswith("unknown") and d not in new_datasets)
+    if missing:
+        print(f"  [WARNING] The existing master_results.csv covers dataset(s) this scan "
+              f"did not find: {', '.join(missing)}. Overwriting will DROP them. If that "
+              f"master was built from another machine's results, regenerate with "
+              f"--from-master instead.", file=sys.stderr)
+
+
+def load_cells_from_master(master_path: Path) -> list[dict]:
+    """Load cells from an existing master_results.csv (e.g. produced on another
+    machine) so its reports can be rebuilt locally with corrected attribution.
+
+    Comment lines (#) are skipped; unknown dataset names are re-derived from the
+    query count and then backfilled per source study.
+    """
+    from collections import defaultdict as _dd
+    groups: dict[str, list[dict]] = _dd(list)
+    with open(master_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(line for line in f if not line.startswith("#"))
+        for row in reader:
+            if (row.get("success") or "True").lower() != "true":
+                continue
+            row["dataset_name"] = _resolve_dataset_name(row)
+            row["source_study"] = row.get("source_study") or "master"
+            groups[row["source_study"]].append(row)
+    cells: list[dict] = []
+    for study, rows in sorted(groups.items()):
+        _backfill_unknown_datasets(rows, study)
+        cells.extend(_dedup_fast_sweep(rows, study))
     return cells
 
 
@@ -131,14 +287,20 @@ def write_master_csv(cells: list[dict], out_path: Path) -> None:
             g = _gate(r)
             c = composite(r, p, m, t)
 
+            active_w = (COMPOSITE_W["recall"] + COMPOSITE_W["precision"]
+                        + COMPOSITE_W["mrr"]
+                        + (COMPOSITE_W["temporal"] if t > 0 else 0.0))
             cell["recall_gate"]               = f"{g:.1f}"
             cell["w_recall"]                  = f"{COMPOSITE_W['recall']    * r * g:.6f}"
             cell["w_precision"]               = f"{COMPOSITE_W['precision'] * p * g:.6f}"
             cell["w_mrr"]                     = f"{COMPOSITE_W['mrr']       * m * g:.6f}"
             cell["w_temporal"]                = f"{COMPOSITE_W['temporal']  * t * g:.6f}"
             cell["composite_score_computed"]  = f"{c:.6f}"
+            # The divisor must appear in the string, otherwise the printed
+            # arithmetic doesn't reproduce the result for TA=0 rows
             cell["composite_formula"] = (
-                f"gate={g:.0f} × (0.40×{r:.4f} + 0.25×{p:.4f} + 0.20×{m:.4f} + 0.15×{t:.4f}) = {c:.6f}"
+                f"gate={g:.0f} × (0.40×{r:.4f} + 0.25×{p:.4f} + 0.20×{m:.4f} + 0.15×{t:.4f})"
+                f" / {active_w:.2f} = {c:.6f}"
             )
             writer.writerow(cell)
 
@@ -194,6 +356,7 @@ def write_formula_doc(out_path: Path, cells: list[dict] | None = None) -> None:
         rows = by_ds.get(ds)
         if not rows:
             continue
+        rows = [r for r in rows if not _is_fullpool(r)] or rows
         best = max(rows, key=lambda r: composite(
             float(r.get("recall_at_k", 0)), float(r.get("precision_at_k", 0)),
             float(r.get("mrr", 0)), float(r.get("temporal_accuracy", 0))
@@ -211,12 +374,14 @@ def write_formula_doc(out_path: Path, cells: list[dict] | None = None) -> None:
         results.append((ds, strat, embed, bm25w, decay, r10, p10, mrr, ta, comp, len(rows)))
 
     lines += ["", "### Composite breakdown per dataset (best config)", ""]
-    for ds, _strat, _embed, _bm25w, _decay, r10, _p10, _mrr, _ta, _comp, _n in results:
+    for ds, _strat, _embed, _bm25w, _decay, r10, p10, mrr, ta, comp, _n in results:
         gate = 1.0 if r10 >= cfg.composite.recall_gate else 0.0
+        active_w = (COMPOSITE_W["recall"] + COMPOSITE_W["precision"] + COMPOSITE_W["mrr"]
+                    + (COMPOSITE_W["temporal"] if ta > 0 else 0.0))
         lines.append(
             f"```\n{ds:<14} = {gate:.0f} × "
             f"(0.40×{r10:.4f} + 0.25×{p10:.4f} + 0.20×{mrr:.4f} + 0.15×{ta:.4f})"
-            f" = {comp:.4f}\n```"
+            f" / {active_w:.2f} = {comp:.4f}\n```"
         )
 
     lines += [
@@ -259,6 +424,10 @@ def _agg_strategy(rows: list[dict]) -> list[dict]:
 
 def _agg_decay(rows: list[dict], strategy: str | None = None) -> list[dict]:
     subset = [r for r in rows if strategy is None or r["retrieval_strategy"] == strategy]
+    # Fast-sweep cells never vary decay (always 'none') and were measured under
+    # a different condition, so counting them inflates the 'none' bucket against
+    # the per-store decay-sweep cells — compare only comparable measurements.
+    subset = [r for r in subset if r.get("study_phase") != "phase3_hybrid_weight"]
     by_decay: dict[str, list] = defaultdict(list)
     for r in subset:
         by_decay[r["decay_policy"]].append(r)
@@ -291,19 +460,82 @@ def _best_config(rows: list[dict]) -> dict | None:
 
 # ── reports_data.js ───────────────────────────────────────────────────────────
 
+def _is_saturated(rows: list[dict]) -> bool:
+    if len(rows) < SATURATION_MIN_N:
+        return False
+    near_perfect = sum(1 for r in rows if float(r.get("recall_at_k", 0)) >= SATURATION_RECALL)
+    return near_perfect / len(rows) >= SATURATION_FRACTION
+
+
+def _is_fullpool(row: dict) -> bool:
+    """Cells measured over the full memory pool instead of one per-type store.
+
+    Pre-fix fast-sweep cells (identifiable by their missing query counts, or by
+    the 'all' label the de-dup assigns) retrieved from all memory types at once
+    — a different, easier condition that cannot be scored against per-store
+    cells."""
+    if row.get("memory_type") == "all":
+        return True
+    try:
+        nq = int(float(row.get("total_queries") or 0))
+    except (TypeError, ValueError):
+        nq = 0
+    return row.get("study_phase") == "phase3_hybrid_weight" and nq == 0
+
+
+def _is_ranking_comparable(row: dict) -> bool:
+    """Cells usable when ranking strategies or embeddings against each other.
+
+    Tuning sweeps measure ONE strategy across many deliberately sub-optimal
+    variants; averaging them into a head-to-head ranking is unfair in both
+    directions (phase 3 sweeps only hybrid, phase 4 sweeps mostly-degraded
+    decay settings of the winning strategy). Rankings therefore use the
+    comparison phases plus phase-4 cells at default (no-decay) settings, and
+    never full-pool cells."""
+    if _is_fullpool(row):
+        return False
+    phase = row.get("study_phase", "")
+    if phase == "phase3_hybrid_weight":
+        return False
+    return not (phase.startswith("phase4") and row.get("decay_policy") != "none")
+
+
 def build_reports_data(cells: list[dict]) -> dict:
     by_ds: dict[str, list[dict]] = defaultdict(list)
     for c in cells:
         by_ds[c["dataset_name"]].append(c)
 
-    ds_order = ["SQuAD", "CoQA", "LoCoMo", "LongMemEval", "Synthetic"]
+    # Config display order first, then any datasets present but not listed there.
+    ds_order = [d for d in cfg.datasets.display_order if d in by_ds]
+    ds_order += sorted(d for d in by_ds
+                       if d not in ds_order and not d.startswith("unknown"))
 
-    # ── global strategy ranking (all datasets) ────────────────────────────────
-    global_strat = _agg_strategy(cells)
+    # Datasets that can no longer discriminate between configs are kept in the
+    # per-dataset section (flagged) but excluded from every global ranking —
+    # otherwise a trivially-easy dataset dictates the "overall best" config.
+    saturated = {ds for ds, rows in by_ds.items() if _is_saturated(rows)}
+    unattributed = {ds for ds in by_ds if ds.startswith("unknown")}
+    for ds in sorted(saturated):
+        print(f"  [warn] {ds}: {len(by_ds[ds])} cells, "
+              f"≥{SATURATION_FRACTION:.0%} at recall ≥ {SATURATION_RECALL} — "
+              f"saturated, excluded from global rankings", file=sys.stderr)
+
+    ranked_cells = [c for c in cells
+                    if c["dataset_name"] not in saturated
+                    and c["dataset_name"] not in unattributed]
+    # Head-to-head rankings additionally require condition-comparable cells
+    # (per-store, not tuning-sweep variants) — see _is_ranking_comparable.
+    comparable_cells = [c for c in ranked_cells if _is_ranking_comparable(c)]
+
+    # ── global strategy ranking (non-saturated, attributed datasets) ──────────
+    global_strat = _agg_strategy(comparable_cells)
 
     # ── global embedding ranking ──────────────────────────────────────────────
+    # Only cells whose strategy actually consults the embedding model count.
     by_embed: dict[str, list] = defaultdict(list)
-    for c in cells:
+    for c in comparable_cells:
+        if c.get("retrieval_strategy") not in EMBEDDING_STRATEGIES:
+            continue
         em = c.get("embedding_model", "")
         if em and em != "none":
             by_embed[em].append(float(c.get("recall_at_k", 0)))
@@ -314,7 +546,7 @@ def build_reports_data(cells: list[dict]) -> dict:
     )[:8]
 
     # ── global decay ranking ──────────────────────────────────────────────────
-    decay_ranking = _agg_decay(cells)
+    decay_ranking = _agg_decay(ranked_cells)
 
     # ── per-dataset records ───────────────────────────────────────────────────
     datasets = []
@@ -323,8 +555,12 @@ def build_reports_data(cells: list[dict]) -> dict:
         if not rows:
             continue
 
-        strats = _agg_strategy(rows)
-        winner = strats[0] if strats else {}
+        cmp_rows = [r for r in rows if _is_ranking_comparable(r)] or rows
+        strats = _agg_strategy(cmp_rows)
+        # Winner needs a minimum sample size — n=1 flukes must not outrank a
+        # strategy averaged over dozens of cells. Fall back if nothing qualifies.
+        eligible = [s for s in strats if s["n"] >= WINNER_MIN_N] or strats
+        winner = eligible[0] if eligible else {}
 
         # Determine best decay strategy (use top strategy by avg recall)
         top_strat_name = winner.get("name", "hybrid")
@@ -342,27 +578,37 @@ def build_reports_data(cells: list[dict]) -> dict:
             "label":          ds_name,
             "cells":          len(rows),
             "multiRelevant":  multi_relevant,
+            "saturated":      ds_name in saturated,
             "winner":         top_strat_name,
             "winnerAvg":      winner.get("avg", 0),
             "winnerBest":     winner.get("best", 0),
             "strategies":     strats,
             "decay":          decay_rows,
-            "bestConfig":     _best_config(rows),
+            # Best config may come from any per-store cell (incl. tuned sweep
+            # winners) but never from a full-pool cell — the recommendation
+            # must be reproducible under the standard condition.
+            "bestConfig":     _best_config([r for r in rows if not _is_fullpool(r)] or rows),
         })
 
     # ── per-dataset recall chart (for main dashboard) ─────────────────────────
     ds_recall = [
         {"name": d["label"], "strat": d["winner"],
          "recall": d["winnerAvg"], "best": d["winnerBest"]}
-        for d in datasets
+        for d in datasets if not d["saturated"]
     ]
 
-    # ── overall best ──────────────────────────────────────────────────────────
-    overall_best = _best_config(cells)
+    # ── overall best (never from a saturated/unattributed dataset or a
+    #    full-pool cell — must be reproducible under the standard condition) ───
+    overall_best = _best_config([c for c in ranked_cells if not _is_fullpool(c)])
 
     return {
         "generatedAt":   datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "totalCells":    len(cells),
+        "rankedCells":   len(ranked_cells),
+        "excludedFromGlobal": {
+            "saturated":    sorted(saturated),
+            "unattributed": sorted(unattributed),
+        },
         "compositeWeights": COMPOSITE_W,
         "compositeFormula": (
             cfg.composite.formula_str
@@ -390,15 +636,19 @@ def write_reports_data_js(data: dict, out_path: Path) -> None:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def generate(project_root: Path | None = None, skip_plots: bool = False) -> None:
+def generate(project_root: Path | None = None, skip_plots: bool = False,
+             master_csv: Path | None = None) -> None:
     # project_root param kept for backward compat with study_runner hook
     output_dir = cfg.reporting.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print("\nMemTuner Report Generator")
-    print(f"  Scanning {output_dir} ...")
-
-    cells = load_all_cells(output_dir)
+    if master_csv:
+        print(f"  Rebuilding from {master_csv} ...")
+        cells = load_cells_from_master(master_csv)
+    else:
+        print(f"  Scanning {output_dir} ...")
+        cells = load_all_cells(output_dir)
     if not cells:
         print("  No cells found. Run a benchmark first.", file=sys.stderr)
         return
@@ -409,6 +659,9 @@ def generate(project_root: Path | None = None, skip_plots: bool = False) -> None
     print(f"  Loaded {len(cells)} cells:")
     for ds, n in sorted(ds_counts.items(), key=lambda x: -x[1]):
         print(f"    {ds:<16} {n:>4} cells")
+
+    if not master_csv:
+        _warn_if_dropping_datasets(output_dir / "master_results.csv", set(ds_counts))
 
     write_master_csv(cells,   output_dir / "master_results.csv")
     write_formula_doc(        output_dir / "COMPOSITE_SCORE_FORMULA.md", cells)
@@ -427,7 +680,7 @@ def generate(project_root: Path | None = None, skip_plots: bool = False) -> None
             spec = importlib.util.spec_from_file_location("plot_benchmark", plot_script)
             mod  = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
             spec.loader.exec_module(mod)                  # type: ignore[union-attr]
-            mod.generate_plots(_proj_root)
+            mod.generate_plots(_proj_root, master_csv=master_csv)
         except Exception as exc:
             print(f"  [warn] Plot generation failed: {exc}", file=sys.stderr)
             print("         Run with --no-plots to skip on headless machines.", file=sys.stderr)
@@ -437,4 +690,12 @@ def generate(project_root: Path | None = None, skip_plots: bool = False) -> None
 
 
 if __name__ == "__main__":
-    generate()
+    import argparse
+    parser = argparse.ArgumentParser(description="Regenerate MemTuner report artefacts.")
+    parser.add_argument("--from-master", type=Path, default=None, metavar="CSV",
+                        help="Rebuild reports from an existing master_results.csv "
+                             "(e.g. produced on another machine) instead of scanning "
+                             "study_* directories.")
+    parser.add_argument("--no-plots", action="store_true", help="Skip PNG generation.")
+    args = parser.parse_args()
+    generate(skip_plots=args.no_plots, master_csv=args.from_master)

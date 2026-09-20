@@ -538,6 +538,7 @@ class TestBugFixRegressions:
     def test_bm25_cache_lock_exists(self) -> None:
         """_BM25_CACHE_LOCK must be a threading.Lock on the module."""
         import threading
+
         from benchmark.memory.strategies.bm25_strategy import _BM25_CACHE_LOCK
         assert isinstance(_BM25_CACHE_LOCK, type(threading.Lock()))
 
@@ -662,6 +663,7 @@ class TestBugFixRegressions:
     def test_phase4_two_stage_accepts_patience_param(self) -> None:
         """_run_phase4_two_stage must accept patience kwarg without TypeError."""
         import inspect
+
         from scripts.study_runner import _run_phase4_two_stage
         sig = inspect.signature(_run_phase4_two_stage)
         assert "patience" in sig.parameters, (

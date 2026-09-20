@@ -274,11 +274,11 @@ def do_download() -> None:
         _download_file(url, dest, desc)
 
 
-def do_convert() -> None:
+def do_convert(force: bool = False) -> None:
     print("\n=== Converting to Gold Format ===\n")
     for name, src, converter_fn, out in CONVERSIONS:
-        if out.exists():
-            print(f"  ✓ Already converted: {out.name}")
+        if out.exists() and not force:
+            print(f"  ✓ Already converted: {out.name}  (use --force to regenerate)")
             continue
         if src is not None and not src.exists():
             print(f"  ✗ {name}: source not found ({src}) — run --download first")
@@ -297,12 +297,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Download and prepare benchmark datasets")
     parser.add_argument("--download", action="store_true", help="Download missing dataset files")
     parser.add_argument("--convert", action="store_true", help="Convert downloaded files to gold format")
+    parser.add_argument("--force", action="store_true",
+                        help="With --convert: regenerate gold files even if they already exist "
+                             "(needed after an adapter change, e.g. the PersonaChat user pooling fix)")
     args = parser.parse_args()
 
     if args.download:
         do_download()
     if args.convert:
-        do_convert()
+        do_convert(force=args.force)
     if not args.download and not args.convert:
         print_status()
         print("Run with --download to fetch missing files, --convert to convert them.")

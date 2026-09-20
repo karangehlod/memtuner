@@ -88,13 +88,19 @@ class CompositeConfig:
         return (
             f"gate(R@10≥{self.recall_gate}) × "
             f"({w['recall']}·R@10 + {w['precision']}·P@10 + {w['mrr']}·MRR + {w['temporal']}·TA)"
+            f" / Σw_active"
         )
 
     def score(self, recall: float, precision: float, mrr: float, temporal: float) -> float:
+        """Composite score. Must match MatrixRunResult.composite_score(): the
+        temporal weight is dropped from the denominator when temporal == 0 so
+        non-temporal datasets aren't capped below 1.0."""
         if recall < self.recall_gate:
             return 0.0
         w = self.weights
-        return w["recall"] * recall + w["precision"] * precision + w["mrr"] * mrr + w["temporal"] * temporal
+        raw = w["recall"] * recall + w["precision"] * precision + w["mrr"] * mrr + w["temporal"] * temporal
+        active = w["recall"] + w["precision"] + w["mrr"] + (w["temporal"] if temporal > 0 else 0.0)
+        return raw / active if active > 0 else 0.0
 
 
 @dataclass

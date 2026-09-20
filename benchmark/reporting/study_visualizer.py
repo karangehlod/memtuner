@@ -152,13 +152,14 @@ class StudyVisualizer:
         self._all = results
         self._out = Path(output_dir)
         self._out.mkdir(parents=True, exist_ok=True)
-        # Pre-filtered view excluding decay-sweep phases — computed once, referenced by
-        # 5+ chart methods that each previously did an identical O(N) filter pass.
-        _decay_tags = {"phase4_decay_broad", "phase4_decay_fine",
-                       "phase4_decay_sweep", "phase4b_archival_floor"}
+        # Pre-filtered view excluding tuning-sweep variants — computed once,
+        # referenced by the strategy-comparison chart methods. Uses the same
+        # rule as StudyAggregator/generate_reports (phase-3 sweeps and
+        # degraded phase-4 decay variants out; phase-4 default-decay cells
+        # stay), so every artefact compares strategies on the same cells.
+        from benchmark.workload.study_aggregator import StudyAggregator
         self._non_decay_results = [
-            r for r in self._results
-            if getattr(r, "study_phase", "general") not in _decay_tags
+            r for r in self._results if not StudyAggregator._is_sweep_variant(r)
         ]
         # Pre-grouped by retrieval_strategy — replaces O(S×N) per-strategy filter passes
         # inside 9+ chart methods. Built once in O(N), accessed in O(1) per strategy.
@@ -481,6 +482,12 @@ class StudyVisualizer:
 
     def _plot_hybrid_weight(self, plt, np) -> str:
         hybrid = [r for r in self._results if r.retrieval_strategy == "hybrid"]
+        # The title claims "Phase 3 sweep" — mixing hybrid rows from other
+        # phases (e.g. decay-degraded phase-4 cells at the tuned weight)
+        # would fake a dip at that weight. Prefer the actual sweep cells.
+        sweep = [r for r in hybrid if "phase3" in (getattr(r, "study_phase", "") or "")]
+        if sweep:
+            hybrid = sweep
         if not hybrid:
             return ""
 
@@ -556,7 +563,7 @@ class StudyVisualizer:
     # ─── Phase 4: Reranker Comparison ────────────────────────────────────────
 
     def _plot_reranker_comparison(self, plt, np) -> str:
-        rerank = [r for r in self._results if r.study_phase == "phase_reranker_comparison"]
+        rerank = [r for r in self._results if "reranker" in (r.study_phase or "")]
         if not rerank:
             return ""
 
@@ -566,7 +573,7 @@ class StudyVisualizer:
         mlabels    = ["Recall@K", "Precision@K", "MRR"]
 
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-        fig.suptitle("Phase 4 — Reranker Comparison",
+        fig.suptitle("Phase 5 — Reranker Comparison",
                      fontsize=_TITLE_SIZE + 1, fontweight="bold")
 
         # ── Left: grouped bars — metric × reranker ────────────────────────────
@@ -627,7 +634,7 @@ class StudyVisualizer:
         _style_ax(axes[1], "Query Latency P50 / P90 / P99 by Reranker", "Reranker", "Latency (ms)")
 
         plt.tight_layout(pad=2.0)
-        path = str(self._out / "phase4_reranker_comparison.png")
+        path = str(self._out / "phase5_reranker_comparison.png")
         fig.savefig(path, dpi=_DPI, bbox_inches="tight")
         plt.close(fig)
         return path
@@ -635,7 +642,7 @@ class StudyVisualizer:
     # ─── Phase 5: Decay × Lambda Heatmap ─────────────────────────────────────
 
     def _plot_decay_heatmap(self, plt, np) -> str:
-        decay_r = [r for r in self._results if r.study_phase == "phase_decay_sweep"]
+        decay_r = [r for r in self._results if "decay" in (r.study_phase or "")]
         if not decay_r:
             decay_r = self._results
 
@@ -646,7 +653,7 @@ class StudyVisualizer:
             return ""
 
         fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-        fig.suptitle("Phase 5 — Decay Policy × Lambda Sweep",
+        fig.suptitle("Phase 4 — Decay Policy × Lambda Sweep",
                      fontsize=_TITLE_SIZE + 1, fontweight="bold")
 
         for ax_idx, (metric, metric_label) in enumerate([
@@ -701,7 +708,7 @@ class StudyVisualizer:
                     ha="center", va="bottom", color="red", fontsize=10, zorder=6)
 
         plt.tight_layout(pad=2.0)
-        path = str(self._out / "phase5_decay_heatmap.png")
+        path = str(self._out / "phase4_decay_heatmap.png")
         fig.savefig(path, dpi=_DPI, bbox_inches="tight")
         plt.close(fig)
         return path
@@ -806,7 +813,7 @@ class StudyVisualizer:
         composite = [r.composite_score() for r in ranked]
 
         fig, axes = plt.subplots(1, 3, figsize=(24, max(7, len(ranked) * 0.8)))
-        fig.suptitle("Top-15 Configurations — Leaderboard",
+        fig.suptitle("Top-10 Configurations — Leaderboard",
                      fontsize=_TITLE_SIZE + 1, fontweight="bold")
 
         y = np.arange(len(ranked))
@@ -818,14 +825,14 @@ class StudyVisualizer:
         axes[0].set_yticks(y)
         axes[0].set_yticklabels(labels, fontsize=_ANNOT_SIZE - 1)
         axes[0].invert_yaxis()
-        axes[0].set_xlabel("Composite Score  (0.40×R + 0.25×P + 0.20×MRR + 0.15×T)",
+        axes[0].set_xlabel("Composite Score  (0.40×R + 0.25×P + 0.20×MRR + 0.15×T) / Σw_active",
                             fontsize=_LABEL_SIZE - 1)
         axes[0].set_xlim(0, 1.05)
         axes[0].spines["top"].set_visible(False)
         axes[0].spines["right"].set_visible(False)
         axes[0].xaxis.grid(True, linestyle="--", linewidth=0.5, alpha=0.6)
         axes[0].set_axisbelow(True)
-        axes[0].set_title("Composite Score (Top 15)", fontsize=_TITLE_SIZE, fontweight="bold")
+        axes[0].set_title("Composite Score (Top 10)", fontsize=_TITLE_SIZE, fontweight="bold")
         for xi, score in zip(y, composite):
             axes[0].text(score + 0.008, xi, f"{score:.3f}",
                          va="center", fontsize=_ANNOT_SIZE, fontweight="bold")
@@ -839,8 +846,15 @@ class StudyVisualizer:
             ("temporal_accuracy", _W["temporal"],  "Temporal×0.15",  _PALETTE[4]),
         ]
         lefts = np.zeros(len(ranked))
+        # Renormalize by the active weight sum (temporal weight drops out when
+        # TA == 0) so the stacked segments sum to the panel-1 composite score.
+        active_w = np.array([
+            _W["recall"] + _W["precision"] + _W["mrr"]
+            + (_W["temporal"] if getattr(r, "temporal_accuracy", 0.0) > 0 else 0.0)
+            for r in ranked
+        ])
         for field, weight, clabel, colour in components:
-            widths = np.array([getattr(r, field) * weight for r in ranked])
+            widths = np.array([getattr(r, field) * weight for r in ranked]) / active_w
             axes[1].barh(y, widths, left=lefts, height=0.72,
                          label=clabel, color=colour, alpha=0.88)
             lefts += widths
@@ -895,14 +909,18 @@ class StudyVisualizer:
         Answers the most important question: 'Was it worth running all 5 phases?'
         Shows Phase 1 → 2 → 3 → 4 → 5 progression of the best config seen so far.
         """
+        # Every tag a phase may write must be listed — a missing tag makes that
+        # phase silently vanish from a chart claiming to show ALL phases.
         _phase_order = [
             ("phase1_baselines",             "Phase 1\nBM25 Baseline"),
             ("phase2_embedding_comparison",  "Phase 2\nEmbedding"),
             ("phase3_hybrid_broad",          "Phase 3 (broad)\nHybrid Weight"),
             ("phase3_hybrid_fine",           "Phase 3 (fine)\nHybrid Weight"),
+            ("phase3_hybrid_weight",         "Phase 3\nHybrid Weight"),
             ("phase4_decay_broad",           "Phase 4 (broad)\nDecay"),
             ("phase4_decay_fine",            "Phase 4 (fine)\nDecay"),
             ("phase4b_archival_floor",       "Phase 4b\nArchival Floor"),
+            ("phase5_reranker_comparison",   "Phase 5\nReranker"),
         ]
 
         # Group by phase once (O(N)), then track running best (O(1) per phase update)
@@ -1056,47 +1074,32 @@ class StudyVisualizer:
         _style_ax(axes[0], "Recall@K per Memory Type (episodic vs preference)",
                   "Strategy", "Recall@K")
 
-        # ── Panel 2: Contamination curve K=1 → 3 → 5 → 10 per strategy ──────────
-        # contamination(k) = 1 - precision(k) = 1 - recall(k) / k
-        # At k=1: exact (= 1 - precision@1).  At k=K: exact (= contamination_rate).
-        # Intermediate k values are estimated using the logarithmic recall curve.
-        # Formula: recall(k) ≈ p1 + (r10 - p1) × log(k)/log(K)
-        #          contamination(k) = 1 - recall(k) / k
-        import math as _math
+        # ── Panel 2: Contamination at the MEASURED cutoffs only ─────────────
+        # K=1 is exact (1 − precision@1); K=k_cfg is exact (contamination_rate).
+        # Intermediate K values were previously log-interpolated via a formula
+        # (contamination(k) = 1 − recall(k)/k) that is only valid with exactly
+        # one gold memory per query — never plot fabricated points.
         import os as _os
         k_cfg = int(_os.environ.get("BENCHMARK_RECALL_K", "10"))
-        k_points = [1, 2, 3, 5, k_cfg]
+        k_points = [1, k_cfg]
         x_k = np.arange(len(k_points))
 
         for i, s in enumerate(strategies):
             sub = self._by_strategy.get(s, [])
             if not sub:
                 continue
-            p1_s  = _mean_std([r.precision_at_1    for r in sub])[0]  # recall@K=1
-            r10_s = _mean_std([r.recall_at_k        for r in sub])[0]  # recall@K=k_cfg
-            c10_s = _mean_std([r.contamination_rate for r in sub])[0]  # exact @K=k_cfg
-
-            # Build contamination curve
-            c_curve = []
-            for kv in k_points:
-                if kv == 1:
-                    c_curve.append(1.0 - p1_s)  # exact
-                elif kv >= k_cfg:
-                    c_curve.append(c10_s)         # exact
-                else:
-                    # Estimate recall(k) via log interpolation
-                    frac = _math.log(kv) / _math.log(k_cfg) if k_cfg > 1 else 1.0
-                    recall_k = p1_s + (r10_s - p1_s) * frac
-                    c_curve.append(max(0.0, min(1.0, 1.0 - recall_k / kv)))
+            p1_s  = _mean_std([r.precision_at_1    for r in sub])[0]
+            c10_s = _mean_std([r.contamination_rate for r in sub])[0]
+            c_curve = [1.0 - p1_s, c10_s]
 
             colour = _PALETTE[i % len(_PALETTE)]
-            axes[1].plot(x_k, c_curve, "o-", label=s, color=colour,
-                         linewidth=2.5, markersize=8)
-            # Annotate K=1 and K=k_cfg endpoints
+            # Dashed connector: two measured points, not a sampled curve
+            axes[1].plot(x_k, c_curve, "o--", label=s, color=colour,
+                         linewidth=2, markersize=8)
             axes[1].text(0, c_curve[0] - 0.018, f"{c_curve[0]:.2f}",
                          ha="center", fontsize=_ANNOT_SIZE - 1, color=colour,
                          fontweight="bold")
-            axes[1].text(len(k_points) - 1, c_curve[-1] + 0.008, f"{c_curve[-1]:.2f}",
+            axes[1].text(1, c_curve[-1] + 0.008, f"{c_curve[-1]:.2f}",
                          ha="center", fontsize=_ANNOT_SIZE - 1, color=colour,
                          fontweight="bold")
 
@@ -1106,7 +1109,10 @@ class StudyVisualizer:
                         label=f"Min possible @K={k_cfg}\n(1 gold per query)")
         axes[1].set_xticks(x_k)
         axes[1].set_xticklabels([f"K={kv}" for kv in k_points], fontsize=_TICK_SIZE)
-        axes[1].legend(loc="lower right", fontsize=_LEGEND_SIZE - 1, framealpha=0.9)
+        # Legend outside the axes — with only two x positions any inside
+        # placement covers one column of endpoint labels
+        axes[1].legend(loc="center left", bbox_to_anchor=(1.01, 0.5),
+                       fontsize=_LEGEND_SIZE - 1, framealpha=0.9)
         axes[1].text(0.02, 0.98,
                      "Falling slope = strategy ranks correct\nresult near rank 1",
                      transform=axes[1].transAxes, fontsize=_ANNOT_SIZE - 1,
@@ -1245,19 +1251,14 @@ class StudyVisualizer:
     # ─── Recall@K Variation — How K affects retrieval quality ────────────────
 
     def _plot_recall_k_variation(self, plt, np) -> str:
-        """Two panels showing how the choice of K (top-N returned results) affects quality.
+        """Two panels showing ranking quality at the measured cutoffs.
 
-        Panel 1 — Recall@K curve per strategy.
-          Uses the available metrics to reconstruct the recall-at-K curve:
+        Panel 1 — the two measured points per strategy:
             K=1  → precision_at_1   (fraction of queries where top-1 result is correct)
             K=10 → recall_at_k      (fraction of gold memories in top-10)
-          MRR gives the expected rank of the first hit: estimated K for 50% recall ≈ 1/MRR.
-          Shows how quickly each strategy "finds" the right answer as K grows.
+          No intermediate K values are drawn — they are not measured.
 
-        Panel 2 — Precision@K vs Recall@K tradeoff.
-          Lower K = higher precision, lower recall.
-          Higher K = lower precision, higher recall.
-          Shows the operating point for each strategy.
+        Panel 2 — Precision@10 vs Recall@10 operating point per strategy.
         """
         if not self._results:
             return ""
@@ -1269,62 +1270,43 @@ class StudyVisualizer:
 
         fig, axes = plt.subplots(1, 2, figsize=(_fig_width_for_n(len(strategies), 13, 1.2), 5))
         fig.suptitle(
-            "How K Affects Retrieval Quality — Top-1 vs Top-3 vs Top-5 vs Top-10\n"
-            "P@1 = is the top result correct?  Recall@K = are the right memories in the top K?",
+            "Ranking Quality — measured at K=1 and K=10\n"
+            "P@1 = is the top result correct?  Recall@10 = are the right memories in the top 10?",
             fontsize=_TITLE_SIZE + 1, fontweight="bold",
         )
 
-        # ── Panel 1: Recall@K curve estimated from P@1, MRR, and Recall@K ────
-        k_values = [1, 2, 3, 5, 10]
+        # ── Panel 1: the two MEASURED ranking-quality points per strategy ────
+        # Only K=1 (P@1) and K=10 (R@10) are measured; intermediate K values
+        # were previously log-interpolated and plotted as if measured — never
+        # fabricate data points on a published chart.
+        k_values = [1, 10]
         x = np.arange(len(k_values))
 
         for i, s in enumerate(strategies):
             sub = self._by_strategy.get(s, [])
             if not sub:
                 continue
-            p1   = _mean_std([r.precision_at_1  for r in sub])[0]  # recall@1
-            r10  = _mean_std([r.recall_at_k     for r in sub])[0]  # recall@10
-            _mrr  = _mean_std([r.mrr             for r in sub])[0]
-
-            # Build estimated recall curve using a logarithmic growth model:
-            # recall(k) ≈ recall@1 + (recall@10 - recall@1) × log(k) / log(10)
-            # This matches the typical sub-linear growth of recall with K.
-            # At K=1: recall(1) = p1  (exact match)
-            # At K=10: recall(10) = r10  (exact match)
-            # The MRR informs the "steepness" — high MRR means fast early gains.
-            if r10 > p1:
-                est_curve = []
-                for k in k_values:
-                    import math
-                    if k == 1:
-                        est_curve.append(p1)
-                    elif k >= 10:
-                        est_curve.append(r10)
-                    else:
-                        # Logarithmic interpolation
-                        frac = math.log(k) / math.log(10)
-                        est_curve.append(p1 + (r10 - p1) * frac)
-            else:
-                est_curve = [p1] + [r10] * (len(k_values) - 1)
+            p1  = _mean_std([r.precision_at_1 for r in sub])[0]
+            r10 = _mean_std([r.recall_at_k    for r in sub])[0]
 
             colour = _PALETTE[i % len(_PALETTE)]
-            axes[0].plot(x, est_curve, "o-", label=s, color=colour,
-                         linewidth=2.5, markersize=8)
-            # Annotate K=1 and K=10 endpoints
-            axes[0].text(0, est_curve[0] + 0.008, f"{est_curve[0]:.3f}",
+            # Dashed connector: two different metrics at measured cutoffs,
+            # not a sampled curve.
+            axes[0].plot(x, [p1, r10], "o--", label=s, color=colour,
+                         linewidth=2, markersize=8)
+            axes[0].text(0, p1 + 0.008, f"{p1:.3f}",
                          ha="center", fontsize=_ANNOT_SIZE - 1, color=colour)
-            axes[0].text(len(k_values) - 1, est_curve[-1] + 0.008,
-                         f"{est_curve[-1]:.3f}",
+            axes[0].text(1, r10 + 0.008, f"{r10:.3f}",
                          ha="center", fontsize=_ANNOT_SIZE - 1, color=colour)
 
         axes[0].set_xticks(x)
-        axes[0].set_xticklabels([f"K={k}" for k in k_values], fontsize=_TICK_SIZE)
+        axes[0].set_xticklabels(["K=1\n(P@1)", "K=10\n(R@10)"], fontsize=_TICK_SIZE)
         axes[0].legend(loc="upper left", fontsize=_LEGEND_SIZE, framealpha=0.9)
         axes[0].autoscale(axis="y", tight=False)
         _yl, _yh = axes[0].get_ylim()
         axes[0].set_ylim(max(0, _yl - 0.02), min(1.0, _yh + 0.02))
-        _style_ax(axes[0], "Recall@K Curve — How Recall Grows as K Increases",
-                  "K  (number of results returned)", "Recall@K")
+        _style_ax(axes[0], "P@1 vs Recall@10 per strategy  (measured points only)",
+                  "K  (number of results returned)", "Score")
         axes[0].text(0.98, 0.05,
                      "Steeper rise = strategy ranks\ngold memories earlier",
                      transform=axes[0].transAxes, ha="right", fontsize=_ANNOT_SIZE - 1,
@@ -1351,23 +1333,14 @@ class StudyVisualizer:
                              xytext=(5, 5), textcoords="offset points",
                              fontsize=_ANNOT_SIZE - 1, color=colour)
 
-            # K=1 point (open marker)
-            axes[1].scatter(p1, p1, s=70, marker=mk, color=colour,
-                            zorder=3, edgecolors=colour, linewidths=1.5,
-                            facecolors="white", alpha=0.9)
+            # No K=1 point here: recall@1 is not measured, and plotting the
+            # point at (P@1, P@1) would assert recall@1 == P@1, which is false
+            # whenever a query has more than one gold memory.
 
-            # Connect K=1 to K=10 with a thin line
-            axes[1].plot([p1, r10], [p1, p10], "-",
-                         color=colour, linewidth=0.8, alpha=0.4)
-
-        # Reference diagonal: precision = recall / K
-        axes[1].text(0.98, 0.98, "● = K=10   ○ = K=1",
-                     transform=axes[1].transAxes, ha="right", va="top",
-                     fontsize=_ANNOT_SIZE - 1, color="grey")
         axes[1].autoscale(tight=False)
         _style_ax(axes[1],
-                  "Precision@K vs Recall@K  (K=1 open, K=10 filled)",
-                  "Recall@K", "Precision@K")
+                  "Precision@10 vs Recall@10 operating points",
+                  "Recall@10", "Precision@10")
         axes[1].spines["top"].set_visible(False)
         axes[1].spines["right"].set_visible(False)
         axes[1].xaxis.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
@@ -2011,7 +1984,7 @@ class StudyVisualizer:
         ax.set_ylim(bottom=0)
 
     def _render_reranker_panel(self, ax, plt, np):
-        rerank = [r for r in self._results if r.study_phase == "phase_reranker_comparison"]
+        rerank = [r for r in self._results if "reranker" in (r.study_phase or "")]
         if not rerank:
             ax.text(0.5, 0.5, "No reranker data", ha="center", va="center", transform=ax.transAxes)
             _style_ax(ax, "Reranker Comparison")
@@ -2037,7 +2010,7 @@ class StudyVisualizer:
         _style_ax(ax, "Reranker: Recall / Precision / MRR", "Reranker", "Score", ylim=(0, 1.0))
 
     def _render_decay_panel(self, ax, plt, np):
-        decay_r = [r for r in self._results if r.study_phase == "phase_decay_sweep" and r.lambda_value > 0]
+        decay_r = [r for r in self._results if "decay" in (r.study_phase or "") and r.lambda_value > 0]
         if not decay_r:
             decay_r = [r for r in self._results if r.lambda_value > 0]
         if not decay_r:
@@ -2132,7 +2105,7 @@ class StudyVisualizer:
         ax.set_axisbelow(True)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.set_title("Leaderboard — Top-10  (composite = 0.40R + 0.25P + 0.20MRR + 0.15T)",
+        ax.set_title("Leaderboard — Top-10  (composite = (0.40R + 0.25P + 0.20MRR + 0.15T) / Σw_active)",
                      fontsize=_TITLE_SIZE, fontweight="bold")
 
         # Score annotation + P50 latency in brackets

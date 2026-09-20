@@ -178,6 +178,21 @@ _ENTITY_RE = re.compile(
 )
 
 
+def _normalize_qa(sample: dict) -> list[dict]:
+    """Return QA annotations as a list of {question, answer, ...} dicts.
+
+    Real LoCoMo files use a list of dicts (with optional 'evidence'); minimal
+    or hand-written datasets sometimes use a plain {question: answer} map.
+    Anything else yields an empty list rather than crashing the whole load.
+    """
+    qa = sample.get("qa", [])
+    if isinstance(qa, dict):
+        return [{"question": q, "answer": a} for q, a in qa.items()]
+    if isinstance(qa, list):
+        return [x for x in qa if isinstance(x, dict)]
+    return []
+
+
 class LoCoMoLoader:
     """Loads LoCoMo JSON data directly into GoldDataset format.
 
@@ -300,6 +315,8 @@ class LoCoMoLoader:
             conv_user_id = f"conv-{sample_id}"  # shared for all turns + queries
             all_user_ids.add(conv_user_id)
 
+            _events_before = sum(len(v) for v in all_day_events.values())
+
             # Convert sessions to memory events and get evidence mapping
             evidence_map = self._convert_sessions(
                 sample,
@@ -312,10 +329,50 @@ class LoCoMoLoader:
                 all_day_events,
             )
 
+            # Fallback documented in the module header: minimal datasets may
+            # provide `event_summary` instead of full conversation sessions.
+            # Only used when THIS sample's conversation yielded no events, so
+            # real LoCoMo files are processed exactly as before.
+            _events_after = sum(len(v) for v in all_day_events.values())
+            _summary_ids: list[str] = []
+            if _events_after == _events_before:
+                summary = sample.get("event_summary", [])
+                if isinstance(summary, dict):
+                    summary = [e for v in summary.values()
+                               for e in (v if isinstance(v, list) else [v])]
+                for ev_idx, text in enumerate(s for s in summary if isinstance(s, str) and s):
+                    _mid = f"locomo_{sample_id}_summary_{ev_idx}"
+                    _summary_ids.append(_mid)
+                    all_day_events.setdefault(0, []).append(GoldMemoryEvent(
+                        id=_mid,
+                        user_id=conv_user_id,
+                        type=MemoryType.EPISODIC,
+                        content=text,
+                        importance=0.5,
+                        entities=[],
+                        task_id=f"locomo_{sample_id}",
+                        conversation_turn=ev_idx,
+                    ))
+
             # Convert QA annotations to queries
             queries = self._convert_qa_annotations(
                 sample, sample_id, conv_user_id, reference_date, evidence_map
             )
+            if not queries and _summary_ids:
+                # Summary-fallback samples have no dialog-level evidence, so
+                # the sample's summary events serve as proxy gold — the same
+                # all-of-source convention the PersonaChat adapter documents.
+                for qa_idx, qa in enumerate(_normalize_qa(sample)):
+                    _q = qa.get("question", "")
+                    if not _q:
+                        continue
+                    queries.append(GoldQuery(
+                        day=1,
+                        query=_q,
+                        task_id=f"locomo_{sample_id}_q{qa_idx:03d}",
+                        user_id=conv_user_id,
+                        expected=GoldExpectedResult(memory_ids=list(_summary_ids)),
+                    ))
             all_queries.extend(queries)
 
         # Build GoldDayEvents list sorted by day
@@ -463,9 +520,14 @@ class LoCoMoLoader:
 
     def _collect_evidence_ids(self, sample: dict[str, Any]) -> set[str]:
         """Collect all dialog IDs that are evidence for QA annotations."""
-        qa_annotations = sample.get("qa", [])
+        qa_annotations = _normalize_qa(sample)
         evidence_ids: set[str] = set()
         for qa in qa_annotations:
+            # Real LoCoMo uses a list of {question, answer, evidence} dicts;
+            # tolerate other shapes (e.g. plain {question: answer} maps) rather
+            # than crashing the whole load on one malformed sample.
+            if not isinstance(qa, dict):
+                continue
             evidence = qa.get("evidence", [])
             if isinstance(evidence, list):
                 for eid in evidence:
@@ -489,7 +551,7 @@ class LoCoMoLoader:
         evidence_map: dict[str, str],
     ) -> list[GoldQuery]:
         """Convert QA annotations into GoldQuery objects."""
-        qa_annotations = sample.get("qa", [])
+        qa_annotations = _normalize_qa(sample)
         queries: list[GoldQuery] = []
 
         # Compute max_day once per sample (constant across all QA annotations in this sample)
@@ -597,7 +659,7 @@ class LoCoMoLoader:
         """Get the distribution of difficulty levels in the dataset."""
         distribution: dict[str, int] = {"easy": 0, "medium": 0, "hard": 0, "extreme": 0}
         for sample in samples:
-            qa_annotations = sample.get("qa", [])
+            qa_annotations = _normalize_qa(sample)
             for qa in qa_annotations:
                 category = qa.get("category", "single-session")
                 difficulty = CATEGORY_DIFFICULTY.get(category, "medium")
@@ -608,7 +670,7 @@ class LoCoMoLoader:
         """Get the distribution of QA categories."""
         distribution: dict[str, int] = {}
         for sample in samples:
-            qa_annotations = sample.get("qa", [])
+            qa_annotations = _normalize_qa(sample)
             for qa in qa_annotations:
                 category = qa.get("category", "unknown")
                 distribution[category] = distribution.get(category, 0) + 1

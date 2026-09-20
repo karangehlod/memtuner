@@ -251,14 +251,17 @@ class TestPrecisionAtKEvaluator:
         )
         assert result.value == 0.0
 
-    def test_precision_empty_expected_raises(self) -> None:
-        """Empty expected → raises ValueError."""
+    def test_precision_empty_expected_returns_zero(self) -> None:
+        """Empty expected → 0.0, NOT an exception.
+
+        Documented contract (ranking.py): precision's denominator is K, so the
+        formula stays well-defined with an empty gold set — every retrieved
+        item is a false positive. MRR/NDCG/Recall raise instead because their
+        formulas divide by |gold|.
+        """
         evaluator = PrecisionAtKEvaluator(top_k=1)
-        with pytest.raises(ValueError, match="expected_ids cannot be empty"):
-            evaluator.evaluate(
-                retrieved_ids=["A"],
-                expected_ids=[],
-            )
+        result = evaluator.evaluate(["m1"], [])
+        assert result.value == 0.0
 
     def test_precision_metric_name(self) -> None:
         """Metric name reflects K value."""
