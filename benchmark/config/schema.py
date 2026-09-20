@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class DecayType(str, Enum):
@@ -319,6 +319,24 @@ class BenchmarkScopeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     evaluation_horizon: int = Field(default=14, ge=1, le=365, description="Number of dataset days to evaluate (replay horizon)")
+    test_holdout_fraction: float = Field(
+        default=0.0,
+        ge=0.0,
+        lt=1.0,
+        description="Fraction of trailing timeline days reserved for evaluation only",
+    )
+    query_start_fraction: float = Field(
+        default=0.0,
+        ge=0.0,
+        lt=1.0,
+        description="Inclusive timeline fraction at which scoring queries begin",
+    )
+    query_end_fraction: float = Field(
+        default=1.0,
+        gt=0.0,
+        le=1.0,
+        description="Exclusive timeline fraction at which scoring queries end",
+    )
     seed: int = Field(default=42, description="Random seed for determinism")
     scenarios: list[str] = Field(
         default_factory=lambda: ["delayed_recall"],
@@ -339,6 +357,13 @@ class BenchmarkScopeConfig(BaseModel):
         default_factory=RetrievalConfig,
         description="Validated retrieval strategy configuration",
     )
+
+    @model_validator(mode="after")
+    def validate_query_window(self) -> BenchmarkScopeConfig:
+        """Ensure scoring intervals have positive width before execution begins."""
+        if self.query_start_fraction >= self.query_end_fraction:
+            raise ValueError("query_start_fraction must be less than query_end_fraction")
+        return self
 
 
 class ObservabilityConfig(BaseModel):

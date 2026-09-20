@@ -184,7 +184,13 @@ class BenchmarkComposer:
 
         # 8. Create scenario with validated horizon
         effective_horizon = self._compute_effective_horizon(config, dataset)
-        scenario = GoldDatasetScenario(dataset, evaluation_horizon=effective_horizon)
+        scenario = GoldDatasetScenario(
+            dataset,
+            evaluation_horizon=effective_horizon,
+            test_frac=config.benchmark.test_holdout_fraction,
+            query_start_fraction=config.benchmark.query_start_fraction,
+            query_end_fraction=config.benchmark.query_end_fraction,
+        )
 
         # 9. Build runner
         time_provider = SimulatedClock()

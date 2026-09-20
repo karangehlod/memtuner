@@ -116,6 +116,19 @@ def _mean_std(values):
     return m, s
 
 
+def _configuration_label(result) -> str:
+    """Format a compact but decision-readable configuration label."""
+    strategy = result.retrieval_strategy.replace("_", " ").title()
+    parts = [f"{strategy} / {result.memory_type.title()}"]
+    if result.embedding_model and result.embedding_model != "none":
+        parts.append(f"Embed: {result.embedding_model.split('/')[-1][:18]}")
+    if result.retrieval_strategy == "hybrid":
+        parts.append(f"BM25 weight: {result.bm25_weight:.2f}")
+    decay = result.decay_policy.replace("_", " ").title()
+    parts.append(f"Decay: {decay} (lambda={result.lambda_value:.3f})")
+    return "\n".join(parts)
+
+
 def _grouped_bar(ax, np, groups, categories, values_by_group_cat,
                  std_by_group_cat=None, palette=None, bar_width=None):
     """Draw grouped bar chart. Returns list of bar containers."""
@@ -147,10 +160,11 @@ def _grouped_bar(ax, np, groups, categories, values_by_group_cat,
 class StudyVisualizer:
     """Generates publication-quality study report from StudyRunResult objects."""
 
-    def __init__(self, results: list, output_dir: Path):
+    def __init__(self, results: list, output_dir: Path, run_metadata: dict | None = None):
         self._results = [r for r in results if r.success]
         self._all = results
         self._out = Path(output_dir)
+        self._run_metadata = dict(run_metadata or {})
         self._out.mkdir(parents=True, exist_ok=True)
         # Pre-filtered view excluding tuning-sweep variants — computed once,
         # referenced by the strategy-comparison chart methods. Uses the same
@@ -168,6 +182,35 @@ class StudyVisualizer:
         for _r in self._non_decay_results:
             _by_strat[_r.retrieval_strategy].append(_r)
         self._by_strategy: dict = dict(_by_strat)
+
+    def _evaluation_caption(self) -> str:
+        """Return the evaluation context required to interpret exported plots."""
+        validation_fraction = self._run_metadata.get("validation_holdout_fraction")
+        final_test_fraction = self._run_metadata.get("final_test", {}).get("holdout_fraction", 0.0)
+        if validation_fraction is not None:
+            protocol = f"Validation: {validation_fraction:.0%}"
+            if final_test_fraction:
+                protocol += f" | Final test: {final_test_fraction:.0%}"
+        else:
+            holdouts = sorted({getattr(r, "test_holdout_fraction", 0.0) for r in self._results})
+            protocol = f"Holdout: {'/'.join(f'{fraction:.0%}' for fraction in holdouts) or 'not recorded'}"
+        leakage = self._run_metadata.get("leakage", {})
+        leakage_text = leakage.get("status", "not checked")
+        return f"{protocol} | Leakage: {leakage_text}"
+
+    def _missing_full_report_sections(self) -> list[str]:
+        """Identify sections unavailable in a partial study run."""
+        available = {
+            "BM25": any(r.retrieval_strategy == "bm25" for r in self._results),
+            "embedding": any(
+                r.retrieval_strategy in ("embeddings", "api_embeddings", "semantic", "colbert", "adaptive")
+                for r in self._results
+            ),
+            "hybrid": any(r.retrieval_strategy == "hybrid" for r in self._results),
+            "reranker": any("reranker" in (r.study_phase or "") for r in self._results),
+            "decay": any(r.lambda_value > 0 for r in self._results),
+        }
+        return [name for name, present in available.items() if not present]
 
     # ─── Public API ──────────────────────────────────────────────────────────
 
@@ -655,6 +698,7 @@ class StudyVisualizer:
         fig, axes = plt.subplots(1, 2, figsize=(15, 5))
         fig.suptitle("Phase 4 — Decay Policy × Lambda Sweep",
                      fontsize=_TITLE_SIZE + 1, fontweight="bold")
+        fig.text(0.5, 0.91, self._evaluation_caption(), ha="center", fontsize=_ANNOT_SIZE)
 
         for ax_idx, (metric, metric_label) in enumerate([
             ("recall_at_k", "Recall@K"),
@@ -691,7 +735,11 @@ class StudyVisualizer:
                 for li in range(len(lambdas)):
                     v = grid[pi, li]
                     text_colour = "white" if v > 0.65 * vmax else "black"
-                    ax.text(li, pi, f"{v:.3f}", ha="center", va="center",
+                    sample_size = sum(
+                        1 for result in decay_r
+                        if result.decay_policy == policy and abs(result.lambda_value - lam) < 1e-9
+                    )
+                    ax.text(li, pi, f"{v:.3f}\nn={sample_size}", ha="center", va="center",
                             fontsize=_ANNOT_SIZE, color=text_colour, fontweight="bold")
 
             cbar = plt.colorbar(im, ax=ax, shrink=0.82, pad=0.02)
@@ -801,12 +849,7 @@ class StudyVisualizer:
 
         labels = []
         for r in ranked:
-            embed = r.embedding_model.split("/")[-1][:12]
-            strat = r.retrieval_strategy[:10]
-            labels.append(
-                f"{strat} | {embed}\n"
-                f"λ={r.lambda_value:.3f}  bm25w={r.bm25_weight:.1f}  {r.memory_type[:4]}"
-            )
+            labels.append(_configuration_label(r))
 
         # Composite score weights (must match scheduler.py COMPOSITE_WEIGHTS)
         _W = {"recall": 0.40, "precision": 0.25, "mrr": 0.20, "temporal": 0.15}
@@ -1552,6 +1595,7 @@ class StudyVisualizer:
             "How does recall change as you tune the forgetting rate?",
             fontsize=_TITLE_SIZE + 1, fontweight="bold",
         )
+        fig.text(0.5, 0.88, self._evaluation_caption(), ha="center", fontsize=_ANNOT_SIZE)
 
         # No-decay baseline for reference
         no_decay = [r for r in self._results if r.lambda_value == 0.0
@@ -1575,15 +1619,21 @@ class StudyVisualizer:
                     vals = [getattr(r, metric) for r in decay_r
                             if r.decay_policy == policy and abs(r.lambda_value - lam) < 1e-9]
                     if vals:
-                        m = sum(vals) / len(vals)  # mean only — no shading (single seed)
-                        pts.append((lam, m))
+                        mean, std = _mean_std(vals)
+                        pts.append((lam, mean, std, len(vals)))
                 if len(pts) < 2:
                     continue
-                xs, ms = zip(*pts)
-                ax.semilogx(xs, ms, "o-", label=policy, color=_PALETTE[i],
-                            linewidth=2.5, markersize=8)
+                xs, means, stds, sample_sizes = zip(*pts)
+                sample_range = (
+                    f"n={sample_sizes[0]}" if min(sample_sizes) == max(sample_sizes)
+                    else f"n={min(sample_sizes)}-{max(sample_sizes)}"
+                )
+                ax.errorbar(
+                    xs, means, yerr=stds, fmt="o-", label=f"{policy} ({sample_range})",
+                    color=_PALETTE[i], linewidth=2.5, markersize=8, capsize=3,
+                )
                 # Annotate best λ value
-                best_lam, best_m = max(zip(xs, ms), key=lambda t: t[1])
+                best_lam, best_m = max(zip(xs, means), key=lambda t: t[1])
                 ax.annotate(f"★ {best_lam:.4f}",
                             xy=(best_lam, best_m),
                             xytext=(best_lam * 1.3, best_m + 0.003),
@@ -1889,16 +1939,24 @@ class StudyVisualizer:
         fig = plt.figure(figsize=(22, 26))
         fig.suptitle(
             "MemTuner — Comprehensive Study Report",
-            fontsize=16, fontweight="bold", y=0.995
+            fontsize=16, fontweight="bold", y=0.987
         )
         fig.text(
-            0.5, 0.988,
-            "BM25 Baseline  ·  Embedding Models  ·  Hybrid Weights + Composite  ·  "
-            "Rerankers P50/P90/P99  ·  Decay Sweep  ·  Composite Breakdown  ·  Leaderboard",
+            0.5, 0.970,
+            self._evaluation_caption(),
             ha="center", fontsize=10, style="italic",
         )
+        missing = self._missing_full_report_sections()
+        if missing:
+            fig.text(
+                0.5, 0.955,
+                f"Partial study: unavailable sections: {', '.join(missing)}",
+                ha="center", fontsize=9, color="#A33A00", fontweight="bold",
+            )
 
-        gs = gridspec.GridSpec(4, 2, figure=fig, hspace=0.55, wspace=0.40)
+        gs = gridspec.GridSpec(
+            4, 2, figure=fig, hspace=0.55, wspace=0.40, top=0.935, bottom=0.035
+        )
 
         self._render_bm25_panel(        fig.add_subplot(gs[0, 0]), plt, np)
         self._render_embedding_panel(   fig.add_subplot(gs[0, 1]), plt, np)

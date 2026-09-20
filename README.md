@@ -22,7 +22,7 @@
 
 ## Overview
 
-MemTuner is an adaptive benchmark for AI agent memory retrieval systems. It systematically evaluates retrieval strategies, embedding models, hybrid BM25/semantic fusion, reranking, temporal decay, and memory types across multiple datasets to identify high-performing configurations and dataset-specific recommendations.
+MemTuner is an adaptive experiment runner for AI agent memory retrieval systems. It systematically evaluates retrieval strategies, embedding models, hybrid BM25/semantic fusion, reranking, temporal decay, and memory types to produce evidence and dataset-specific recommendations. Its rankings are not universal production prescriptions: they apply to the evaluated dataset, workload, hardware, metric weights, and evaluation protocol.
 
 Most memory benchmarks answer: *"Can model X remember fact Y?"*
 
@@ -59,6 +59,7 @@ You have a system with poor recall and you're not sure whether it's the embeddin
 - **You want a quick "is my RAG working?" check** — Use `memtuner study --mode quick` (BM25 baseline only, ~1 min) as a sanity check, but for production validation you want Phases 2–4.
 - **You need online/streaming memory evaluation** — MemTuner evaluates a static corpus with pre-defined gold queries. It does not model memory growth over a live session.
 - **Your task is generation quality, not retrieval** — MemTuner measures Recall@K, MRR, and NDCG. If your primary concern is answer fluency or factual accuracy of generated text, add `--judge-model` to layer an LLM judge on top.
+- **You need a universal strategy recommendation** — configuration rankings are evidence for the tested data and workload. Validate the selected configuration on an untouched production-like holdout before deployment.
 
 ---
 
@@ -378,6 +379,8 @@ python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode qu
 | `--workers N` | `cpu_count - 1` | Parallel threads for BM25/recency phases |
 | `--seed N` | `42` | Single random seed |
 | `--seeds N [N ...]` | `[--seed]` | Multiple seeds for bootstrap CIs, e.g. `--seeds 42 123 456` |
+| `--test-holdout-fraction F` | `0.20` | Validation fraction used for phase selection; `0` is exploratory only. |
+| `--final-test-holdout-fraction F` | `0` | Optional untouched tail reserved for one final rerun of the validation winner. The validation and final fractions must sum to less than `1`. |
 | `--early-stop-patience N` | `3` | Phase 4 early-stopping patience; `0` disables |
 | `--ollama-url URL` | none | Ollama / OpenAI-compatible judge endpoint |
 | `--judge-model MODEL` | none | LLM judge model, e.g. `nemotron-3-nano:4b` |
@@ -637,6 +640,19 @@ instructions to add the token.
 > The benchmark warns about this at startup. Results are valid for model selection and
 > engineering comparisons, but should not be reported as unbiased recall estimates in papers
 > without a clean evaluation split.
+
+### Coverage boundaries and additions
+
+The bundled suite has strong retrieval, dialogue, temporal, and multi-hop coverage, but it is not sufficient by itself to establish a universal agent-memory recommendation. Add datasets or production traces that cover:
+
+| Missing or weakly represented behavior | Add before making a broad claim |
+|---|---|
+| Contradictory memories and corrections | Conflicting facts, source authority, and update resolution |
+| Personalization | Longitudinal per-user preferences with isolation checks |
+| Multi-session agent work | Goals, tool outcomes, retries, and long-running task state |
+| Production retrieval | De-identified traces with observed queries, relevance labels, latency, and cost |
+
+Custom additions should include a documented license, deterministic conversion to Gold JSON, query-to-memory provenance, a leakage check, and an untouched final-test split. This prevents a larger dataset count from becoming superficial coverage.
 
 ---
 

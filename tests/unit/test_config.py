@@ -56,6 +56,18 @@ class TestBenchmarkConfig:
         with pytest.raises(Exception):  # noqa: B017
             BenchmarkScopeConfig(evaluation_horizon=0)
 
+    def test_test_holdout_fraction_is_validated(self) -> None:
+        config = BenchmarkScopeConfig(test_holdout_fraction=0.2)
+        assert config.test_holdout_fraction == 0.2
+        with pytest.raises(Exception):  # noqa: B017
+            BenchmarkScopeConfig(test_holdout_fraction=1.0)
+
+    def test_query_window_is_validated(self) -> None:
+        config = BenchmarkScopeConfig(query_start_fraction=0.4, query_end_fraction=0.8)
+        assert config.query_start_fraction == 0.4
+        with pytest.raises(Exception):  # noqa: B017
+            BenchmarkScopeConfig(query_start_fraction=0.8, query_end_fraction=0.4)
+
     def test_invalid_seed_type_rejected(self) -> None:
         with pytest.raises(Exception):  # noqa: B017
             BenchmarkScopeConfig(seed="not_a_number")  # type: ignore[arg-type]

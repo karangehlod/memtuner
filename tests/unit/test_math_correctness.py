@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import math
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -658,6 +659,78 @@ class TestBugFixRegressions:
         for key in ("best_embedding_model", "best_embedding_backend",
                     "best_bm25_weight", "best_retrieval_strategy"):
             assert key in recs, f"Missing key '{key}' in recommendations"
+
+    def test_study_summary_records_holdout_protocol(self) -> None:
+        """Merged reports must disclose whether their scores used a holdout."""
+        from benchmark.workload.study_scheduler import StudyRunResult
+
+        result = StudyRunResult(
+            cell_id="c1", run_id="r1",
+            memory_type="episodic", retrieval_strategy="bm25",
+            decay_policy="none", lambda_value=0.0, pruning_threshold=0.0,
+            workload_profile="medium_qpd", seed=42,
+            recall_at_k=0.5, precision_at_k=0.1, mrr=0.4, ndcg=0.3,
+            test_holdout_fraction=0.2,
+            success=True,
+        )
+        protocol = StudyAggregator([result]).study_summary()["evaluation_protocol"]
+        assert protocol["test_holdout_fractions"] == [0.2]
+
+    def test_study_report_emits_integrity_metadata(self, tmp_path) -> None:
+        """Reports must make dataset provenance, leakage, and failures visible."""
+        import json
+
+        from benchmark.workload.study_aggregator import StudyReporter
+        from benchmark.workload.study_scheduler import StudyRunResult
+
+        successful = StudyRunResult(
+            cell_id="successful", run_id="r1",
+            memory_type="episodic", retrieval_strategy="bm25",
+            decay_policy="none", lambda_value=0.0, pruning_threshold=0.0,
+            workload_profile="medium_qpd", seed=42,
+            recall_at_k=0.5, precision_at_k=0.1, mrr=0.4, ndcg=0.3,
+            success=True,
+        )
+        failed = StudyRunResult(
+            cell_id="failed", run_id="r1",
+            memory_type="episodic", retrieval_strategy="semantic",
+            decay_policy="none", lambda_value=0.0, pruning_threshold=0.0,
+            workload_profile="medium_qpd", seed=42,
+            success=False,
+            error_message="StrategyResolutionError: missing model",
+        )
+        metadata = {
+            "dataset_path": "/tmp/example_gold.json",
+            "dataset_fingerprint": "1234567890abcdef",
+            "leakage": {"status": "clean", "policy": "fail", "leaked_queries": 0, "total_queries": 2},
+            "final_test": {
+                "status": "completed",
+                "holdout_fraction": 0.2,
+                "recall_at_k": 0.6,
+                "mrr": 0.5,
+                "latency_p50_ms": 12.0,
+            },
+        }
+        paths = StudyReporter(tmp_path).write_all(
+            StudyAggregator([successful, failed]),
+            run_id="report_contract",
+            skip_plots=True,
+            run_metadata=metadata,
+        )
+
+        summary = json.loads(Path(paths["summary_json"]).read_text())
+        text = Path(paths["text_report"]).read_text()
+        assert summary["run_metadata"]["dataset_path"] == metadata["dataset_path"]
+        assert summary["run_metadata"]["leakage"] == metadata["leakage"]
+        assert summary["run_metadata"]["failed_cells"] == [
+            {"cell_id": "failed", "error": "StrategyResolutionError: missing model"}
+        ]
+        assert "EVALUATION INTEGRITY" in text
+        assert "/tmp/example_gold.json" in text
+        assert "Leakage:     clean" in text
+        assert "Final test:  completed (holdout=20%)" in text
+        assert "Recall@K=0.6000" in text
+        assert "failed: StrategyResolutionError: missing model" in text
 
     # Bug F: early_stop_patience must be accepted by _run_phase4_two_stage
     def test_phase4_two_stage_accepts_patience_param(self) -> None:

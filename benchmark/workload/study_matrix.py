@@ -129,6 +129,9 @@ class StudyCell:
     bm25_weight: float = DEFAULT_BM25_WEIGHT
     reranker_model: str = DEFAULT_RERANKER
     ollama_base_url: str = ""
+    test_holdout_fraction: float = 0.0
+    query_start_fraction: float = 0.0
+    query_end_fraction: float = 1.0
     seed: int = 42
     study_phase: str = "general"
 
@@ -147,7 +150,8 @@ class StudyCell:
         key = (
             f"{self.study_phase}:{self.memory_type}:{self.retrieval_strategy}:{self.decay.label}"
             f":{self.embedding_model}:{self.embedding_backend}:{self.bm25_weight:.2f}"
-            f":{self.reranker_model}:{self.workload_profile}:{self.seed}"
+            f":{self.reranker_model}:{self.workload_profile}:{self.test_holdout_fraction:.3f}"
+            f":{self.query_start_fraction:.3f}:{self.query_end_fraction:.3f}:{self.seed}"
         )
         object.__setattr__(self, "_cell_id_cache", hashlib.md5(key.encode()).hexdigest()[:12])
         return self._cell_id_cache
@@ -230,6 +234,9 @@ class StudyCell:
             },
             "benchmark": {
                 "evaluation_horizon": evaluation_horizon,
+                "test_holdout_fraction": self.test_holdout_fraction,
+                "query_start_fraction": self.query_start_fraction,
+                "query_end_fraction": self.query_end_fraction,
                 "seed": self.seed,
                 "scenarios": ["delayed_recall"],
                 "retrieval_strategy": internal_strategy,
@@ -267,6 +274,9 @@ class StudyCell:
             "top_k": top_k,
             "ollama_base_url": self.ollama_base_url,
             "workload_profile": self.workload_profile,
+            "test_holdout_fraction": self.test_holdout_fraction,
+            "query_start_fraction": self.query_start_fraction,
+            "query_end_fraction": self.query_end_fraction,
             "seed": self.seed,
             "study_phase": self.study_phase,
             "label": self.label,
@@ -289,17 +299,26 @@ class StudyExpander:
         workload_profile: str = "medium_qpd",
         seed: int = 42,
         ollama_base_url: str = "",
+        test_holdout_fraction: float = 0.0,
+        query_start_fraction: float = 0.0,
+        query_end_fraction: float = 1.0,
     ):
         self._mem_types = memory_types or ["episodic", "semantic", "preference"]
         self._profile = workload_profile
         self._seed = seed
         self._ollama_url = ollama_base_url
+        self._test_holdout_fraction = test_holdout_fraction
+        self._query_start_fraction = query_start_fraction
+        self._query_end_fraction = query_end_fraction
 
     def _cell(self, **kwargs) -> StudyCell:
         return StudyCell(
             workload_profile=self._profile,
             seed=self._seed,
             ollama_base_url=self._ollama_url,
+            test_holdout_fraction=self._test_holdout_fraction,
+            query_start_fraction=self._query_start_fraction,
+            query_end_fraction=self._query_end_fraction,
             **kwargs,
         )
 

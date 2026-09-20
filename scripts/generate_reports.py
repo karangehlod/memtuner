@@ -458,6 +458,11 @@ def _best_config(rows: list[dict]) -> dict | None:
     }
 
 
+def _final_test_rows(rows: list[dict]) -> list[dict]:
+    """Only a separate final-test rerun can support a deployment recommendation."""
+    return [row for row in rows if row.get("study_phase") == "final_test"]
+
+
 # ── reports_data.js ───────────────────────────────────────────────────────────
 
 def _is_saturated(rows: list[dict]) -> bool:
@@ -555,7 +560,7 @@ def build_reports_data(cells: list[dict]) -> dict:
         if not rows:
             continue
 
-        cmp_rows = [r for r in rows if _is_ranking_comparable(r)] or rows
+        cmp_rows = [r for r in rows if _is_ranking_comparable(r)]
         strats = _agg_strategy(cmp_rows)
         # Winner needs a minimum sample size — n=1 flukes must not outrank a
         # strategy averaged over dozens of cells. Fall back if nothing qualifies.
@@ -587,7 +592,9 @@ def build_reports_data(cells: list[dict]) -> dict:
             # Best config may come from any per-store cell (incl. tuned sweep
             # winners) but never from a full-pool cell — the recommendation
             # must be reproducible under the standard condition.
-            "bestConfig":     _best_config([r for r in rows if not _is_fullpool(r)] or rows),
+            "bestConfig":     _best_config(_final_test_rows(rows)),
+            "tuningCandidate": _best_config([r for r in rows if not _is_fullpool(r)]),
+            "recommendationStatus": "final_tested" if _final_test_rows(rows) else "tuning_only",
         })
 
     # ── per-dataset recall chart (for main dashboard) ─────────────────────────

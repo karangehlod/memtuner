@@ -43,6 +43,7 @@ import os
 import sys
 import time
 import uuid
+from hashlib import sha256
 from pathlib import Path
 
 # Ensure the project root (parent of scripts/) is on sys.path so that
@@ -231,6 +232,34 @@ Examples:
         help="Override evaluation horizon (number of dataset days to process)",
     )
     parser.add_argument(
+        "--test-holdout-fraction",
+        type=float,
+        default=0.20,
+        help=(
+            "Reserve this trailing fraction of the timeline for final evaluation only "
+            "(default: 0.20). Use 0 only for exploratory, non-holdout runs."
+        ),
+    )
+    parser.add_argument(
+        "--final-test-holdout-fraction",
+        type=float,
+        default=0.0,
+        help=(
+            "Reserve a disjoint trailing timeline fraction for one final evaluation of "
+            "the tuning winner (default: disabled). When set, --test-holdout-fraction "
+            "becomes the validation fraction used for phase selection."
+        ),
+    )
+    parser.add_argument(
+        "--leakage-policy",
+        choices=["fail", "warn"],
+        default="fail",
+        help=(
+            "How to handle query/corpus overlap (default: fail). "
+            "Use warn only for exploratory runs; resulting scores are not unbiased estimates."
+        ),
+    )
+    parser.add_argument(
         "--ollama-url",
         default="",
         help="Ollama base URL — used only for the LLM judge (not embeddings). "
@@ -334,6 +363,13 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    if not 0.0 <= args.test_holdout_fraction < 1.0:
+        parser.error("--test-holdout-fraction must be in [0.0, 1.0)")
+    if not 0.0 <= args.final_test_holdout_fraction < 1.0:
+        parser.error("--final-test-holdout-fraction must be in [0.0, 1.0)")
+    if args.test_holdout_fraction + args.final_test_holdout_fraction >= 1.0:
+        parser.error("validation and final-test holdout fractions must sum to less than 1.0")
 
     # ── Merge mode: combine existing CSVs and exit ───────────────────────────
     if getattr(args, "doctor", False):
@@ -1434,6 +1470,13 @@ def _run_single_dataset(
         _leakage = _LeakageChecker(min_overlap_chars=15).check(_queries, _mem_contents)
         _leakage_symbol = "CLEAN" if _leakage.is_clean else "WARNING"
         _leak_pct = _leakage.leakage_rate * 100
+        leakage_metadata = {
+            "status": "clean" if _leakage.is_clean else "detected",
+            "policy": args.leakage_policy,
+            "leaked_queries": _leakage.leaked_count,
+            "total_queries": _leakage.total_queries,
+            "leakage_rate": _leakage.leakage_rate,
+        }
         print(f"  [leakage] {_leakage_symbol}: {_leakage.leaked_count}/{_leakage.total_queries} "
               f"queries overlap corpus ({_leak_pct:.1f}%)")
         if not _leakage.is_clean:
@@ -1447,7 +1490,15 @@ def _run_single_dataset(
                 f"  ╚{'═'*58}╝\n",
                 file=_sys.stderr,
             )
+            if args.leakage_policy == "fail":
+                print(
+                    "  [skip] Refusing contaminated dataset. Use --leakage-policy warn "
+                    "only for exploratory analysis.",
+                    file=_sys.stderr,
+                )
+                return None
     except Exception as _le:
+        leakage_metadata["error"] = str(_le)
         print(f"  [leakage] check skipped: {_le}")
 
     # Auto-detect which memory types actually exist in this dataset.
@@ -1538,10 +1589,19 @@ def _run_single_dataset(
         print(f"  Seeds: {seeds}")
 
     # Shared expander used for phase headers (seed doesn't affect phase structure)
+    validation_fraction = args.test_holdout_fraction
+    final_test_fraction = args.final_test_holdout_fraction
+    tuning_holdout_fraction = validation_fraction + final_test_fraction
+    validation_start_fraction = 1.0 - tuning_holdout_fraction
+    validation_end_fraction = 1.0 - final_test_fraction
+
     expander = StudyExpander(
         memory_types=effective_memory_types,
         ollama_base_url=args.ollama_url or "",
         workload_profile=args.workload,
+        test_holdout_fraction=tuning_holdout_fraction,
+        query_start_fraction=validation_start_fraction,
+        query_end_fraction=validation_end_fraction,
         seed=getattr(args, "seed", 42),
     )
 
@@ -1565,6 +1625,9 @@ def _run_single_dataset(
                 memory_types=effective_memory_types,
                 ollama_base_url=args.ollama_url or "",
                 workload_profile=args.workload,
+                test_holdout_fraction=tuning_holdout_fraction,
+                query_start_fraction=validation_start_fraction,
+                query_end_fraction=validation_end_fraction,
                 seed=seed_val,
             )
 
@@ -1681,7 +1744,77 @@ def _run_single_dataset(
 
     agg = StudyAggregator(all_results, dataset_name=gold_path.stem)
     reporter = StudyReporter(output_dir)
-    paths = reporter.write_all(agg, run_id, skip_plots=args.no_plots, all_results=all_results)
+    final_test_metadata: dict = {
+        "status": "not_requested" if final_test_fraction == 0.0 else "not_run",
+        "holdout_fraction": final_test_fraction,
+    }
+    if final_test_fraction > 0.0:
+        selected = agg.best_overall()
+        if selected is None:
+            final_test_metadata["reason"] = "No successful validation cell was available."
+        else:
+            from benchmark.workload.matrix import DecaySpec
+            from benchmark.workload.study_matrix import StudyCell
+
+            final_cell = StudyCell(
+                memory_type=selected.memory_type,
+                retrieval_strategy=selected.retrieval_strategy,
+                decay=DecaySpec(
+                    policy=selected.decay_policy,
+                    lambda_value=selected.lambda_value,
+                    pruning_threshold=selected.pruning_threshold,
+                ),
+                workload_profile=selected.workload_profile,
+                embedding_model=selected.embedding_model,
+                embedding_backend=selected.embedding_backend,
+                bm25_weight=selected.bm25_weight,
+                reranker_model=selected.reranker_model,
+                ollama_base_url=args.ollama_url or "",
+                test_holdout_fraction=final_test_fraction,
+                query_start_fraction=1.0 - final_test_fraction,
+                query_end_fraction=1.0,
+                seed=selected.seed,
+                study_phase="final_test",
+            )
+            print("\n  Final test: rerunning the validation winner on the untouched tail...")
+            final_results = scheduler.run(
+                cells=[final_cell],
+                gold_dataset_path=str(gold_path),
+                evaluation_horizon=evaluation_horizon,
+            )
+            final_result = final_results[0] if final_results else None
+            final_test_metadata["selected_validation_cell_id"] = selected.cell_id
+            if final_result is None or not final_result.success:
+                final_test_metadata["reason"] = (
+                    final_result.error_message if final_result is not None else "Final-test worker returned no result."
+                )
+            else:
+                final_test_metadata.update({
+                    "status": "completed",
+                    "cell_id": final_result.cell_id,
+                    "recall_at_k": final_result.recall_at_k,
+                    "precision_at_k": final_result.precision_at_k,
+                    "mrr": final_result.mrr,
+                    "ndcg": final_result.ndcg,
+                    "latency_p50_ms": final_result.latency_p50_ms,
+                    "latency_p90_ms": final_result.latency_p90_ms,
+                    "latency_p99_ms": final_result.latency_p99_ms,
+                    "total_queries": final_result.total_queries,
+                })
+    run_metadata = {
+        "dataset_path": str(gold_path.resolve()),
+        "dataset_fingerprint": sha256(gold_path.read_bytes()).hexdigest()[:16],
+        "leakage": leakage_metadata,
+        "validation_holdout_fraction": validation_fraction,
+        "final_test": final_test_metadata,
+    }
+    paths = reporter.write_all(
+        agg,
+        run_id,
+        skip_plots=args.no_plots,
+        all_results=all_results,
+        run_metadata=run_metadata,
+    )
     _print_summary(agg)
 
     # ── Export benchmark_results/leaderboards.json ────────────────────────────

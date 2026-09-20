@@ -615,7 +615,15 @@ class StudyAggregator(MatrixAggregator):
                     "test_type": test_type,
                 })
 
-        return sorted(results, key=lambda x: x["p_value"])
+        ordered = sorted(results, key=lambda x: x["p_value"])
+        running_adjusted = 0.0
+        total_comparisons = len(ordered)
+        for index, row in enumerate(ordered):
+            holm_adjusted = min(1.0, (total_comparisons - index) * row["p_value"])
+            running_adjusted = max(running_adjusted, holm_adjusted)
+            row["p_value_holm"] = round(running_adjusted, 6)
+            row["significant_holm"] = bool(running_adjusted < alpha)
+        return ordered
 
     # ─── Phase summary ───────────────────────────────────────────────────────
 
@@ -709,6 +717,27 @@ class StudyAggregator(MatrixAggregator):
 
     def study_summary(self) -> dict:
         base = self.summary()
+        base["evaluation_protocol"] = {
+            "test_holdout_fractions": sorted({
+                getattr(result, "test_holdout_fraction", 0.0)
+                for result in self._study_results
+            }),
+            "warning": (
+                "A 0.0 holdout fraction is exploratory only and does not provide "
+                "an out-of-sample estimate."
+            ),
+        }
+        base["recommendation_scope"] = (
+            "Recommendations apply only to the evaluated datasets, workload profile, "
+            "hardware, retrieval metric weights, and evaluation protocol. They are "
+            "comparative evidence, not universal production prescriptions."
+        )
+        base["paired_significance"] = {
+            "unit": "benchmark cell",
+            "method": "paired Wilcoxon signed-rank where cell pairing is available; Mann-Whitney U otherwise",
+            "multiple_comparison_correction": "Holm",
+            "comparisons": self.wilcoxon_pairwise(),
+        }
         # Compute once, reuse below to avoid a second O(N) pass over _study_results.
         _em_ranked = self.rank_by_embedding_model()
         base["embedding_model_ranking"] = _em_ranked
@@ -760,6 +789,7 @@ class StudyReporter:
         run_id: str,
         skip_plots: bool = False,
         all_results: list | None = None,
+        run_metadata: dict | None = None,
     ) -> dict[str, str]:
         """Write all report files and return a dict of {label: absolute_path}.
 
@@ -768,18 +798,19 @@ class StudyReporter:
             run_id: Unique identifier for this run.
             skip_plots: If True, skip matplotlib PNG generation.
             all_results: Raw result list for the visualizer (needed for phase PNGs).
+            run_metadata: Dataset and evaluation-integrity details for this run.
         """
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         paths: dict[str, str] = {}
-        paths["summary_json"] = self._write_json(agg, run_id, ts)
+        paths["summary_json"] = self._write_json(agg, run_id, ts, run_metadata)
         paths["grid_csv"] = self._write_csv(agg, run_id, ts)
-        paths["text_report"] = self._write_text(agg, run_id, ts)
+        paths["text_report"] = self._write_text(agg, run_id, ts, run_metadata)
 
         if not skip_plots:
             try:
                 from benchmark.reporting.study_visualizer import StudyVisualizer
                 results_for_viz = all_results if all_results is not None else agg._results
-                viz = StudyVisualizer(results_for_viz, self._out)
+                viz = StudyVisualizer(results_for_viz, self._out, run_metadata=run_metadata)
                 viz_paths = viz.generate_all()
                 for name, p in (viz_paths or {}).items():
                     if p:
@@ -791,10 +822,22 @@ class StudyReporter:
 
         return paths
 
-    def _write_json(self, agg: StudyAggregator, run_id: str, ts: str) -> str:
+    def _write_json(
+        self, agg: StudyAggregator, run_id: str, ts: str, run_metadata: dict | None
+    ) -> str:
         path = self._out / f"study_{ts}_{run_id}_summary.json"
+        summary = agg.study_summary()
+        metadata = dict(run_metadata or {})
+        metadata["failed_cells"] = [
+            {
+                "cell_id": result.cell_id,
+                "error": (result.error_message or "unknown error").splitlines()[0],
+            }
+            for result in agg._failed
+        ]
+        summary["run_metadata"] = metadata
         with open(path, "w", encoding="utf-8") as f:
-            json.dump(agg.study_summary(), f, indent=2, default=str)
+            json.dump(summary, f, indent=2, default=str)
         return str(path)
 
     def _write_csv(self, agg: StudyAggregator, run_id: str, ts: str) -> str:
@@ -809,23 +852,75 @@ class StudyReporter:
                 writer.writerows(rows)
         return str(path)
 
-    def _write_text(self, agg: StudyAggregator, run_id: str, ts: str) -> str:
+    def _write_text(
+        self, agg: StudyAggregator, run_id: str, ts: str, run_metadata: dict | None
+    ) -> str:
         path = self._out / f"study_{ts}_{run_id}_report.txt"
-        lines = self._format_report(agg, run_id)
+        lines = self._format_report(agg, run_id, run_metadata)
         with open(path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
         return str(path)
 
-    def _format_report(self, agg: StudyAggregator, run_id: str) -> list[str]:
+    def _format_report(
+        self, agg: StudyAggregator, run_id: str, run_metadata: dict | None = None
+    ) -> list[str]:
         sep = "=" * 76
+        metadata = run_metadata or {}
+        leakage = metadata.get("leakage", {})
+        final_test = metadata.get("final_test", {})
+        failed_cells = [
+            {
+                "cell_id": result.cell_id,
+                "error": (result.error_message or "unknown error").splitlines()[0],
+            }
+            for result in agg._failed
+        ]
         lines = [
             sep,
             "MEMTUNER — COMPREHENSIVE STUDY REPORT",
             f"Run ID:       {run_id}",
             f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"Cells:        {agg.success_count}/{agg.total} successful",
+            f"Holdout:      {', '.join(f'{fraction:.0%}' for fraction in agg.study_summary().get('evaluation_protocol', {}).get('test_holdout_fractions', [])) or 'not recorded'}",
             sep,
         ]
+        lines += [
+            "",
+            "RECOMMENDATION SCOPE",
+            "  Rankings are comparative evidence for this dataset, workload, hardware,",
+            "  metric weights, and evaluation protocol; they are not universal prescriptions.",
+        ]
+        if metadata or failed_cells:
+            lines += ["", "EVALUATION INTEGRITY"]
+            if metadata.get("dataset_path"):
+                lines.append(f"  Dataset:     {metadata['dataset_path']}")
+            if metadata.get("dataset_fingerprint"):
+                lines.append(f"  Fingerprint: {metadata['dataset_fingerprint']}")
+            if leakage:
+                lines.append(
+                    f"  Leakage:     {leakage.get('status', 'unknown')} "
+                    f"({leakage.get('leaked_queries', 0)}/{leakage.get('total_queries', 0)} queries; "
+                    f"policy={leakage.get('policy', 'unknown')})"
+                )
+            if final_test:
+                lines.append(
+                    f"  Final test:  {final_test.get('status', 'unknown')} "
+                    f"(holdout={final_test.get('holdout_fraction', 0.0):.0%})"
+                )
+                if final_test.get("status") == "completed":
+                    lines.append(
+                        f"    Recall@K={final_test.get('recall_at_k', 0.0):.4f}  "
+                        f"MRR={final_test.get('mrr', 0.0):.4f}  "
+                        f"P50={final_test.get('latency_p50_ms', 0.0):.1f}ms"
+                    )
+                elif final_test.get("reason"):
+                    lines.append(f"    Reason: {final_test['reason']}")
+            if failed_cells:
+                lines.append(f"  Failed cells: {len(failed_cells)}")
+                for cell in failed_cells[:5]:
+                    lines.append(f"    {cell['cell_id']}: {cell['error']}")
+                if len(failed_cells) > 5:
+                    lines.append(f"    ... {len(failed_cells) - 5} additional failures")
 
         best = agg.best_overall()
         if best:

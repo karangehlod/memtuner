@@ -66,3 +66,5 @@ benchmark_results/
 #   python scripts/prepare_extended_datasets.py
 data/input/
 data/generated/
+
+/graphify-out/*

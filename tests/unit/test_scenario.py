@@ -72,3 +72,22 @@ class TestGoldDatasetScenario:
     def test_recall_k_from_criteria(self, delayed_recall_dataset: GoldDataset) -> None:
         scenario = GoldDatasetScenario(delayed_recall_dataset)
         assert scenario.recall_k() == 5
+
+    def test_tail_holdout_only_injects_training_events(self, delayed_recall_dataset: GoldDataset) -> None:
+        scenario = GoldDatasetScenario(delayed_recall_dataset, test_frac=0.2)
+        split_day = int(scenario.total_days() * 0.8)
+        assert scenario.get_events_for_day(split_day) is None
+        assert scenario.get_queries_for_day(0) == []
+
+    def test_query_window_only_scores_its_bounded_interval(
+        self, delayed_recall_dataset: GoldDataset
+    ) -> None:
+        scenario = GoldDatasetScenario(
+            delayed_recall_dataset,
+            test_frac=0.5,
+            query_start_fraction=0.2,
+            query_end_fraction=0.5,
+        )
+        assert scenario.get_queries_for_day(0) == []
+        assert scenario.get_queries_for_day(3)
+        assert scenario.get_queries_for_day(scenario.total_days() - 1) == []

@@ -76,6 +76,9 @@ def _run_study_cell_worker(
         bm25_weight=cell_dict.get("bm25_weight", 0.0),
         reranker_model=cell_dict.get("reranker_model", "none"),
         ollama_base_url=cell_dict.get("ollama_base_url", ""),
+        test_holdout_fraction=cell_dict.get("test_holdout_fraction", 0.0),
+        query_start_fraction=cell_dict.get("query_start_fraction", 0.0),
+        query_end_fraction=cell_dict.get("query_end_fraction", 1.0),
         seed=cell_dict.get("seed", 42),
         study_phase=cell_dict.get("study_phase", "general"),
     )
@@ -138,7 +141,7 @@ def _run_study_cell_worker(
             config=config,
             dataset_path=Path(gold_dataset_path) if _dataset_override is None else None,
             dataset_override=_dataset_override,
-            allow_strategy_fallback=True,
+            allow_strategy_fallback=False,
             answer_evaluator=_answer_evaluator,
         )
 
@@ -194,6 +197,9 @@ def _run_study_cell_worker(
         "study_phase": cell.study_phase,
         "top_k": cell_dict.get("top_k", 10),
         "archival_floor": cell.decay.archival_floor,
+        "test_holdout_fraction": cell.test_holdout_fraction,
+        "query_start_fraction": cell.query_start_fraction,
+        "query_end_fraction": cell.query_end_fraction,
     }
     result_dict["_timestamp_normalization"] = normalization_meta
     return result_dict
@@ -215,6 +221,9 @@ class StudyRunResult(MatrixRunResult):
     study_phase: str = "general"
     top_k: int = 10
     archival_floor: float | None = 0.65   # Phase 4b sweep dimension
+    test_holdout_fraction: float = 0.0
+    query_start_fraction: float = 0.0
+    query_end_fraction: float = 1.0
 
     def __init__(self, **kwargs):
         study_kwargs = {
@@ -228,6 +237,9 @@ class StudyRunResult(MatrixRunResult):
                 ("study_phase", "general"),
                 ("top_k", 10),
                 ("archival_floor", 0.65),
+                ("test_holdout_fraction", 0.0),
+                ("query_start_fraction", 0.0),
+                ("query_end_fraction", 1.0),
             ]
         }
         super().__init__(**kwargs)
@@ -253,6 +265,12 @@ class StudyRunResult(MatrixRunResult):
             None if str(raw_floor).strip() in ("", "None", "none")
             else float(raw_floor)
         )
+        raw_holdout = row.get("test_holdout_fraction", "0.0")
+        test_holdout_fraction = float(raw_holdout) if raw_holdout != "" else 0.0
+        raw_query_start = row.get("query_start_fraction", "0.0")
+        query_start_fraction = float(raw_query_start) if raw_query_start != "" else 0.0
+        raw_query_end = row.get("query_end_fraction", "1.0")
+        query_end_fraction = float(raw_query_end) if raw_query_end != "" else 1.0
         return StudyRunResult(
             **{f: getattr(base, f) for f in base.__dataclass_fields__},
             embedding_model=row.get("embedding_model", ""),
@@ -263,6 +281,9 @@ class StudyRunResult(MatrixRunResult):
             study_phase=row.get("study_phase", "general"),
             top_k=top_k,
             archival_floor=archival_floor,
+            test_holdout_fraction=test_holdout_fraction,
+            query_start_fraction=query_start_fraction,
+            query_end_fraction=query_end_fraction,
         )
 
     def to_dict(self) -> dict:
@@ -276,6 +297,9 @@ class StudyRunResult(MatrixRunResult):
             "study_phase": self.study_phase,
             "top_k": self.top_k,
             "archival_floor": self.archival_floor,
+            "test_holdout_fraction": self.test_holdout_fraction,
+            "query_start_fraction": self.query_start_fraction,
+            "query_end_fraction": self.query_end_fraction,
         }
         return d
 
@@ -301,6 +325,8 @@ class CellCheckpointer:
     _FIELDS = [
         "completed_at", "study_phase", "memory_type", "retrieval_strategy",
         "embedding_model", "embedding_backend", "bm25_weight", "reranker_model",
+        "test_holdout_fraction",
+        "query_start_fraction", "query_end_fraction",
         "recall_at_k", "precision_at_k", "mrr", "ndcg",
         "latency_p50_ms", "latency_p90_ms", "duration_seconds", "peak_ram_mb",
         "success", "error_message",
@@ -338,6 +364,9 @@ class CellCheckpointer:
             "embedding_backend": result.embedding_backend,
             "bm25_weight": result.bm25_weight,
             "reranker_model": result.reranker_model,
+            "test_holdout_fraction": result.test_holdout_fraction,
+            "query_start_fraction": result.query_start_fraction,
+            "query_end_fraction": result.query_end_fraction,
             "recall_at_k": round(result.recall_at_k, 4),
             "precision_at_k": round(result.precision_at_k, 4),
             "mrr": round(result.mrr, 4),
@@ -545,6 +574,9 @@ class StudyScheduler:
             study_phase=cell_dict.get("study_phase", "general"),
             top_k=cell_dict.get("top_k", 10),
             archival_floor=cell_dict.get("archival_floor", 0.65),
+            test_holdout_fraction=cell_dict.get("test_holdout_fraction", 0.0),
+            query_start_fraction=cell_dict.get("query_start_fraction", 0.0),
+            query_end_fraction=cell_dict.get("query_end_fraction", 1.0),
             success=False,
             error_message=error,
         )
@@ -638,5 +670,8 @@ class StudyScheduler:
             study_phase=study.get("study_phase", "general"),
             top_k=study.get("top_k", 10),
             archival_floor=study.get("archival_floor", 0.65),
+            test_holdout_fraction=study.get("test_holdout_fraction", 0.0),
+            query_start_fraction=study.get("query_start_fraction", 0.0),
+            query_end_fraction=study.get("query_end_fraction", 1.0),
         )
         return result

@@ -161,7 +161,7 @@ def _ranking_comparable(rows: list[dict]) -> list[dict]:
     not tuning-sweep variants) — same rule as generate_reports. Falls back to
     all rows when nothing qualifies so a plot is never silently empty."""
     from generate_reports import _is_ranking_comparable
-    return [r for r in rows if _is_ranking_comparable(r)] or rows
+    return [r for r in rows if _is_ranking_comparable(r)]
 
 
 def _store_only(rows: list[dict]) -> list[dict]:
@@ -176,6 +176,22 @@ def _decay_comparable(rows: list[dict]) -> list[dict]:
     (always 'none') and were measured under a different condition, so they
     would inflate the 'none' bucket against per-store decay-sweep cells."""
     return [r for r in rows if r.get("study_phase") != "phase3_hybrid_weight"]
+
+
+def _final_test_rows(rows: list[dict]) -> list[dict]:
+    """Return final, untouched evaluations; tuning cells never qualify."""
+    return [r for r in rows if r.get("study_phase") == "final_test"]
+
+
+def _equal_replication_decay(rows: list[dict]) -> dict[str, list[dict]]:
+    """Return decay groups only when every policy has equal repeated evidence."""
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for row in _decay_comparable(rows):
+        groups[row["decay_policy"]].append(row)
+    if len(groups) < 2:
+        return {}
+    counts = {len(group) for group in groups.values()}
+    return dict(groups) if len(counts) == 1 and next(iter(counts)) >= 2 else {}
 
 
 def _saturated(rows: list[dict]) -> bool:
@@ -219,51 +235,50 @@ def plot_strategy_comparison(ds_name: str, rows: list[dict], out_dir: Path, dpi:
     for r in _ranking_comparable(rows):
         by_strat[r["retrieval_strategy"]].append(r)
 
+    if not by_strat:
+        _remove_stale(out_dir, f"{ds_name}_01_strategy_comparison.png")
+        return
+
     records = []
     for s, rs in by_strat.items():
         r10s = [_f(r, "recall_at_k") for r in rs]
         p1s  = [_f(r, "precision_at_1") for r in rs]
         mrrs = [_f(r, "mrr") for r in rs]
-        records.append(dict(name=s, avg=np.mean(r10s), best=max(r10s),
-                            p1=np.mean(p1s), mrr=np.mean(mrrs), n=len(rs)))
+        records.append(dict(name=s, avg=np.mean(r10s), std=np.std(r10s, ddof=1) if len(r10s) > 1 else 0.0,
+                    p1=np.mean(p1s), mrr=np.mean(mrrs), n=len(rs)))
     records.sort(key=lambda x: -x["avg"])
 
     names = [r["name"] for r in records]
     avgs  = [r["avg"]  for r in records]
-    bests = [r["best"] for r in records]
+    stds  = [r["std"]  for r in records]
     p1s   = [r["p1"]   for r in records]
     y     = np.arange(len(names))
     h     = 0.28
 
     fig, ax = plt.subplots(figsize=(7, max(3, 0.55 * len(names) + 1.2)))
-    ax.set_title(f"{ds_name} — Retrieval strategy: avg vs best Recall@10", pad=8)
+    ax.set_title(f"{ds_name} — Head-to-head strategy comparison", pad=8)
 
-    # Best recall (faint background bar)
-    ax.barh(y + h/2, bests, h*3, color=C["blue"], alpha=0.15, label="Best Recall@10")
-    # Avg recall (solid bar)
-    ax.barh(y + h/2, avgs,  h,   color=[STRATEGY_COLORS.get(n, C["blue"]) for n in names],
-                   label="Avg Recall@10")
+    ax.barh(y + h/2, avgs, h, xerr=stds,
+            color=[STRATEGY_COLORS.get(n, C["blue"]) for n in names],
+            error_kw={"capsize": 3, "elinewidth": 0.8}, label="Mean Recall@10 ± 1 SD")
     # P@1 bar (below)
     ax.barh(y - h/2, p1s,   h,   color=C["orange"], alpha=0.75, label="Avg Precision@1")
 
-    # Annotate winner
-    # Anchor past the row's LONGEST bar — the P@1 bar can exceed the recall bars
-    ax.text(max(bests[0], avgs[0], p1s[0]) + 0.01, y[0] + h/2,
-            f"best={bests[0]:.3f}", va="center",
-            fontsize=7.5, color=C["blue"], fontweight="bold")
+    for index, record in enumerate(records):
+        ax.text(max(record["avg"] + record["std"], record["p1"]) + 0.01, index + h / 2,
+                f"n={record['n']}", va="center", fontsize=7, color=C["gray"])
 
     ax.set_yticks(y)
     ax.set_yticklabels(names)
     ax.set_xlabel("Score")
-    ax.set_xlim(0, min(1.0, max(bests) * 1.22))
+    ax.set_xlim(0, min(1.0, max(avg + std for avg, std in zip(avgs, stds)) * 1.22))
     ax.axvline(0, color="#c3c2b7", linewidth=0.8)
     ax.invert_yaxis()
     ax.grid(axis="x")
     ax.grid(axis="y", alpha=0)
 
     legend_patches = [
-        mpatches.Patch(color=C["blue"], alpha=0.15, label="Best Recall@10 (tuned config)"),
-        mpatches.Patch(color=C["blue"], label="Avg Recall@10 (all runs)"),
+        mpatches.Patch(color=C["blue"], label="Mean Recall@10 ± 1 SD"),
         mpatches.Patch(color=C["orange"], alpha=0.75, label="Avg Precision@1"),
     ]
     ax.legend(handles=legend_patches, loc="center left",
@@ -281,14 +296,10 @@ def plot_decay_sweep(ds_name: str, rows: list[dict], out_dir: Path, dpi: int) ->
     for r in rows:
         by_strat[r["retrieval_strategy"]].append(r)
     top_strat = max(by_strat, key=lambda s: np.mean([_f(r, "recall_at_k") for r in by_strat[s]]))
-    strat_rows = _decay_comparable(by_strat[top_strat])
-
-    by_decay: dict[str, list] = defaultdict(list)
-    for r in strat_rows:
-        by_decay[r["decay_policy"]].append(r)
-
-    if len(by_decay) < 2:
+    by_decay = _equal_replication_decay(by_strat[top_strat])
+    if not by_decay:
         _remove_stale(out_dir, f"{ds_name}_02_decay_sweep.png")
+        print(f"  [skip] {ds_name}: decay policies lack equal repeated measurements")
         return
 
     records = []
@@ -509,7 +520,8 @@ def plot_memory_type(ds_name: str, rows: list[dict], out_dir: Path, dpi: int) ->
 # ── 6. Best-config recommendation card ───────────────────────────────────────
 
 def plot_best_config_card(ds_name: str, rows: list[dict], out_dir: Path, dpi: int) -> None:
-    best = max(_store_only(rows), key=_composite)
+    final_rows = _final_test_rows(rows)
+    best = max(final_rows, key=_composite) if final_rows else max(_store_only(rows), key=_composite)
     comp = _composite(best)
 
     r10  = _f(best, "recall_at_k")
@@ -537,7 +549,8 @@ def plot_best_config_card(ds_name: str, rows: list[dict], out_dir: Path, dpi: in
 
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.8),
                              gridspec_kw={"width_ratios": [1.3, 1]})
-    fig.suptitle(f"{ds_name} — Best configuration recommendation",
+    evidence_label = "Final-test result" if final_rows else "Tuning-only candidate — not deployable"
+    fig.suptitle(f"{ds_name} — {evidence_label}",
                  fontsize=11, fontweight="bold", y=1.01)
 
     # LEFT: Configuration details
@@ -563,6 +576,10 @@ def plot_best_config_card(ds_name: str, rows: list[dict], out_dir: Path, dpi: in
     ax_cfg.text(0.0, -0.04,
                 f"Composite score: {comp:.4f}   Recall@10: {r10:.4f}   MRR: {mrr:.4f}",
                 transform=ax_cfg.transAxes, fontsize=8, color=C["blue"], fontweight="bold")
+    if not final_rows:
+        ax_cfg.text(0.0, -0.38,
+                    "No untouched final-test row was found. Re-run with --final-test-holdout-fraction.",
+                    transform=ax_cfg.transAxes, fontsize=7, color="#A33A00", fontweight="bold")
 
     gate_note = (f"gate = 1.0 (R@10 ≥ {cfg.composite.recall_gate})" if gate == 1.0
                  else f"gate = 0.0 (R@10 < {cfg.composite.recall_gate})")
@@ -677,13 +694,16 @@ def plot_cross_strategy_heatmap(by_ds: dict[str, list], out_dir: Path, dpi: int)
 # ── Cross-dataset: decay policy line chart ────────────────────────────────────
 
 def plot_cross_decay_heatmap(by_ds: dict[str, list], out_dir: Path, dpi: int) -> None:
-    """Line chart: one line per decay policy across datasets (top strategy per dataset)."""
+    """Grouped bars for balanced decay measurements across categorical datasets."""
     ds_present  = [d for d in DATASET_ORDER if d in by_ds]
     decay_order = ["linear", "logarithmic", "tiered", "exponential", "none"]
 
-    # For each dataset: use top strategy, then avg recall per decay policy
-    data: dict[str, dict[str, float]] = {d: {} for d in decay_order}
+    # For each non-saturated dataset, use its top head-to-head strategy only
+    # when every decay policy has the same number of repeated measurements.
+    data: dict[str, dict[str, tuple[float, float, int]]] = {}
     for ds in ds_present:
+        if _saturated(by_ds[ds]):
+            continue
         by_s: dict[str, list] = defaultdict(list)
         for r in _ranking_comparable(by_ds[ds]):
             by_s[r["retrieval_strategy"]].append(r)
@@ -693,46 +713,48 @@ def plot_cross_decay_heatmap(by_ds: dict[str, list], out_dir: Path, dpi: int) ->
         # Decay buckets need the strategy's FULL rows — by_s holds only the
         # ranking-comparable subset, which excludes the decay-swept cells.
         top_s_all = [r for r in by_ds[ds] if r["retrieval_strategy"] == top_s]
-        by_d:  dict[str, list] = defaultdict(list)
-        for r in _decay_comparable(top_s_all):
-            by_d[r["decay_policy"]].append(_f(r, "recall_at_k"))
-        for dec in decay_order:
-            if dec in by_d:
-                data[dec][ds] = float(np.mean(by_d[dec]))
+        by_d = _equal_replication_decay(top_s_all)
+        if not by_d:
+            print(f"  [skip] {ds}: cross-dataset decay comparison lacks balanced replication")
+            continue
+        data[ds] = {
+            decay: (
+                float(np.mean([_f(row, "recall_at_k") for row in decay_rows])),
+                float(np.std([_f(row, "recall_at_k") for row in decay_rows], ddof=1)),
+                len(decay_rows),
+            )
+            for decay, decay_rows in by_d.items()
+        }
 
-    active_decays = [d for d in decay_order if data[d]]
-    if not active_decays:
+    valid_datasets = [ds for ds in ds_present if ds in data]
+    active_decays = [decay for decay in decay_order if any(decay in data[ds] for ds in valid_datasets)]
+    if not valid_datasets or not active_decays:
+        _remove_stale(out_dir, "cross_02_decay_lines.png")
         return
 
     decay_cols = [C["blue"], C["orange"], C["aqua"], C["yellow"], C["gray"]]
-    x     = np.arange(len(ds_present))
+    x = np.arange(len(valid_datasets))
+    width = 0.72 / len(active_decays)
 
-    fig, ax = plt.subplots(figsize=(7.5, 3.8))
-    ax.set_title("Cross-dataset — Decay policy comparison  (top strategy per dataset)", pad=8)
+    fig, ax = plt.subplots(figsize=(max(7.5, len(valid_datasets) * 2.2), 4.2))
+    ax.set_title("Cross-dataset — Balanced decay comparison (top strategy per dataset)", pad=8)
 
-    for dec, col in zip(active_decays, decay_cols):
-        vals = [data[dec].get(ds, np.nan) for ds in ds_present]
-        ax.plot(x, vals, "o-", color=col, linewidth=1.8, markersize=6,
-                label=dec, alpha=0.9)
-
-    # One label per dataset (its best decay) — labelling every line stacks
-    # unreadable text where the policies score similarly
-    for xi, ds in enumerate(ds_present):
-        scored = [(dec, data[dec][ds]) for dec in active_decays if ds in data[dec]]
-        if scored:
-            dec, v = max(scored, key=lambda t: t[1])
-            col = decay_cols[active_decays.index(dec)]
-            ax.text(xi, v + 0.015, f"{v:.3f}", ha="center", va="bottom",
-                    fontsize=6.5, color=col)
+    for index, (decay, color) in enumerate(zip(active_decays, decay_cols)):
+        values = [data[ds].get(decay, (np.nan, np.nan, 0)) for ds in valid_datasets]
+        means = [value[0] for value in values]
+        stds = [value[1] for value in values]
+        offset = (index - (len(active_decays) - 1) / 2) * width
+        ax.bar(x + offset, means, width, yerr=stds, capsize=3, color=color,
+               alpha=0.85, label=decay)
 
     ax.set_xticks(x)
-    ax.set_xticklabels([_ds_label(ds, by_ds[ds]) for ds in ds_present],
+    ax.set_xticklabels([f"{ds}\n(n={next(iter(data[ds].values()))[2]})" for ds in valid_datasets],
                        rotation=15, ha="right")
     ax.set_ylabel("Avg Recall@10")
     ax.set_ylim(bottom=0)
     ax.legend(fontsize=7.5, loc="upper right", title="Decay policy", title_fontsize=7.5)
     ax.grid(axis="y")
-    ax.grid(axis="x", alpha=0.25)
+    ax.grid(axis="x", alpha=0)
     fig.tight_layout()
     _save(fig, out_dir / "cross_02_decay_lines.png")
 
@@ -761,7 +783,7 @@ def plot_composite_breakdown(by_ds: dict[str, list], out_dir: Path, dpi: int) ->
 
     x = np.arange(len(ds_present))
     fig, ax = plt.subplots(figsize=(7, 4))
-    ax.set_title("Best-config composite score breakdown per dataset\n" +
+    ax.set_title("Tuning-candidate composite score breakdown per dataset\n" +
                  cfg.composite.formula_str, pad=8)
 
     bottoms = np.zeros(len(ds_present))
@@ -819,7 +841,8 @@ def plot_best_configs_summary(by_ds: dict[str, list], out_dir: Path, dpi: int) -
 
     fig, ax = plt.subplots(figsize=(11, max(2.5, 0.52 * len(rows_out) + 1.8)))
     ax.axis("off")
-    ax.set_title("Best Configuration Recommendation Per Dataset\n" +
+    ax.set_title("Final-Test Configuration Results Per Dataset\n"
+                 "(tuning candidates shown where final test is absent)\n" +
                  cfg.composite.formula_str,
                  fontsize=10, pad=10)
 
@@ -868,8 +891,8 @@ def write_recommendations(by_ds: dict[str, list], out_path: Path) -> None:
     lines = [
         "# MemTuner — Per-Dataset Configuration Recommendations",
         "",
-        "Generated by `scripts/plot_benchmark.py`. Each recommendation is the **highest composite-scoring**",
-        "configuration found in the benchmark sweep.",
+        "Generated by `scripts/plot_benchmark.py`. A deployable recommendation requires an **untouched final-test**",
+        "measurement. When no final test is present, this document shows a tuning candidate only.",
         "",
         "## Composite score formula",
         "",
@@ -895,7 +918,8 @@ def write_recommendations(by_ds: dict[str, list], out_path: Path) -> None:
         near_perfect = sum(1 for r in rows if _f(r, "recall_at_k") >= 0.99)
         saturated = len(rows) >= 5 and near_perfect / len(rows) >= 0.5
 
-        best  = max(_store_only(rows), key=_composite)
+        final_rows = _final_test_rows(rows)
+        best  = max(final_rows, key=_composite) if final_rows else max(_store_only(rows), key=_composite)
         comp  = _composite(best)
         r10   = _f(best, "recall_at_k")
         p10   = _f(best, "precision_at_k")
@@ -937,6 +961,12 @@ def write_recommendations(by_ds: dict[str, list], out_path: Path) -> None:
             f"## {ds_name}",
             "",
         ]
+        if not final_rows:
+            lines += [
+                "> ⚠️ **Tuning-only candidate — not deployable.** No untouched final-test row was found. "
+                "Re-run with `--final-test-holdout-fraction` before treating this selection as a recommendation.",
+                "",
+            ]
         if saturated:
             lines += [
                 f"> ⚠️ **Saturated dataset — do not use for tuning.** "
@@ -947,7 +977,9 @@ def write_recommendations(by_ds: dict[str, list], out_path: Path) -> None:
                 "",
             ]
         lines += [
-            f"**Best config**: `{strat}` + `{embed}` ({backend}) + `{decay}` decay (λ={lam:.4f})",
+            f"+ BM25 weight={bm25w:.2f} (semantic={sem_w:.2f}) + `{mem}` memory",
+            f"**{'Final-test result' if final_rows else 'Best tuning candidate'}**: `{strat}` + `{embed}` ({backend}) + `{decay}` decay (λ={lam:.4f})",
+            f"+ BM25 weight={bm25w:.2f} (semantic={sem_w:.2f}) + `{mem}` memory",
             f"+ BM25 weight={bm25w:.2f} (semantic={sem_w:.2f}) + `{mem}` memory",
             "",
             "| Metric | Value |",

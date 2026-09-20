@@ -25,6 +25,8 @@ class GoldDatasetScenario(BenchmarkScenario):
         dataset: GoldDataset,
         evaluation_horizon: int | None = None,
         test_frac: float = 0.0,
+        query_start_fraction: float = 0.0,
+        query_end_fraction: float = 1.0,
     ) -> None:
         """Initialize from a gold dataset.
 
@@ -34,6 +36,10 @@ class GoldDatasetScenario(BenchmarkScenario):
             test_frac: Fraction of days (from the end) to hold out as a test split.
                 Events on held-out days are not injected; only their queries are evaluated.
                 Must be in [0.0, 1.0).  Default 0.0 disables the split (original behaviour).
+            query_start_fraction: Inclusive fraction of the replay horizon at which queries
+                are scored. Defaults to the start of the holdout interval.
+            query_end_fraction: Exclusive fraction of the replay horizon at which queries
+                stop being scored. Defaults to the end of the replay horizon.
         """
         self._dataset = dataset
         # Merge multiple GoldDayEvents that share the same day number.
@@ -69,6 +75,16 @@ class GoldDatasetScenario(BenchmarkScenario):
         self._split_day: int | None = (
             int(self._total_days * (1 - test_frac)) if test_frac > 0.0 else None
         )
+        if not (0.0 <= query_start_fraction < query_end_fraction <= 1.0):
+            raise ValueError(
+                "query window must satisfy 0.0 <= start < end <= 1.0, got "
+                f"start={query_start_fraction}, end={query_end_fraction}"
+            )
+        default_query_start = 1.0 - test_frac if test_frac > 0.0 else 0.0
+        self._query_start_day = int(self._total_days * query_start_fraction)
+        self._query_end_day = int(self._total_days * query_end_fraction)
+        if query_start_fraction == 0.0 and test_frac > 0.0:
+            self._query_start_day = int(self._total_days * default_query_start)
 
     def active_days(self) -> list[int]:
         """Return sorted list of days that have events or queries.
@@ -126,7 +142,7 @@ class GoldDatasetScenario(BenchmarkScenario):
         Returns:
             List of queries (may be empty).
         """
-        if self._split_day is not None and day < self._split_day:
+        if day < self._query_start_day or day >= self._query_end_day:
             return []
         return self._queries_by_day.get(day, [])
 
