@@ -268,15 +268,40 @@ Example on a 16 GB NVIDIA GPU:
 
 ### The whole thing — every dataset, every phase
 
+The proper full benchmark, start to finish:
+
 ```bash
-memtuner study --mode full            # all datasets × all 5 phases, merged report
-memtuner reports                      # HTML dashboard + data JS from all past runs
+memtuner doctor --apply               # 1. hardware check; writes worker/model config to .env
+memtuner study --mode full            # 2. all datasets × all 5 phases, merged report
+memtuner reports                      # 3. HTML dashboard + data JS from all past runs
 memtuner plots                        # regenerate PNG charts from past runs
 memtuner plots --dpi 300              # high-res for publication
 ```
 
 With no `--gold-dataset` argument, `study` auto-downloads every available
-dataset and merges the results into one report.
+dataset and merges the results into one report. No extra flags are needed for
+a correct run: the evaluation horizon follows each dataset's natural span
+(so long-range datasets like LoCoMo evaluate **all** their queries), and
+query↔corpus overlap is reported as a per-dataset note rather than a refusal.
+
+**If a dataset is skipped or its numbers look wrong:**
+
+```bash
+# "cannot load dataset — Failed to parse gold dataset JSON" → the gold file is
+# corrupt (doctor flags 0-byte/non-JSON gold files). Delete it and rebuild:
+rm data/input/<name>_gold.json
+python scripts/prepare_datasets.py --convert --force
+
+# After pulling adapter changes, gold files do NOT regenerate on their own —
+# plain --convert skips existing files. Force a rebuild so fixes take effect:
+python scripts/prepare_datasets.py --convert --force
+```
+
+Warnings a run may print, and what they mean: `[horizon]` — a pinned window
+excludes some queries (the run auto-uses the natural span unless you pinned
+one); `OVERLAP NOTE` — queries verbatim-overlap the corpus, which favors
+lexical strategies (expected for retrieval benchmarks; weigh bm25-vs-semantic
+gaps accordingly); `[size]` — fewer than 30 queries, results are anecdotal.
 
 ### Scoped runs — one dataset, or specific phases
 
@@ -384,12 +409,13 @@ python scripts/study_runner.py --gold-dataset data/input/locomo10.json --mode qu
 | `--early-stop-patience N` | `3` | Phase 4 early-stopping patience; `0` disables |
 | `--ollama-url URL` | none | Ollama / OpenAI-compatible judge endpoint |
 | `--judge-model MODEL` | none | LLM judge model, e.g. `nemotron-3-nano:4b` |
-| `--workload` | `medium_qpd` | `low_qpd` (14d) · `medium_qpd` (50d) · `high_qpd` (90d). **Different workloads evaluate different query subsets — results are not comparable across workloads.** |
+| `--workload` | unset | `low_qpd` (14d) · `medium_qpd` (50d) · `high_qpd` (90d). Passing this **pins** the evaluation window to the profile's day-range; leaving it unset lets the horizon follow each dataset's natural span. **Different windows evaluate different query subsets — results are not comparable across them.** |
+| `--leakage-policy` | `warn` | `warn` prints each dataset's verbatim query↔corpus overlap rate (expected for retrieval benchmarks; it signals lexical-strategy advantage) and records it in run metadata. `fail` refuses overlapping datasets — use when evaluating generation, not retrieval. |
 | `--memory-types` | `episodic semantic preference` | Memory types to benchmark (auto-pruned to types present in dataset) |
 | `--skip-models MODEL [MODEL ...]` | none | Exclude specific embedding models by name (e.g. models too large for your VRAM) |
 | `--only-models MODEL [MODEL ...]` | none | Whitelist: only run these embedding models |
 | `--skip-rerankers MODEL [MODEL ...]` | none | Exclude specific reranker models from Phase 5 |
-| `--evaluation-horizon N` | dataset max | Override the number of dataset days to evaluate. Defaults to the natural span of the dataset. |
+| `--evaluation-horizon N` | dataset max | Number of dataset days to evaluate. Defaults to each dataset's natural span (LoCoMo runs to day 721) so no queries are silently excluded. Precedence: this flag > `--workload` profile window > natural span. A horizon that would exclude **all** queries skips the dataset with an error instead of producing zero-cells. |
 | `--study-config YAML` | `configs/study_defaults.yaml` | YAML file controlling which models are swept and default parameters |
 | `--no-plots` | off | Skip PNG generation (useful on headless / CI servers) |
 | `--output-dir PATH` | `data/output` | Output root directory |

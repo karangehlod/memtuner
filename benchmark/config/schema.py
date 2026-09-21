@@ -318,7 +318,7 @@ class BenchmarkScopeConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    evaluation_horizon: int = Field(default=14, ge=1, le=365, description="Number of dataset days to evaluate (replay horizon)")
+    evaluation_horizon: int = Field(default=14, ge=1, le=3650, description="Number of dataset days to evaluate (replay horizon). Upper bound is a sanity cap, not a policy: real datasets exceed a year (LoCoMo queries reach day 721)")
     test_holdout_fraction: float = Field(
         default=0.0,
         ge=0.0,

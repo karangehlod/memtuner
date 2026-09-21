@@ -196,9 +196,14 @@ Examples:
     )
     parser.add_argument(
         "--workload",
-        default="medium_qpd",
+        default=None,
         choices=["low_qpd", "medium_qpd", "high_qpd"],
-        help="Workload profile (default: medium_qpd)",
+        help=(
+            "Workload profile (default: medium_qpd). Passing this pins the "
+            "evaluation horizon to the profile's day-window; without it (and "
+            "without --evaluation-horizon) the horizon follows each dataset's "
+            "natural span so no queries are silently excluded."
+        ),
     )
     parser.add_argument(
         "--workers",
@@ -253,10 +258,13 @@ Examples:
     parser.add_argument(
         "--leakage-policy",
         choices=["fail", "warn"],
-        default="fail",
+        default="warn",
         help=(
-            "How to handle query/corpus overlap (default: fail). "
-            "Use warn only for exploratory runs; resulting scores are not unbiased estimates."
+            "How to handle verbatim query/corpus overlap (default: warn). "
+            "Overlap is intrinsic to retrieval benchmarks (the corpus contains the "
+            "answers) and mainly signals lexical-strategy advantage; the rate is "
+            "recorded in run metadata either way. Use fail to refuse overlapping "
+            "datasets, e.g. when evaluating GENERATION rather than retrieval."
         ),
     )
     parser.add_argument(
@@ -488,7 +496,7 @@ Examples:
 
     gold_path = gold_paths[0]
 
-    profile = get_profile(args.workload)
+    profile = get_profile(args.workload or "medium_qpd")
     evaluation_horizon = args.evaluation_horizon or profile.evaluation_horizon
 
     run_id = uuid.uuid4().hex[:12]
@@ -1404,7 +1412,7 @@ def _run_single_dataset(
     from benchmark.workload.study_matrix import DEFAULT_EMBEDDING_MODEL, StudyExpander
     from benchmark.workload.study_scheduler import StudyScheduler
 
-    profile = get_profile(args.workload)
+    profile = get_profile(args.workload or "medium_qpd")
     evaluation_horizon = args.evaluation_horizon or profile.evaluation_horizon
 
     # Warn when --workload flag is non-default — different workloads evaluate
@@ -1438,20 +1446,68 @@ def _run_single_dataset(
         print(f"  [skip] Delete {gold_path} and re-run to regenerate it.")
         return None
 
+    # ── Evaluation horizon: default to the dataset's natural span ────────────
+    # Documented contract (README): unless the user pins the horizon with
+    # --evaluation-horizon, or asks for a specific day-window simulation with
+    # --workload, the horizon covers the whole dataset — a fixed 50-day default
+    # silently excluded 100% of LoCoMo's queries (they run to day 721).
+    if args.evaluation_horizon is None and args.workload is None:
+        try:
+            _nat_span = max(
+                max((q.day for q in _preflight_ds.queries), default=0),
+                max((d.day for d in _preflight_ds.events), default=0),
+            ) + 1
+            if _nat_span > evaluation_horizon:
+                print(
+                    f"  [horizon] using dataset natural span: {_nat_span}d "
+                    f"(profile default {evaluation_horizon}d would exclude queries; "
+                    f"pin with --evaluation-horizon or --workload to override)"
+                )
+                evaluation_horizon = _nat_span
+        except Exception:
+            pass
+
     # ── Evaluation horizon vs dataset coverage ───────────────────────────────
     # Warn if the dataset contains queries on days beyond evaluation_horizon.
     # Those queries are silently skipped — this is not a crash, just a coverage gap.
     try:
+        from benchmark.workload.profile import HIGH_QPD as _HIGH_QPD
         _dataset_max_day = max((q.day for q in _preflight_ds.queries), default=0)
         _total_q = len(_preflight_ds.queries)
         _skipped_q = sum(1 for q in _preflight_ds.queries if q.day >= evaluation_horizon)
         if _skipped_q > 0:
+            # Only suggest high_qpd when its horizon actually covers the dataset
+            _alt = (" or --workload high_qpd"
+                    if _dataset_max_day < _HIGH_QPD.evaluation_horizon else "")
             print(
                 f"  [horizon] WARNING: evaluation_horizon={evaluation_horizon}d but dataset "
                 f"has queries up to day {_dataset_max_day}. "
                 f"{_skipped_q}/{_total_q} queries ({_skipped_q*100//_total_q}%) "
-                f"will NOT be evaluated. Use --evaluation-horizon {_dataset_max_day+1} "
-                f"or --workload high_qpd to include all queries."
+                f"will NOT be evaluated. Use --evaluation-horizon {_dataset_max_day+1}"
+                f"{_alt} to include all queries."
+            )
+        if _total_q > 0 and _skipped_q == _total_q:
+            # Evaluating zero queries can only produce meaningless zero-cells —
+            # skip the dataset instead of burning compute on it.
+            print(
+                f"  [skip] evaluation_horizon={evaluation_horizon}d excludes ALL "
+                f"{_total_q} queries — re-run with --evaluation-horizon {_dataset_max_day+1}.",
+                file=sys.stderr,
+            )
+            return None
+    except Exception:
+        pass
+
+    # ── Statistical adequacy ──────────────────────────────────────────────────
+    # A handful of queries cannot rank strategies (CIs span most of [0, 1]);
+    # run it, but say plainly that the numbers are anecdotal.
+    try:
+        _nq_total = len(_preflight_ds.queries)
+        if 0 < _nq_total < 30:
+            print(
+                f"  [size] WARNING: only {_nq_total} queries — results from this "
+                f"dataset are anecdotal, not statistically meaningful (need ≥30; "
+                f"CIs will be flagged unreliable)."
             )
     except Exception:
         pass
@@ -1483,17 +1539,18 @@ def _run_single_dataset(
             import sys as _sys
             print(
                 f"\n  ╔{'═'*58}╗\n"
-                f"  ║  LEAKAGE WARNING: {_leak_pct:.1f}% of queries verbatim-overlap   ║\n"
-                f"  ║  the memory corpus. Recall scores may reflect           ║\n"
-                f"  ║  memorisation, not retrieval quality. Do not cite       ║\n"
-                f"  ║  these numbers as unbiased recall estimates.            ║\n"
+                f"  ║  OVERLAP NOTE: {_leak_pct:5.1f}% of queries verbatim-overlap    ║\n"
+                f"  ║  the memory corpus. This favors lexical strategies      ║\n"
+                f"  ║  (bm25/bm25l) and is expected in retrieval benchmarks;  ║\n"
+                f"  ║  weigh cross-strategy gaps on this dataset accordingly. ║\n"
                 f"  ╚{'═'*58}╝\n",
                 file=_sys.stderr,
             )
             if args.leakage_policy == "fail":
                 print(
-                    "  [skip] Refusing contaminated dataset. Use --leakage-policy warn "
-                    "only for exploratory analysis.",
+                    "  [skip] --leakage-policy fail: refusing dataset with query/corpus "
+                    "overlap (the default policy is warn — overlap is expected for "
+                    "retrieval benchmarks).",
                     file=_sys.stderr,
                 )
                 return None
@@ -1598,7 +1655,7 @@ def _run_single_dataset(
     expander = StudyExpander(
         memory_types=effective_memory_types,
         ollama_base_url=args.ollama_url or "",
-        workload_profile=args.workload,
+        workload_profile=args.workload or "medium_qpd",
         test_holdout_fraction=tuning_holdout_fraction,
         query_start_fraction=validation_start_fraction,
         query_end_fraction=validation_end_fraction,
@@ -1624,7 +1681,7 @@ def _run_single_dataset(
             seed_expander = StudyExpander(
                 memory_types=effective_memory_types,
                 ollama_base_url=args.ollama_url or "",
-                workload_profile=args.workload,
+                workload_profile=args.workload or "medium_qpd",
                 test_holdout_fraction=tuning_holdout_fraction,
                 query_start_fraction=validation_start_fraction,
                 query_end_fraction=validation_end_fraction,

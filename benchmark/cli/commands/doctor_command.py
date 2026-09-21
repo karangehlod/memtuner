@@ -214,8 +214,22 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
     for _name in _core + _extended:
         _p = _data_dir / _name
         if _p.exists():
+            _size = _p.stat().st_size
+            # Existence is not validity: a 0-byte or non-JSON gold file passes
+            # this check but crashes the study at load time — catch it here.
+            _looks_json = False
+            if _size > 0:
+                try:
+                    with open(_p, encoding="utf-8") as _f:
+                        _looks_json = _f.read(64).lstrip()[:1] in ("{", "[")
+                except OSError:
+                    _looks_json = False
+            if not _looks_json:
+                _warn(f"{_name} — corrupt ({_size} bytes, not valid JSON). "
+                      f"Delete it and re-run: python scripts/prepare_datasets.py --convert --force")
+                continue
             _n_present += 1
-            _ok(f"{_name}  ({_p.stat().st_size // (1024 * 1024)} MB)")
+            _ok(f"{_name}  ({_size // (1024 * 1024)} MB)")
         else:
             _info(f"{_name} — not downloaded (auto-fetched when requested)")
     if _n_present < len(_core):
