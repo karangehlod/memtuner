@@ -30,6 +30,7 @@ class DatasetProfile:
     time_span_days:  int | str      # 0 = no temporal dimension, int = typical span
     why_hard:        str            # the structural retrieval challenge (IR theory, not run data)
     strengths:       tuple[str, ...] = field(default_factory=tuple)  # challenge tags
+    evidence_tier:   str = "transfer_coverage"  # agent_memory_core | controlled_verification | transfer_coverage
 
 
 # Registry: maps the normalised dataset name (lowercase, no suffix) → profile
@@ -47,6 +48,7 @@ DATASET_PROFILES: dict[str, DatasetProfile] = {
             "Queries paraphrase conversation content; exact keywords rare."
         ),
         strengths       = ("temporal_reasoning", "multi_turn", "paraphrase_gap"),
+        evidence_tier   = "agent_memory_core",
     ),
 
     "longmemeval": DatasetProfile(
@@ -62,6 +64,7 @@ DATASET_PROFILES: dict[str, DatasetProfile] = {
             "helps distinguish by meaning drift."
         ),
         strengths       = ("knowledge_update", "temporal_facts", "contradiction_resolution"),
+        evidence_tier   = "agent_memory_core",
     ),
 
     "squad": DatasetProfile(
@@ -107,6 +110,7 @@ DATASET_PROFILES: dict[str, DatasetProfile] = {
             "or that the temporal constraint is enforced correctly."
         ),
         strengths       = ("ablation", "reproducible", "configurable_difficulty"),
+        evidence_tier   = "controlled_verification",
     ),
 
     "hotpotqa": DatasetProfile(
@@ -122,6 +126,34 @@ DATASET_PROFILES: dict[str, DatasetProfile] = {
             "bridge lexical and semantic gaps across the two hops."
         ),
         strengths       = ("multi_hop", "cross_document_reasoning", "bridge_entities"),
+    ),
+
+    "conflict-update": DatasetProfile(
+        display_name    = "Conflict/Update Controlled",
+        character       = "Current-state retrieval with stale competing memories",
+        query_style     = "direct_qa",
+        memory_density  = "sparse",
+        time_span_days  = 5,
+        why_hard        = (
+            "Each current-state query has an older plausible but invalid memory. "
+            "The evaluator expects the correction, authority-confirmed update, or tombstone."
+        ),
+        strengths       = ("knowledge_update", "contradiction_resolution", "deletion_semantics"),
+        evidence_tier   = "controlled_verification",
+    ),
+
+    "longmemeval-v2": DatasetProfile(
+        display_name    = "LongMemEval-V2",
+        character       = "Web and enterprise long-term agent trajectories",
+        query_style     = "mixed",
+        memory_density  = "dense",
+        time_span_days  = "trajectory-dependent",
+        why_hard        = (
+            "Queries can require long trajectories, updates, and multimodal context. "
+            "Run the official evaluator for leaderboard-comparable answer and latency metrics."
+        ),
+        strengths       = ("agent_trajectory", "knowledge_update", "multimodal_context", "latency"),
+        evidence_tier   = "agent_memory_core",
     ),
 }
 
@@ -140,7 +172,7 @@ def get_profile(dataset_path_or_name: str) -> DatasetProfile | None:
     name = re.sub(r".*[/\\]", "", name)       # remove directory
     name = re.sub(r"(_gold|_oracle|_dev.*|_train.*)?\.json$", "", name)  # remove suffixes
     name = re.sub(r"\d+$", "", name)           # remove trailing numbers (locomo10 → locomo)
-    name = name.rstrip("_-")
+    name = name.rstrip("_-").replace("_", "-")
 
     # Direct match
     if name in DATASET_PROFILES:

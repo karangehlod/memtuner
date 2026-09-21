@@ -55,6 +55,13 @@ logger = get_logger(__name__)
     help="Maximum number of queries to use from the pack.",
 )
 @click.option(
+    "--longmemeval-profile",
+    type=click.Choice(["oracle", "small", "medium"]),
+    default="oracle",
+    show_default=True,
+    help="LongMemEval corpus profile; ignored for other packs.",
+)
+@click.option(
     "--allow-strategy-fallback",
     is_flag=True,
     default=False,
@@ -67,6 +74,7 @@ def run_benchmark(
     pack: str | None,
     data_dir: str | None,
     max_queries: int | None,
+    longmemeval_profile: str,
     allow_strategy_fallback: bool,
 ) -> None:
     """Execute benchmark scenarios from a config file."""
@@ -86,7 +94,9 @@ def run_benchmark(
     dataset_override = None
 
     if pack:
-        dataset_override = _load_pack_dataset(pack, data_dir, max_queries, benchmark_config)
+        dataset_override = _load_pack_dataset(
+            pack, data_dir, max_queries, benchmark_config, longmemeval_profile
+        )
         click.echo(
             f"📦 Pack '{pack}' loaded: "
             f"{len(dataset_override.queries)} queries, "
@@ -147,6 +157,7 @@ def _load_pack_dataset(
     data_dir: str | None,
     max_queries: int | None,
     config: object,
+    longmemeval_profile: str = "oracle",
 ) -> object:
     """Load a benchmark pack dataset.
 
@@ -159,9 +170,14 @@ def _load_pack_dataset(
     Returns:
         A GoldDataset instance.
     """
+    from benchmark.packs.longmemeval.adapter import LongMemEvalPack
     from benchmark.packs.registry import PackRegistry
 
-    pack_instance = PackRegistry.get(pack)
+    pack_instance = (
+        LongMemEvalPack(profile=longmemeval_profile)
+        if pack == "longmemeval"
+        else PackRegistry.get(pack)
+    )
     default_dirs = {
         "longmemeval": "data/input/longmemeval",
         "locomo": "data/input",

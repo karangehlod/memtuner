@@ -33,6 +33,10 @@ class GoldMemoryEvent(BaseModel):
     entities: list[str] = Field(default_factory=list, description="Entities")
     task_id: str = Field(..., description="Task identifier")
     conversation_turn: int = Field(default=0, ge=0, description="Turn number in conversation")
+    provenance: dict[str, str] = Field(
+        default_factory=dict,
+        description="Source-record, session, and update provenance for auditability",
+    )
 
     model_config = {"frozen": True}
 
@@ -118,6 +122,10 @@ class GoldQuery(BaseModel):
         default=None,
         description="Conversation turn this query follows up on",
     )
+    provenance: dict[str, str] = Field(
+        default_factory=dict,
+        description="Source-record, relevance-label, and cost provenance for auditability",
+    )
 
     model_config = {"frozen": True}
 
@@ -182,6 +190,10 @@ class GoldDataset(BaseModel):
     evaluation_criteria: GoldEvaluationCriteria = Field(
         default_factory=GoldEvaluationCriteria,
         description="Evaluation criteria",
+    )
+    metadata: dict[str, str] = Field(
+        default_factory=dict,
+        description="Immutable dataset tier, source, and protocol metadata",
     )
 
     model_config = {"frozen": True}

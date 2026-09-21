@@ -22,6 +22,7 @@ Custom data format (queries.jsonl):
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from benchmark.gold.schema import (
@@ -51,6 +52,7 @@ class PrivateDataPack(BenchmarkPack):
     def __init__(self):
         self._events: list[dict[str, Any]] = []
         self._queries: list[dict[str, Any]] = []
+        self._manifest: dict[str, Any] = {}
         self._loaded = False
 
     def metadata(self) -> PackMetadata:
@@ -91,6 +93,9 @@ class PrivateDataPack(BenchmarkPack):
 
         self._events = _load_jsonl(events_path)
         self._queries = _load_jsonl(queries_path)
+        manifest_path = data_dir / "manifest.json"
+        self._manifest = _load_manifest(manifest_path) if manifest_path.exists() else {}
+        _validate_trace_records(self._events, self._queries, self._manifest)
         self._loaded = True
 
     def to_gold_dataset(
@@ -135,6 +140,10 @@ class PrivateDataPack(BenchmarkPack):
                 entities=event.get("entities", []),
                 task_id=event.get("task_id", ""),
                 conversation_turn=event.get("turn", 0),
+                provenance=_string_metadata(
+                    event,
+                    ("source_record_id", "session_id", "update_of", "conflict_label", "deletion_label"),
+                ),
             )
             day_to_events.setdefault(day, []).append(memory_event)
 
@@ -171,6 +180,17 @@ class PrivateDataPack(BenchmarkPack):
                     ),
                 ),
                 gold_answer=str(q.get("gold_answer", "")) or None,
+                provenance=_string_metadata(
+                    q,
+                    (
+                        "source_record_id",
+                        "session_id",
+                        "relevance_judgment",
+                        "observed_latency_ms",
+                        "observed_cost_usd",
+                        "split",
+                    ),
+                ),
             )
             all_queries.append(query)
 
@@ -192,6 +212,12 @@ class PrivateDataPack(BenchmarkPack):
             user_ids=sorted(user_ids_set),
             events=all_day_events,
             queries=all_queries,
+            metadata={
+                "dataset_tier": self._manifest.get("dataset_tier", "exploratory"),
+                "provenance": self._manifest.get("provenance", "user-supplied"),
+                "split_protocol": self._manifest.get("split_protocol", "unspecified"),
+                "trace_contract": self._manifest.get("schema_version", "none"),
+            },
         )
 
     def download_instructions(self) -> str:
@@ -225,6 +251,17 @@ FIELD DESCRIPTIONS:
   earliest_day:         Optional: earliest expected retrieval day
   latest_day:           Optional: latest expected retrieval day
 
+PRODUCTION TRACE CONTRACT:
+    Add manifest.json to make a trace eligible for production-facing recommendations:
+    {"schema_version":"private-trace-v1","dataset_tier":"production_trace","provenance":"observed-production-traffic","split_protocol":"user-session-final-test","required_query_fields":["source_record_id","relevance_judgment","split"]}
+
+    Production traces require source_record_id on all events and queries, query
+    split in {train, validation, final_test}, non-empty relevance_judgment,
+    evidence from the same user, and at least one final_test query. Optional
+    event fields update_of, conflict_label, and deletion_label preserve memory
+    update semantics. Optional query fields observed_latency_ms and
+    observed_cost_usd preserve observed serving measurements.
+
 USAGE:
   benchmark run --pack private --data-dir ./my_data/
 """
@@ -239,3 +276,95 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
             if line:
                 records.append(json.loads(line))
     return records
+
+
+def _load_manifest(path: Path) -> dict[str, Any]:
+    """Load the optional, versioned private-trace manifest."""
+    with path.open(encoding="utf-8") as handle:
+        manifest = json.load(handle)
+    if not isinstance(manifest, dict):
+        raise ValueError("Private pack manifest.json must contain a JSON object.")
+    return manifest
+
+
+def _validate_trace_records(
+    events: list[dict[str, Any]], queries: list[dict[str, Any]], manifest: dict[str, Any]
+) -> None:
+    """Reject ambiguous evidence and enforce the opt-in production trace contract."""
+    event_by_id = {event.get("memory_id"): event for event in events}
+    if len(event_by_id) != len(events) or None in event_by_id:
+        raise ValueError("Private pack events must have unique non-empty memory_id values.")
+
+    for query in queries:
+        query_id = query.get("query_id", "<unknown>")
+        expected_ids = query.get("expected_memory_ids", [])
+        missing = [memory_id for memory_id in expected_ids if memory_id not in event_by_id]
+        if missing:
+            raise ValueError(f"Private pack query {query_id} references missing memory IDs: {missing}")
+        cross_user = [
+            memory_id
+            for memory_id in expected_ids
+            if event_by_id[memory_id].get("user_id", "default-user")
+            != query.get("user_id", "default-user")
+        ]
+        if cross_user:
+            raise ValueError(f"Private pack query {query_id} references another user's memory: {cross_user}")
+
+    if manifest.get("dataset_tier") != "production_trace":
+        return
+
+    if manifest.get("schema_version") != "private-trace-v1":
+        raise ValueError("Production private traces require schema_version 'private-trace-v1'.")
+    if not manifest.get("provenance") or not manifest.get("split_protocol"):
+        raise ValueError("Production private traces require manifest provenance and split_protocol.")
+
+    for record_type, records in (("event", events), ("query", queries)):
+        missing_provenance = [
+            record.get("memory_id") or record.get("query_id", "<unknown>")
+            for record in records
+            if not record.get("source_record_id")
+        ]
+        if missing_provenance:
+            raise ValueError(
+                f"Production private trace {record_type}s require source_record_id: {missing_provenance}"
+            )
+
+    allowed_splits = {"train", "validation", "final_test"}
+    splits = {query.get("split") for query in queries}
+    if not splits <= allowed_splits or not {"validation", "final_test"} <= splits:
+        raise ValueError(
+            "Production private traces require validation and final_test query splits. "
+            "Allowed splits: train, validation, final_test."
+        )
+    if any(not query.get("relevance_judgment") for query in queries):
+        raise ValueError("Production private trace queries require relevance_judgment.")
+
+    if manifest.get("split_protocol") == "user-session-final-test":
+        query_scopes = {
+            (query.get("user_id", "default-user"), query.get("session_id"), query.get("split"))
+            for query in queries
+        }
+        if any(session_id is None for _, session_id, _ in query_scopes):
+            raise ValueError(
+                "Production traces using user-session-final-test require query session_id values."
+            )
+        validation_scopes = {
+            (user_id, session_id)
+            for user_id, session_id, split in query_scopes
+            if split == "validation"
+        }
+        final_test_scopes = {
+            (user_id, session_id)
+            for user_id, session_id, split in query_scopes
+            if split == "final_test"
+        }
+        overlap = validation_scopes & final_test_scopes
+        if overlap:
+            raise ValueError(
+                "Production private trace validation and final_test queries must use disjoint user/session scopes."
+            )
+
+
+def _string_metadata(record: dict[str, Any], keys: tuple[str, ...]) -> dict[str, str]:
+    """Retain optional trace annotations without imposing a nested Gold schema."""
+    return {key: str(record[key]) for key in keys if record.get(key) is not None}

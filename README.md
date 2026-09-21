@@ -598,7 +598,11 @@ completes. If a run crashes at cell 50 of 100, the first 50 results are already 
 
 ## Datasets
 
-MemTuner benchmarks against 14 datasets. **None are redistributed in this
+MemTuner benchmarks against 14 datasets, but they do not make the same claim.
+**Agent-memory core evidence** is LoCoMo, LongMemEval profiles, controlled
+conflict/update tasks, and validated proprietary traces. General QA and IR
+datasets are reported as **transfer coverage**, not proof of end-to-end agent
+memory quality. **None are redistributed in this
 repository** — every dataset is downloaded from its original source the first
 time a run needs it and remains under its original license. We are grateful
 to the authors of these datasets; full citations and license notices are in
@@ -607,7 +611,8 @@ to the authors of these datasets; full citations and license notices are in
 | Dataset | Path (`data/input/`) | Queries | License | What it tests |
 |---------|----------------------|---------|---------|---------------|
 | **LoCoMo** | `locomo10.json` | 1,977 | CC BY-NC 4.0 ([Snap Research](https://github.com/snap-research/locomo)) | Long-horizon episodic conversation memory |
-| **LongMemEval** | `longmemeval_oracle_gold.json` | 470 | MIT ([Wu et al.](https://github.com/xiaowu0162/LongMemEval)) | Temporal reasoning + knowledge updates |
+| **LongMemEval** | `longmemeval_oracle_gold.json` | 470 | MIT ([Wu et al.](https://github.com/xiaowu0162/LongMemEval)) | Agent-memory core: temporal reasoning + knowledge updates; use S/M full-history profiles for scale |
+| **Conflict/Update Controlled** | `conflict_update_gold.json` | 3 | This repo (Apache 2.0) | Controlled verification of corrections, authority, and deletions |
 | **SQuAD 2.0** | `squad_gold.json` | 11,873 | CC BY-SA 4.0 ([Stanford NLP](https://rajpurkar.github.io/SQuAD-explorer/)) | Reading comprehension |
 | **CoQA** | `coqa_gold.json` | 7,983 | Mixed ([Stanford NLP](https://stanfordnlp.github.io/coqa/)) | Conversational QA |
 | **HotpotQA** | `hotpotqa_gold.json` | 5,000 | CC BY-SA 4.0 ([Yang et al.](https://hotpotqa.github.io/)) | Multi-hop reasoning |
@@ -629,6 +634,8 @@ to the authors of these datasets; full citations and license notices are in
 **Manual preparation (optional — `memtuner study` does this automatically):**
 ```bash
 memtuner prepare-datasets --download --convert       # core 7 datasets
+python scripts/prepare_datasets.py --convert --longmemeval-profile small  # full-history LongMemEval S
+python scripts/prepare_datasets.py --convert           # includes conflict/update controlled fixture
 python scripts/prepare_extended_datasets.py          # extended 7 datasets
 ```
 

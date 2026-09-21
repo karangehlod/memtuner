@@ -29,6 +29,36 @@ benchmark run -c configs/locomo.yaml --pack private --data-dir data/my_data
 
 ## Field Reference
 
+## Production Trace Contract
+
+The two JSONL files above are sufficient for exploratory benchmarking. They do
+not establish a deployable recommendation on their own. For production-facing
+evaluation, add a versioned `manifest.json` and retain provenance on every
+record:
+
+```json
+{
+    "schema_version": "private-trace-v1",
+    "dataset_tier": "production_trace",
+    "provenance": "observed-production-traffic",
+    "split_protocol": "user-session-final-test"
+}
+```
+
+Production traces require `source_record_id` on each event and query,
+`relevance_judgment`, `session_id`, and `split` on every query, plus both
+`validation` and untouched `final_test` query splits. A `(user_id, session_id)`
+scope cannot appear in both validation and final test, and a query may only cite
+memory IDs owned by the same `user_id`. This makes user isolation,
+query-to-memory provenance, and final-test reporting machine-checkable.
+
+Use these optional fields when they exist in the original trace:
+
+| Record | Fields | Purpose |
+|---|---|---|
+| event | `source_record_id`, `session_id`, `update_of`, `conflict_label`, `deletion_label` | Provenance and memory-update semantics |
+| query | `source_record_id`, `session_id`, `relevance_judgment`, `split`, `observed_latency_ms`, `observed_cost_usd` | Judgment quality, untouched holdout, and observed serving cost |
+
 ### events.jsonl
 
 | Field | Type | Required | Description |
@@ -42,6 +72,11 @@ benchmark run -c configs/locomo.yaml --pack private --data-dir data/my_data
 | `entities` | list[str] | No | Entity names mentioned in this memory |
 | `task_id` | string | No | Task/session grouping identifier |
 | `turn` | int | No | Conversation turn number (default: 0) |
+| `source_record_id` | string | Production | Immutable identifier from the source trace |
+| `session_id` | string | No | Original session or conversation identifier |
+| `update_of` | string | No | Superseded memory ID |
+| `conflict_label` | string | No | Update conflict category or source authority label |
+| `deletion_label` | string | No | Tombstone/deletion category |
 
 ### queries.jsonl
 
@@ -56,6 +91,11 @@ benchmark run -c configs/locomo.yaml --pack private --data-dir data/my_data
 | `task_id` | string | No | Task grouping |
 | `earliest_day` | int | No | Earliest acceptable retrieval day |
 | `latest_day` | int | No | Latest acceptable retrieval day |
+| `source_record_id` | string | Production | Immutable identifier from the source trace |
+| `relevance_judgment` | string | Production | Human or validated programmatic evidence label |
+| `split` | string | Production | `train`, `validation`, or `final_test` |
+| `observed_latency_ms` | number | No | Observed source-system latency |
+| `observed_cost_usd` | number | No | Observed source-system cost |
 
 ## Tips
 
@@ -64,6 +104,7 @@ benchmark run -c configs/locomo.yaml --pack private --data-dir data/my_data
 - **Temporal spread**: Spread events across multiple `day` values to test temporal decay.
 - **Memory types**: Use different `type` values to test different memory modules.
 - **Importance scores**: Higher importance (closer to 1.0) events should be recalled more reliably.
+- **Updates and deletions**: Annotate corrections with `update_of` and tombstones with `deletion_label`; do not label stale evidence as correct for a current-state question.
 
 ## Using with Workload Profiles
 

@@ -214,6 +214,22 @@ class TestLongMemEvalPack:
         pack = LongMemEvalPack()
         assert "longmemeval_oracle.json" in pack.required_files()
 
+    def test_small_profile_uses_full_history_file_and_metadata(self, tmp_path: Path) -> None:
+        profile_path = tmp_path / "longmemeval_s_cleaned.json"
+        profile_path.write_text(json.dumps(SAMPLE_LONGMEMEVAL_DATA), encoding="utf-8")
+
+        pack = LongMemEvalPack(profile="small")
+        pack.load(tmp_path)
+        dataset = pack.to_gold_dataset(evaluation_horizon=30)
+
+        assert pack.required_files() == ["longmemeval_s_cleaned.json"]
+        assert dataset.scenario == "longmemeval-small"
+        assert dataset.metadata["evaluation_mode"] == "full_history"
+
+    def test_unknown_profile_is_rejected(self) -> None:
+        with pytest.raises(ValueError, match="Unknown LongMemEval profile"):
+            LongMemEvalPack(profile="large")
+
 
 @pytest.mark.unit
 class TestGenerateMemoryId:

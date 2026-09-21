@@ -16,6 +16,9 @@ AUTO-DOWNLOADABLE datasets (set HF_TOKEN in .env for HuggingFace datasets):
     hotpotqa     CMU (~54 MB) — no auth needed.
     synthetic    No download — generated on demand (200 queries, zero setup).
 
+LongMemEval profiles: oracle is downloaded by default. Request full-history
+profiles explicitly with --longmemeval-profile small or --longmemeval-profile medium.
+
 MANUAL download required (large size or special tools):
     fever        185k claims — https://fever.ai/dataset/fever.html
     msmarco      100k+ queries — https://microsoft.github.io/msmarco/
@@ -77,12 +80,18 @@ DOWNLOADS: list[tuple[Path, str, str]] = [
     ),
 ]
 
+_LONGMEMEVAL_PROFILE_FILES = {
+    "oracle": "longmemeval_oracle.json",
+    "small": "longmemeval_s_cleaned.json",
+    "medium": "longmemeval_m_cleaned.json",
+}
+
 # ── Conversion specs ────────────────────────────────────────────────────────
-def _convert_longmemeval() -> Path:
+def _convert_longmemeval(profile: str = "oracle") -> Path:
     from benchmark.gold.longmemeval_adapter import convert_longmemeval_to_gold
-    src = DATA_DIR / "longmemeval" / "longmemeval_oracle.json"
-    out = DATA_DIR / "longmemeval_oracle_gold.json"
-    convert_longmemeval_to_gold(src, out, "longmemeval_full")
+    src = DATA_DIR / "longmemeval" / _LONGMEMEVAL_PROFILE_FILES[profile]
+    out = DATA_DIR / f"longmemeval_{profile}_gold.json"
+    convert_longmemeval_to_gold(src, out, f"longmemeval_{profile}", profile=profile)
     return out
 
 
@@ -140,6 +149,15 @@ def _generate_synthetic() -> Path:
     return out
 
 
+def _generate_conflict_update() -> Path:
+    from benchmark.gold.adapters.conflict_update_adapter import ConflictUpdateAdapter
+
+    out = DATA_DIR / "conflict_update_gold.json"
+    dataset = ConflictUpdateAdapter().load()
+    out.write_text(dataset.model_dump_json(indent=2), encoding="utf-8")
+    return out
+
+
 CONVERSIONS: list[tuple[str, Path, callable, Path]] = [
     # (name, required_source, converter_fn, output_path)
     ("longmemeval", DATA_DIR / "longmemeval" / "longmemeval_oracle.json", _convert_longmemeval, DATA_DIR / "longmemeval_oracle_gold.json"),
@@ -148,6 +166,7 @@ CONVERSIONS: list[tuple[str, Path, callable, Path]] = [
     ("personachat", DATA_DIR / "personachat" / "personachat_truecased_full_train.json",  _convert_personachat,  DATA_DIR / "personachat_gold.json"),
     ("hotpotqa",    DATA_DIR / "hotpotqa" / "hotpot_dev_distractor_v1.json", _convert_hotpotqa, DATA_DIR / "hotpotqa_gold.json"),
     ("synthetic",   None,                                                  _generate_synthetic,   DATA_DIR / "synthetic_gold.json"),
+    ("conflict-update", None,                                              _generate_conflict_update, DATA_DIR / "conflict_update_gold.json"),
 ]
 
 # ── Manual-download datasets (require auth, large size, or special tools) ──
@@ -264,19 +283,40 @@ def _hf_token_summary() -> None:
         print("    Fix: add HF_TOKEN=hf_... to .env (get one at https://huggingface.co/settings/tokens)")
 
 
-def do_download() -> None:
+def _longmemeval_download(profile: str) -> tuple[Path, str, str]:
+    filename = _LONGMEMEVAL_PROFILE_FILES[profile]
+    return (
+        DATA_DIR / "longmemeval" / filename,
+        f"https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/main/{filename}",
+        f"LongMemEval {profile} ({'oracle evidence' if profile == 'oracle' else 'full history'})",
+    )
+
+
+def do_download(longmemeval_profiles: list[str]) -> None:
     print("\n=== Downloading Datasets ===\n")
     _hf_token_summary()
-    for dest, url, desc in DOWNLOADS:
+    downloads = [
+        download
+        for download in DOWNLOADS
+        if download[0].name != _LONGMEMEVAL_PROFILE_FILES["oracle"]
+    ]
+    downloads.extend(_longmemeval_download(profile) for profile in longmemeval_profiles)
+    for dest, url, desc in downloads:
         if dest.exists():
             print(f"  ✓ Already present: {dest.name}")
             continue
         _download_file(url, dest, desc)
 
 
-def do_convert(force: bool = False) -> None:
+def do_convert(force: bool = False, longmemeval_profiles: list[str] | None = None) -> None:
     print("\n=== Converting to Gold Format ===\n")
-    for name, src, converter_fn, out in CONVERSIONS:
+    longmemeval_profiles = longmemeval_profiles or ["oracle"]
+    conversions = [
+        (f"longmemeval-{profile}", DATA_DIR / "longmemeval" / _LONGMEMEVAL_PROFILE_FILES[profile], lambda profile=profile: _convert_longmemeval(profile), DATA_DIR / f"longmemeval_{profile}_gold.json")
+        for profile in longmemeval_profiles
+    ]
+    conversions.extend(conversion for conversion in CONVERSIONS if conversion[0] != "longmemeval")
+    for name, src, converter_fn, out in conversions:
         if out.exists() and not force:
             print(f"  ✓ Already converted: {out.name}  (use --force to regenerate)")
             continue
@@ -297,15 +337,23 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Download and prepare benchmark datasets")
     parser.add_argument("--download", action="store_true", help="Download missing dataset files")
     parser.add_argument("--convert", action="store_true", help="Convert downloaded files to gold format")
+    parser.add_argument(
+        "--longmemeval-profile",
+        action="append",
+        choices=sorted(_LONGMEMEVAL_PROFILE_FILES),
+        default=[],
+        help="LongMemEval profile to download/convert; repeat for multiple profiles (default: oracle).",
+    )
     parser.add_argument("--force", action="store_true",
                         help="With --convert: regenerate gold files even if they already exist "
                              "(needed after an adapter change, e.g. the PersonaChat user pooling fix)")
     args = parser.parse_args()
 
+    longmemeval_profiles = args.longmemeval_profile or ["oracle"]
     if args.download:
-        do_download()
+        do_download(longmemeval_profiles)
     if args.convert:
-        do_convert(force=args.force)
+        do_convert(force=args.force, longmemeval_profiles=longmemeval_profiles)
     if not args.download and not args.convert:
         print_status()
         print("Run with --download to fetch missing files, --convert to convert them.")

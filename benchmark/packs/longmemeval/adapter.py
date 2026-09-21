@@ -48,6 +48,12 @@ _QUESTION_TYPE_TO_MEMORY_TYPE: dict[str, str] = {
     "temporal-reasoning": "episodic",
 }
 
+_PROFILE_FILES = {
+    "oracle": "longmemeval_oracle.json",
+    "small": "longmemeval_s_cleaned.json",
+    "medium": "longmemeval_m_cleaned.json",
+}
+
 
 @register_pack("longmemeval")
 class LongMemEvalPack(BenchmarkPack):
@@ -57,14 +63,19 @@ class LongMemEvalPack(BenchmarkPack):
     Each question comes with timestamped chat history sessions.
     """
 
-    def __init__(self):
+    def __init__(self, profile: str = "oracle"):
+        if profile not in _PROFILE_FILES:
+            raise ValueError(
+                f"Unknown LongMemEval profile '{profile}'. Expected one of: {sorted(_PROFILE_FILES)}"
+            )
+        self._profile = profile
         self._data: list[dict[str, Any]] = []
         self._loaded = False
 
     def metadata(self) -> PackMetadata:
         return PackMetadata(
             name="longmemeval",
-            version="1.0-cleaned",
+            version=f"1.0-cleaned-{self._profile}",
             description=(
                 "LongMemEval: Benchmarking Chat Assistants on Long-Term "
                 "Interactive Memory (ICLR 2025)"
@@ -87,11 +98,12 @@ class LongMemEvalPack(BenchmarkPack):
         )
 
     def required_files(self) -> list[str]:
-        return ["longmemeval_oracle.json"]
+        return [_PROFILE_FILES[self._profile]]
 
-    def _resolve_oracle_path(self, data_dir: Path) -> Path:
-        direct_path = data_dir / "longmemeval_oracle.json"
-        nested_path = data_dir / "longmemeval" / "longmemeval_oracle.json"
+    def _resolve_profile_path(self, data_dir: Path) -> Path:
+        filename = _PROFILE_FILES[self._profile]
+        direct_path = data_dir / filename
+        nested_path = data_dir / "longmemeval" / filename
 
         if direct_path.exists():
             return direct_path
@@ -99,19 +111,19 @@ class LongMemEvalPack(BenchmarkPack):
             return nested_path
 
         raise FileNotFoundError(
-            f"LongMemEval oracle file not found at {direct_path} or {nested_path}. "
+            f"LongMemEval {self._profile} file not found at {direct_path} or {nested_path}. "
             f"Download it: {self.download_instructions()}"
         )
 
     def load(self, data_dir: Path) -> None:
-        """Load LongMemEval oracle dataset.
+        """Load the selected LongMemEval profile.
 
         Args:
-            data_dir: Directory containing longmemeval_oracle.json
+            data_dir: Directory containing the selected profile file.
         """
-        oracle_path = self._resolve_oracle_path(data_dir)
+        profile_path = self._resolve_profile_path(data_dir)
 
-        with open(oracle_path) as f:
+        with open(profile_path) as f:
             self._data = json.load(f)
 
         self._loaded = True
@@ -245,12 +257,17 @@ class LongMemEvalPack(BenchmarkPack):
 
         return GoldDataset(
             schema_version="1.0",
-            scenario="longmemeval-oracle",
-            description="LongMemEval: 500 questions testing long-term memory abilities (ICLR 2025)",
+            scenario=f"longmemeval-{self._profile}",
+            description=f"LongMemEval {self._profile}: long-term chat memory abilities (ICLR 2025)",
             user_ids=user_ids,
             total_conversation_turns=total_memory_events,
             events=all_day_events,
             queries=all_queries,
+            metadata={
+                "dataset_tier": "agent_memory",
+                "longmemeval_profile": self._profile,
+                "evaluation_mode": "oracle_retrieval" if self._profile == "oracle" else "full_history",
+            },
         )
 
     def download_instructions(self) -> str:
@@ -264,6 +281,10 @@ To download LongMemEval dataset:
 Optional (large file ~100MB, full chat histories):
   curl -sL -o longmemeval_s_cleaned.json \\
     "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/main/longmemeval_s_cleaned.json"
+
+Medium profile (largest, up to 500 history sessions per question):
+    curl -sL -o longmemeval_m_cleaned.json \
+        "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/main/longmemeval_m_cleaned.json"
 
 Source: https://github.com/xiaowu0162/LongMemEval
 License: MIT (ICLR 2025)
