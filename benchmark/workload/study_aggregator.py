@@ -144,6 +144,10 @@ class StudyAggregator(MatrixAggregator):
         phase = getattr(r, "study_phase", "general") or "general"
         if phase in ("phase3_hybrid_broad", "phase3_hybrid_fine", "phase3_hybrid_weight"):
             return True
+        # External-backend cells (mem0/zep/…) are judge-scored; their gold-ID
+        # recall is a lower bound and must not enter native strategy rankings.
+        if getattr(r, "backend", "native") != "native":
+            return True
         return phase.startswith("phase4") and getattr(r, "decay_policy", "none") != "none"
 
     def rank_by_retrieval_strategy(self) -> list[dict]:

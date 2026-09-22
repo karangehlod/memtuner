@@ -134,10 +134,25 @@ class StudyCell:
     query_end_fraction: float = 1.0
     seed: int = 42
     study_phase: str = "general"
+    # Arena backend (docs/ARENA_PLAN.md Phase 1): "native" runs MemTuner's own
+    # stores; any other value selects the external adapter "<backend>_store"
+    # (e.g. "mem0" → mem0_store). External backends manage their own retrieval
+    # and lifecycle, so strategy/embedding/decay dimensions do not apply.
+    backend: str = "native"
 
     @property
     def semantic_weight(self) -> float:
         return round(1.0 - self.bm25_weight, 2)
+
+    @property
+    def scoring_mode(self) -> str:
+        """gold_ids for native stores; judge_primary for external backends.
+
+        External systems rewrite memories at ingest, so gold-ID retrieval
+        metrics are at best lower bounds (provenance-mapped) — the LLM judge
+        score is the primary metric for those cells.
+        """
+        return "gold_ids" if self.backend == "native" else "judge_primary"
 
     # Cached cell ID — excluded from __hash__ and __eq__ so the frozen-dataclass
     # hash stays stable before and after the first cell_id access.
@@ -152,6 +167,9 @@ class StudyCell:
             f":{self.embedding_model}:{self.embedding_backend}:{self.bm25_weight:.2f}"
             f":{self.reranker_model}:{self.workload_profile}:{self.test_holdout_fraction:.3f}"
             f":{self.query_start_fraction:.3f}:{self.query_end_fraction:.3f}:{self.seed}"
+            # Appended only for external backends so pre-existing native cell
+            # IDs (checkpoints, quarantined grids) remain stable.
+            + (f":{self.backend}" if self.backend != "native" else "")
         )
         object.__setattr__(self, "_cell_id_cache", hashlib.md5(key.encode()).hexdigest()[:12])
         return self._cell_id_cache
@@ -187,8 +205,16 @@ class StudyCell:
 
     def to_config_dict(self, evaluation_horizon: int) -> dict:
         """Build BenchmarkConfig-compatible dict for this cell."""
+        if self.backend != "native":
+            return self._external_backend_config_dict(evaluation_horizon)
         policy_block = self.decay.to_config_dict()
-        memory_module = f"{self.memory_type}_store"
+        # memory_type="all" enables every long-term store — the full-system
+        # configuration used for arena baseline cells, where the native stack
+        # competes against external systems that ingest all memory types.
+        if self.memory_type == "all":
+            memory_modules = ["episodic_store", "semantic_store", "preference_store"]
+        else:
+            memory_modules = [f"{self.memory_type}_store"]
         internal_strategy = self._internal_retrieval_strategy()
 
         retrieval: dict = {}
@@ -227,10 +253,10 @@ class StudyCell:
 
         return {
             "memory": {
-                "enabled": {"short_term": [], "long_term": [memory_module]},
+                "enabled": {"short_term": [], "long_term": memory_modules},
             },
             "policies": {
-                "module_policies": {memory_module: policy_block},
+                "module_policies": {m: policy_block for m in memory_modules},
             },
             "benchmark": {
                 "evaluation_horizon": evaluation_horizon,
@@ -242,6 +268,40 @@ class StudyCell:
                 "retrieval_strategy": internal_strategy,
                 "reranker": reranker,
                 "retrieval": retrieval,
+            },
+            "observability": {
+                "exporter": "none",
+                "endpoint": "http://localhost:4317",
+                "log_level": "WARNING",
+            },
+            "answering": {"enabled": False, "model": ""},
+        }
+
+    def _external_backend_config_dict(self, evaluation_horizon: int) -> dict:
+        """Config for an external arena backend (mem0, zep, letta, …).
+
+        The external system owns retrieval, embeddings, and lifecycle, so no
+        retrieval strategy is configured (empty string → composer resolves no
+        strategy and loads no models) and no decay policies are attached. The
+        adapter registers in the composer as "<backend>_store" and isolates
+        itself with an auto-generated per-instance namespace.
+        """
+        memory_module = f"{self.backend}_store"
+        return {
+            "memory": {
+                "enabled": {"short_term": [], "long_term": [memory_module]},
+            },
+            "policies": {"module_policies": {}},
+            "benchmark": {
+                "evaluation_horizon": evaluation_horizon,
+                "test_holdout_fraction": self.test_holdout_fraction,
+                "query_start_fraction": self.query_start_fraction,
+                "query_end_fraction": self.query_end_fraction,
+                "seed": self.seed,
+                "scenarios": ["delayed_recall"],
+                "retrieval_strategy": "",
+                "reranker": {"strategy": "local_overlap"},
+                "retrieval": {},
             },
             "observability": {
                 "exporter": "none",
@@ -279,6 +339,8 @@ class StudyCell:
             "query_end_fraction": self.query_end_fraction,
             "seed": self.seed,
             "study_phase": self.study_phase,
+            "backend": self.backend,
+            "scoring_mode": self.scoring_mode,
             "label": self.label,
         }
 

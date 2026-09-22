@@ -53,6 +53,17 @@ class RetrievedMemory(BaseModel):
         le=1.0,
         description="Current decay multiplier",
     )
+    content: str | None = Field(
+        default=None,
+        description=(
+            "Retrieved text as returned by the memory system. Native stores "
+            "leave this None (the runner resolves content from the injected "
+            "gold events by memory_id); external systems that rewrite "
+            "memories at ingest (Mem0 facts, Zep graph edges) MUST set it — "
+            "their IDs resolve to nothing, and the LLM judge would otherwise "
+            "score them against an empty context."
+        ),
+    )
 
     model_config = {"frozen": True}
 

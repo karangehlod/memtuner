@@ -244,6 +244,8 @@ class MatrixAggregator:
                 "bm25_weight": getattr(r, "bm25_weight", ""),
                 "semantic_weight": getattr(r, "semantic_weight", ""),
                 "reranker_model": getattr(r, "reranker_model", "none"),
+                "backend": getattr(r, "backend", "native"),
+                "scoring_mode": getattr(r, "scoring_mode", "gold_ids"),
                 "decay_policy": r.decay_policy,
                 "lambda": r.lambda_value,
                 "pruning_threshold": r.pruning_threshold,
@@ -262,6 +264,14 @@ class MatrixAggregator:
                 "composite_score": round(r.composite_score(), 4),
                 "total_queries": r.total_queries,
                 "correct_recalls": r.correct_recalls,
+                # Judge score: blank (not 0.0) when the judge was not enabled —
+                # a 0.0 would read as "answered everything wrong".
+                "llm_judge_score": (
+                    round(r.llm_judge_score, 4)
+                    if getattr(r, "llm_judge_score", None) is not None
+                    else ""
+                ),
+                "llm_judge_queries": getattr(r, "llm_judge_queries", 0),
                 # ── Latency ───────────────────────────────────────────────
                 "latency_p50_ms": round(r.latency_p50_ms, 3),
                 "latency_p90_ms": round(r.latency_p90_ms, 3),

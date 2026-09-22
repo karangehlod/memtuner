@@ -99,6 +99,7 @@ You have a system with poor recall and you're not sure whether it's the embeddin
 - [Benchmark Design](#benchmark-design)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Memory-System Arena](#memory-system-arena)
 - [Models](#models)
 - [Running the Benchmark](#running-the-benchmark)
 - [Output](#output)
@@ -345,6 +346,68 @@ python -m pytest tests/ -m "unit or contract" -q    # ~15 s, same suite CI runs
 | [configs/study_defaults.yaml](configs/study_defaults.yaml) | Which embedding/reranker models the study sweeps; also sets default `seed`, `workers`, `recall_k`, and judge endpoint. Pass with `--study-config`. | — |
 
 All outputs go to `data/output/study_<run_id>/`.
+
+---
+
+## Memory-System Arena
+
+The arena runs **third-party memory systems and MemTuner's native stack
+through one identical protocol** — ingest the dataset's timeline, answer the
+holdout queries, score the answers with a pinned local LLM judge — so systems
+can be compared on the same footing instead of on vendor self-reports.
+
+**Everything is free and local.** No API keys, no per-token billing, no cloud
+services: judge, embedders, and every arena backend run on your own hardware
+(the full policy is ground rule 9 in [docs/ARENA_PLAN.md](docs/ARENA_PLAN.md)).
+Vendors publish managed-platform numbers; the arena answers a different
+question — *what do these systems do when you run them yourself, for free?*
+
+```bash
+# One-time model pulls (see docs/RUNBOOK.md for the full list)
+ollama pull nemotron-3-nano llama3.1:8b nomic-embed-text
+
+python scripts/arena_runner.py \
+  --systems native mem0 graphiti \
+  --gold-dataset data/input/locomo10.json \
+  --seeds 42 123 456 \
+  --ollama-url http://localhost:11434/v1
+```
+
+| System | What runs | Config (cited & pinned) | Scoring |
+|---|---|---|---|
+| `native` | MemTuner's own stores, **all enabled** (full system) | `configs/arena/baseline_rag.yaml` (frozen tuning winner) | gold-ID retrieval + judge |
+| `mem0` | Mem0 OSS (`mem0ai`), local stack: Ollama LLM + embedder, embedded Qdrant | [configs/arena/mem0.yaml](configs/arena/mem0.yaml) | judge-primary; gold-ID recall is a provenance-mapped lower bound |
+| `graphiti` | Graphiti (`graphiti-core`) — the OSS graph framework that powers Zep — Ollama recipe + embedded FalkorDB Lite | [configs/arena/graphiti.yaml](configs/arena/graphiti.yaml) | judge-primary (facts, no gold IDs) |
+| `zep` | ⛔ Zep **Cloud** — paid managed service, outside the free arena; adapter kept for self-funded comparisons (`ZEP_API_KEY`) | [configs/arena/zep.yaml](configs/arena/zep.yaml) | judge-primary |
+
+How the numbers stay honest:
+
+- **The judge is mandatory.** Judged answer accuracy is the only metric that
+  is defined for every system; the runner refuses to start without a judge
+  endpoint (`--allow-no-judge` runs retrieval-only and marks the output
+  non-publishable). Retrieval Recall@K is shown for context but external
+  systems rewrite memories at ingest, so their recall is a lower bound at
+  best — compare systems on the judge column.
+- **No tuning phases, no per-system tuning.** One flat cell per
+  system × dataset × seed. Each external system runs its vendor's
+  *documented* configuration, committed verbatim under
+  [configs/arena/](configs/arena/) with the doc URL, retrieval date, and SDK
+  version pin — and a `deviations:` list for every departure (e.g. Mem0's
+  LLM switched from OpenAI to its documented Ollama provider to satisfy the
+  zero-cost rule). Vendors are welcome to correct their config via PR.
+- **Same holdout, same horizon.** 20% trailing-days holdout, natural-span
+  horizons, and cells that score zero queries fail loudly instead of
+  reporting 0.0.
+- **Isolation is contract-tested.** Every adapter passes a substitutability
+  suite ([tests/contract/test_external_store_contract.py](tests/contract/test_external_store_contract.py)):
+  per-cell namespace isolation, verified teardown, and API-faithful fakes
+  that make vendor SDK signature drift fail in CI.
+
+Letta (f.k.a. MemGPT) is not in the roster yet: its self-hostable V1 Python
+API server was retired to an archive branch in favor of the TypeScript-first
+"Letta Code" — the adapter waits until there is a stable Python surface to
+verify against. Roadmap, protocol, and acceptance criteria:
+[docs/ARENA_PLAN.md](docs/ARENA_PLAN.md).
 
 ---
 

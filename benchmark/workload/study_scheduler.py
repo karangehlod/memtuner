@@ -81,6 +81,7 @@ def _run_study_cell_worker(
         query_end_fraction=cell_dict.get("query_end_fraction", 1.0),
         seed=cell_dict.get("seed", 42),
         study_phase=cell_dict.get("study_phase", "general"),
+        backend=cell_dict.get("backend", "native"),
     )
 
     result = MatrixRunResult(
@@ -164,6 +165,10 @@ def _run_study_cell_worker(
             result.precision_at_1 = sr.precision_at_1
             result.total_queries = sr.total_queries
             result.correct_recalls = sr.correct_recalls
+            # Judge scores were previously computed by the scenario runner and
+            # then dropped here — the grid CSV never saw them (fixed 2026-09-22).
+            result.llm_judge_score = getattr(sr, "llm_judge_score", None)
+            result.llm_judge_queries = getattr(sr, "llm_judge_queries", 0)
             result.latency_p50_ms = sr.latency_p50_ms
             result.latency_p90_ms = sr.latency_p90_ms
             result.latency_p99_ms = sr.latency_p99_ms
@@ -211,6 +216,8 @@ def _run_study_cell_worker(
         "test_holdout_fraction": cell.test_holdout_fraction,
         "query_start_fraction": cell.query_start_fraction,
         "query_end_fraction": cell.query_end_fraction,
+        "backend": cell.backend,
+        "scoring_mode": cell.scoring_mode,
     }
     result_dict["_timestamp_normalization"] = normalization_meta
     return result_dict
@@ -235,6 +242,8 @@ class StudyRunResult(MatrixRunResult):
     test_holdout_fraction: float = 0.0
     query_start_fraction: float = 0.0
     query_end_fraction: float = 1.0
+    backend: str = "native"       # "native" or an external arena backend (mem0, …)
+    scoring_mode: str = "gold_ids"  # gold_ids | judge_primary (external backends)
 
     def __init__(self, **kwargs):
         study_kwargs = {
@@ -251,6 +260,8 @@ class StudyRunResult(MatrixRunResult):
                 ("test_holdout_fraction", 0.0),
                 ("query_start_fraction", 0.0),
                 ("query_end_fraction", 1.0),
+                ("backend", "native"),
+                ("scoring_mode", "gold_ids"),
             ]
         }
         super().__init__(**kwargs)
@@ -295,6 +306,8 @@ class StudyRunResult(MatrixRunResult):
             test_holdout_fraction=test_holdout_fraction,
             query_start_fraction=query_start_fraction,
             query_end_fraction=query_end_fraction,
+            backend=row.get("backend", "native"),
+            scoring_mode=row.get("scoring_mode", "gold_ids"),
         )
 
     def to_dict(self) -> dict:
@@ -588,6 +601,8 @@ class StudyScheduler:
             test_holdout_fraction=cell_dict.get("test_holdout_fraction", 0.0),
             query_start_fraction=cell_dict.get("query_start_fraction", 0.0),
             query_end_fraction=cell_dict.get("query_end_fraction", 1.0),
+            backend=cell_dict.get("backend", "native"),
+            scoring_mode=cell_dict.get("scoring_mode", "gold_ids"),
             success=False,
             error_message=error,
         )
@@ -658,6 +673,8 @@ class StudyScheduler:
             precision_at_1=base.precision_at_1,
             total_queries=base.total_queries,
             correct_recalls=base.correct_recalls,
+            llm_judge_score=base.llm_judge_score,
+            llm_judge_queries=base.llm_judge_queries,
             peak_ram_mb=base.peak_ram_mb,
             avg_ram_mb=base.avg_ram_mb,
             peak_cpu_percent=base.peak_cpu_percent,
@@ -684,5 +701,7 @@ class StudyScheduler:
             test_holdout_fraction=study.get("test_holdout_fraction", 0.0),
             query_start_fraction=study.get("query_start_fraction", 0.0),
             query_end_fraction=study.get("query_end_fraction", 1.0),
+            backend=study.get("backend", "native"),
+            scoring_mode=study.get("scoring_mode", "gold_ids"),
         )
         return result

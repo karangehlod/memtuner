@@ -1,0 +1,40 @@
+# Zep arena configuration — vendor-recommended usage, committed verbatim.
+#
+# ⛔ OUT OF SCOPE for the standard arena (ground rule 9, zero-cost/local-only,
+# 2026-09-22): Zep is a paid managed cloud service and Zep Community Edition
+# is deprecated. This adapter stays available for anyone who wants to fund a
+# Zep Cloud comparison themselves (`ZEP_API_KEY`). The free-arena slot for
+# Zep's technology is Graphiti (getzep/graphiti), labeled as Graphiti.
+#
+# ARENA_PLAN fairness protocol: each external system runs its vendor's
+# documented usage; no per-system tuning in arena v1. Deviations must be
+# listed under `deviations:` with a reason; vendors may correct via PR.
+#
+# vendor_doc: https://github.com/getzep/zep-python/blob/main/reference.md
+#             (graph.add / graph.search / user.delete, zep-cloud SDK)
+# vendor_benchmark: https://github.com/getzep/zep/blob/main/benchmarks/longmemeval/zep_longmem_eval.py
+#             — retrieval recipe followed by the adapter: graph.search default
+#             scope (edges/facts, limit 20) + a second search scope="nodes"
+#             (entity summaries), composed as facts + entities context.
+# vendor_doc_date: 2026-09-22
+# zep_sdk_version: 3.28.0   # pin with: pip install zep-cloud==3.28.0
+#
+# DISCLOSURES (must accompany any Zep results):
+#   - This adapter targets **Zep Cloud** (managed service): Zep Community
+#     Edition is deprecated per getzep/zep README ("legacy/ — Deprecated Zep
+#     Community Edition (unsupported)"). Requires ZEP_API_KEY; ingestion and
+#     retrieval run vendor-side with vendor-controlled models. Comparing a
+#     managed service against locally-run OSS backends is an asymmetry the
+#     results table must state.
+#   - Zep exposes no relevance scores on search results; the adapter reports
+#     synthesized rank scores (1/(rank+1)). Judge score is the only valid
+#     cross-system metric for Zep cells (scoring_mode=judge_primary).
+#   - Gold-ID retrieval metrics are undefined: Zep returns derived graph
+#     facts/summaries, not the ingested events.
+
+adapter:
+  class: benchmark.memory.external.zep_store.ZepStore
+  # namespace is generated per cell by the adapter — never set here.
+  include_nodes: true   # facts + entity summaries, per Zep's own benchmark
+
+deviations: []

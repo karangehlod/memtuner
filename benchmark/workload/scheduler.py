@@ -85,6 +85,12 @@ class MatrixRunResult:
     total_queries: int = 0
     correct_recalls: int = 0
 
+    # LLM-as-judge answer quality (None = judge not enabled for this cell).
+    # This is the only metric comparable across memory systems — retrieval
+    # metrics are undefined or lower bounds for external backends.
+    llm_judge_score: float | None = None
+    llm_judge_queries: int = 0
+
     # Resources
     peak_ram_mb: float = 0.0
     avg_ram_mb: float = 0.0
@@ -132,6 +138,12 @@ class MatrixRunResult:
             precision_at_1=float(row.get("precision_at_1", 0.0)),
             total_queries=int(row.get("total_queries", 0)),
             correct_recalls=int(row.get("correct_recalls", 0)),
+            llm_judge_score=(
+                float(row["llm_judge_score"])
+                if str(row.get("llm_judge_score", "")).strip() not in ("", "None", "none")
+                else None
+            ),
+            llm_judge_queries=int(float(row.get("llm_judge_queries") or 0)),
             peak_ram_mb=float(row.get("peak_ram_mb", 0.0)),
             avg_ram_mb=float(row.get("avg_ram_mb", 0.0)),
             peak_cpu_percent=float(row.get("peak_cpu_percent", 0.0)),
@@ -243,6 +255,10 @@ class MatrixRunResult:
                 "composite_score": round(self.composite_score(), 4),
                 "total_queries": self.total_queries,
                 "correct_recalls": self.correct_recalls,
+                "llm_judge_score": (
+                    round(self.llm_judge_score, 4) if self.llm_judge_score is not None else None
+                ),
+                "llm_judge_queries": self.llm_judge_queries,
             },
             "resources": {
                 "peak_ram_mb": round(self.peak_ram_mb, 2),
@@ -584,6 +600,8 @@ class MatrixScheduler:
             precision_at_1=m.get("precision_at_1", 0.0),
             total_queries=m.get("total_queries", 0),
             correct_recalls=m.get("correct_recalls", 0),
+            llm_judge_score=m.get("llm_judge_score"),
+            llm_judge_queries=m.get("llm_judge_queries", 0),
             peak_ram_mb=r.get("peak_ram_mb", 0.0),
             avg_ram_mb=r.get("avg_ram_mb", 0.0),
             peak_cpu_percent=r.get("peak_cpu_percent", 0.0),

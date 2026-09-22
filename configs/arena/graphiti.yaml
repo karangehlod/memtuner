@@ -1,0 +1,48 @@
+# Graphiti arena configuration — vendor-documented local recipe, verbatim.
+#
+# Graphiti (getzep/graphiti) is the open-source temporal-knowledge-graph
+# framework that powers Zep. It fills the knowledge-graph slot in the
+# zero-cost arena (ARENA_PLAN ground rule 9) and is always labeled
+# **Graphiti**, never "Zep" — Zep Cloud is a different (paid, managed)
+# product with vendor-side optimizations.
+#
+# vendor_doc: https://github.com/getzep/graphiti README, sections
+#   "Using Graphiti with OpenAI-compatible providers and local LLMs"
+#   (OpenAIGenericClient + OpenAIEmbedder → Ollama; their model picks:
+#   deepseek-r1:7b + nomic-embed-text) and "Database Configuration"
+#   (FalkorDB Lite embedded driver).
+# api_verified_against: graphiti_core/graphiti.py — add_episode(name,
+#   episode_body, source_description, reference_time, group_id),
+#   search(query, group_ids, num_results) → list[EntityEdge];
+#   utils/maintenance/graph_data_operations.clear_data(driver, group_ids).
+# vendor_doc_date: 2026-09-22
+# graphiti_core_version: 0.30.2
+#   pin with: pip install "graphiti-core[falkordblite]==0.30.2"  (Python 3.12+)
+#
+# One-time model pulls (from the vendor's own recipe):
+#   ollama pull deepseek-r1:7b
+#   ollama pull nomic-embed-text
+#
+# DISCLOSURES:
+#   - Entirely local & free: Ollama models + embedded FalkorDB Lite (no
+#     server, no API key, no billing).
+#   - Graphiti's README warns that structured-output extraction "works best"
+#     with large hosted models and that reliability varies on small local
+#     models. This affects ingest quality and is inherent to running the
+#     vendor's documented local recipe — disclose next to Graphiti numbers.
+#   - No relevance scores on search results → adapter reports synthesized
+#     rank scores; gold-ID metrics undefined → judge-primary.
+
+adapter:
+  class: benchmark.memory.external.graphiti_store.GraphitiStore
+  # namespace is generated per cell by the adapter — never set here.
+
+graphiti_config:
+  ollama_base_url: "http://localhost:11434/v1"
+  llm_model: "deepseek-r1:7b"        # vendor recipe's pick
+  embedding_model: "nomic-embed-text"
+  embedding_dim: 768
+  graph_backend: "falkordblite"       # embedded, serverless; alternatives: falkordb, neo4j
+  falkordblite_path: "/tmp/memtuner_arena_graphiti.db"
+
+deviations: []

@@ -39,6 +39,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   definitions remain.
 
 ### Added
+- **Memory-System Arena** (`scripts/arena_runner.py`) — runs external memory
+  systems and the native stack through one identical ingest→query→judge
+  protocol; zero-cost/local-only by ground rule (`docs/ARENA_PLAN.md`).
+  Adapters behind the store contract: `Mem0Store` (mem0ai 2.1.0, documented
+  Ollama local stack), `GraphitiStore` (graphiti-core 0.30.2, vendor Ollama
+  recipe + embedded FalkorDB Lite), `ZepStore` (Zep Cloud, dormant — paid).
+  Vendor configs committed verbatim with doc citations, SDK pins, and
+  disclosed deviations under `configs/arena/`. Contract test suite with
+  API-faithful fakes (`tests/contract/test_external_store_contract.py`).
+- **`backend` / `scoring_mode` study dimensions** — external-backend cells
+  carry provenance through cell → config → grid CSV and are excluded from
+  native strategy rankings; `memory_type="all"` runs the full native system
+  (all long-term stores) for fair arena baselines.
+- **Judge scores in results** — `llm_judge_score` / `llm_judge_queries` now
+  survive worker→result→CSV round-trips (previously computed by the scenario
+  runner and silently dropped); `RetrievedMemory.content` lets external
+  systems hand the judge the text they actually returned (their IDs resolve
+  to nothing in the gold store — the judge previously saw an empty context).
+- **Judge pinned in config** — `judge.model` in `configs/study_defaults.yaml`
+  is now wired (was dead config); endpoint via `--ollama-url` or
+  `BENCHMARK_JUDGE_BASE_URL`; reported-run protocol in `docs/RUNBOOK.md`.
 - **`--doctor` command** — reads CPU, RAM, GPU and installed packages; prints
   hardware capability matrix and copy-paste ready run command tailored to the
   detected hardware. Runs as `python scripts/study_runner.py --doctor` or `memtuner doctor`.
@@ -106,6 +127,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   marked failed) instead of silent strategy-disable producing fallback recalls.
 
 ### Fixed
+- **Holdout/horizon interaction** — the temporal-holdout split day was
+  computed from the (possibly padded) evaluation horizon; a horizon larger
+  than a dataset's day span pushed the scoring window past every query, and
+  the cells were recorded as `✓ success, recall=0.0`. Split now derives from
+  the days that contain data, zero-scored cells are recorded as **failed**,
+  and the loader warns when holdout queries reference only held-out memories
+  (same-day-gold datasets). `memtuner doctor` flags unscorable gold files.
+- **Reranker lift artifact** — `rank_by_reranker()` pooled every study phase
+  into the "none" baseline and the phase-5 control used a different stage-1
+  (semantic) than the llm_rerank treatment (BM25). Lift now compares phase-5
+  cells only and the control is a `bm25` cell; previously published negative
+  lifts were meaningless.
+- **Multi-store index clobbering** — all enabled stores shared one retrieval
+  strategy instance, so the last store to index (often an empty one) wiped
+  the index for the rest; any multi-store config silently scored 0. The
+  composer now builds one strategy instance per module.
+- **Mem0 v2 API compatibility** — `search()` uses
+  `filters={"user_id": …}` + `top_k` (top-level `user_id`/`limit` are
+  rejected by mem0ai ≥2); the contract-test fake enforces the real signature
+  so drift fails in CI.
 - `_INDEX_CACHE` in `EmbeddingsStrategy` stored a list alias instead of a copy;
   incremental appends corrupted the cached list, causing `IndexError` in later
   cells hitting the same corpus hash.

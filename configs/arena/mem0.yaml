@@ -1,0 +1,68 @@
+# Mem0 arena configuration — vendor-recommended defaults, committed verbatim.
+#
+# ARENA_PLAN fairness protocol: each external system runs its vendor's
+# documented quickstart defaults; no per-system tuning in arena v1. Any
+# deviation from vendor defaults must be listed under `deviations:` with a
+# reason, and vendors are invited to correct this file via PR.
+#
+# vendor_doc: https://github.com/mem0ai/mem0/blob/main/README.md ("Basic Usage")
+#             cross-checked against mem0/memory/main.py add()/search()/delete_all()
+# vendor_doc_date: 2026-09-22
+# mem0_sdk_version: 2.1.0   # pin with: pip install mem0ai==2.1.0
+#
+# Vendor defaults as documented (README "Basic Usage", retrieved 2026-09-22):
+#   LLM (fact extraction): gpt-5-mini via OpenAI  → requires OPENAI_API_KEY
+#   Embedder:              text-embedding-3-small via OpenAI
+#   add(..., infer=True):  LLM extracts facts and may add/update/delete
+#                          related memories (this IS the product; never set
+#                          infer=False in arena runs — that would benchmark a
+#                          raw vector store, not Mem0)
+#   Optional hybrid search extra: pip install "mem0ai[nlp]" (BM25 + entity
+#   boosting). NOT installed for arena v1 — quickstart default only.
+#
+# Notes for results interpretation (disclose next to any Mem0 numbers):
+#   - Mem0's published April-2026 numbers (LoCoMo 92.5, LongMemEval 94.4) are
+#     from their MANAGED PLATFORM with "proprietary optimizations not
+#     available in the open-source SDK" (their words, README). The arena runs
+#     the OSS SDK — compare against OSS, cite their caveat when referencing
+#     platform numbers. Their eval framework:
+#     https://github.com/mem0ai/memory-benchmarks
+#   - OSS v2 search API: search(query, top_k=…, filters={"user_id": …}).
+
+adapter:
+  class: benchmark.memory.external.mem0_store.Mem0Store
+  # namespace is generated per cell by the adapter — never set here.
+
+# Passed to mem0.Memory.from_config() by Mem0Store._load_arena_config().
+#
+# ZERO-COST ARENA STACK (project ground rule, 2026-09-22): the arena runs
+# only open-source software with no per-call costs. Mem0's vendor defaults
+# (gpt-5-mini + text-embedding-3-small) bill OpenAI per token, so the LLM and
+# embedder are switched to Ollama — both are officially documented Mem0
+# provider paths (docs/components/llms/models/ollama.mdx and
+# docs/components/embedders/models/ollama.mdx), not hacks. The vector store
+# stays at Mem0's own default: Qdrant in local embedded mode (path-based, no
+# server, no cost — mem0/configs/vector_stores/qdrant.py).
+mem0_config:
+  llm:
+    provider: ollama
+    config:
+      model: "llama3.1:8b"      # tool-calling-capable, from Mem0's own docs example
+      temperature: 0.1           # Mem0 docs example value
+  embedder:
+    provider: ollama
+    config:
+      model: "nomic-embed-text"  # 137 MB, free; ollama pull nomic-embed-text
+  vector_store:
+    provider: qdrant
+    config:
+      path: "/tmp/memtuner_arena_qdrant"
+      embedding_model_dims: 768  # nomic-embed-text dimension (default assumes 1536)
+
+deviations:
+  - setting: "llm.provider=ollama (llama3.1:8b) instead of openai gpt-5-mini"
+    reason: "zero-cost/local-only arena ground rule; vendor default bills OpenAI"
+    affects: "ingest fact-extraction quality — a weaker extractor than the vendor default; disclose next to every Mem0 number"
+  - setting: "embedder.provider=ollama (nomic-embed-text) instead of text-embedding-3-small"
+    reason: "zero-cost/local-only arena ground rule"
+    affects: "retrieval quality; embedding_model_dims adjusted to 768 accordingly"

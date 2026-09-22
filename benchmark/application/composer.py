@@ -102,6 +102,14 @@ class BenchmarkComposer:
         self._registry.register("preference_store", PreferenceStore)
         self._registry.register("semantic_store", SemanticStore)
         self._registry.register("entity_store", EntityStore)
+        # External arena backends (docs/ARENA_PLAN.md Phase 1). The vendor SDK
+        # import inside each adapter is lazy, so registration is always safe.
+        from benchmark.memory.external.graphiti_store import GraphitiStore
+        from benchmark.memory.external.mem0_store import Mem0Store
+        from benchmark.memory.external.zep_store import ZepStore
+        self._registry.register("mem0_store", Mem0Store)
+        self._registry.register("zep_store", ZepStore)
+        self._registry.register("graphiti_store", GraphitiStore)
         bootstrap_retrieval_strategies(self._strategy_registry)
 
     def compose(
@@ -153,10 +161,25 @@ class BenchmarkComposer:
 
         # 3. Resolve memory modules
         logger.info(f"[TRACE] Composer calling resolver with allow_strategy_fallback={allow_strategy_fallback}")
+        # Each module needs its OWN strategy instance: stores index their own
+        # memories into their strategy, so a shared instance gets clobbered by
+        # whichever store indexed last (an empty store wipes the index for the
+        # others — every multi-store config silently scored 0). Model weights
+        # are cached by model name inside the strategies, so per-module
+        # instances share the expensive parts.
+        def _strategy_factory():
+            return self._resolve_strategy(
+                config,
+                config.benchmark.retrieval_strategy,
+                resolver,
+                allow_fallback=allow_strategy_fallback,
+            )
+
         memory_modules = resolver.resolve_memory_modules(
             config,
             retrieval_strategy=retrieval_strategy,
             allow_strategy_fallback=allow_strategy_fallback,
+            strategy_factory=_strategy_factory if retrieval_strategy is not None else None,
         )
 
         # Warn if no memory modules are configured — run will produce all-zero metrics

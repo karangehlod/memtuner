@@ -446,10 +446,18 @@ class ScenarioRunner:
                 _retrieved_set = {m.memory_id for m in retrieved_memories}
 
                 if self._answer_evaluator is not None and gold_query.gold_answer:
+                    # Prefer the content the memory system itself returned
+                    # (external systems rewrite memories — their IDs resolve
+                    # to nothing here); fall back to the injected gold event
+                    # for native stores, which only return IDs.
                     retrieved_contents = [
-                        self._memory_content_by_id[memory.memory_id]
+                        text
                         for memory in retrieved_memories
-                        if memory.memory_id in self._memory_content_by_id
+                        if (text := (
+                            memory.content
+                            if getattr(memory, "content", None)
+                            else self._memory_content_by_id.get(memory.memory_id)
+                        ))
                     ]
                     # Recall for the LLM judge context: fraction of gold evidence
                     # that was surfaced. Guard against empty gold sets (data error).

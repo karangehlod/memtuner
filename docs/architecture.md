@@ -81,6 +81,13 @@ production backend (see [Section 9](#9-how-to-replace-any-component)).
 - Browse results in a **web dashboard** (FastAPI explorer).
 - Full **OpenTelemetry** tracing — every read, write, and decision is a span.
 - **Deterministic replay** — same config + seed = identical results, always.
+- **External memory systems as modules** — Mem0 and Graphiti (and dormant
+  Zep Cloud) plug in behind the same `MemoryWriter`/`MemoryReader` contract
+  via `benchmark/memory/external/`, registered in the composer as
+  `mem0_store` / `graphiti_store` / `zep_store`. They are judge-scored
+  (`scoring_mode=judge_primary`), namespace-isolated per cell, and excluded
+  from native strategy rankings. See the README "Memory-System Arena"
+  section and `docs/ARENA_PLAN.md`.
 
 ---
 

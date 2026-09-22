@@ -28,6 +28,94 @@ cat data/output/grid_*/grid_*_report.txt
 
 ---
 
+## Reported Runs — the Phase-0 protocol (NVIDIA machine)
+
+Use this procedure for any run whose numbers may be published or compared
+(see `docs/ARENA_PLAN.md`). It differs from exploratory runs in four ways:
+valid datasets only, ≥10 seeds, the pinned LLM judge, and natural-span
+horizons.
+
+The whole protocol is zero-cost by design (ARENA_PLAN ground rule 9): judge,
+embedders, and all arena backends run locally — no API keys, no per-token
+billing, GPU time only.
+
+```powershell
+# 0. One-time: pull the pinned judge model (docs/ARENA_PLAN.md ground rule 6)
+ollama pull nemotron-3-nano
+# For arena runs that include Mem0 (its local stack, see configs/arena/mem0.yaml):
+ollama pull llama3.1:8b
+ollama pull nomic-embed-text
+# For arena runs that include Graphiti (configs/arena/graphiti.yaml; needs Python 3.12+):
+pip install "graphiti-core[falkordblite]==0.30.2"
+ollama pull deepseek-r1:7b
+
+# 1. Refresh converted datasets (PersonaChat pooling fix requires --force once)
+python scripts\prepare_datasets.py --convert --force
+
+# 2. Preflight — must warn on same-day datasets and pass locomo/longmemeval/synthetic
+memtuner doctor
+
+# 3. The run. Judge model comes pinned from configs/study_defaults.yaml;
+#    only the endpoint is passed here.
+python scripts\study_runner.py --mode full `
+  --gold-dataset data\input\locomo10.json data\input\longmemeval_oracle_gold.json data\input\synthetic_gold.json `
+  --seeds 42 123 456 777 1010 2024 3141 4242 5555 8888 `
+  --ollama-url http://localhost:11434/v1
+```
+
+Rules baked into this command:
+
+- **Datasets:** only the three with scorable temporal holdouts. SQuAD, CoQA,
+  PersonaChat, HotpotQA, MS MARCO, etc. are same-day-gold (doctor warns) —
+  static-retrieval smoke tests only, never in reported runs.
+- **No `--evaluation-horizon`, no `--workload`:** the horizon then follows each
+  dataset's natural span (LoCoMo 722d, LongMemEval 180d), which activates the
+  phase-4b archival-floor sweep naturally where the timeline supports it.
+  (A padded horizon can no longer empty the holdout window — fixed 2026-09-22 —
+  but natural spans remain the correct default.)
+- **Holdout:** `--test-holdout-fraction` defaults to 0.20; do not set it to 0
+  for a reported run. Add `--final-test-holdout-fraction 0.10` when selecting
+  a deployable winner.
+- **Seeds:** 10 seeds × ≥3 memory types ⇒ N ≥ 30 per strategy, the minimum for
+  publishable bootstrap CIs.
+- **Judge:** pinned in `configs/study_defaults.yaml` (`judge.model`). If the
+  startup banner does not print `LLM judge enabled: …`, stop and fix the
+  endpoint — a reported run without judge scores cannot be compared to
+  anything external.
+
+After the run, copy `data/output/master_results.csv` (and the `study_*` dirs
+if feasible) back to the analysis machine and rebuild reports with
+`python scripts/generate_reports.py --from-master data/output/master_results.csv`.
+
+### Arena runs (cross-system comparison)
+
+The arena compares memory systems (native stack, Mem0, Graphiti) under one
+flat ingest→query→judge protocol — no tuning phases. See the README's
+"Memory-System Arena" section and `docs/ARENA_PLAN.md` for the rules.
+
+```powershell
+# Backend SDKs (once): Mem0 + Graphiti (Graphiti needs Python 3.12+)
+pip install mem0ai==2.1.0 "graphiti-core[falkordblite]==0.30.2"
+
+python scripts\arena_runner.py `
+  --systems native mem0 graphiti `
+  --gold-dataset data\input\locomo10.json data\input\longmemeval_oracle_gold.json data\input\synthetic_gold.json `
+  --seeds 42 123 456 777 1010 `
+  --ollama-url http://localhost:11434/v1
+```
+
+Notes:
+- The runner **refuses to start without a judge** (exit 2) — judged answer
+  accuracy is the only cross-system metric. `--allow-no-judge` produces
+  retrieval-only numbers that must not be published.
+- External ingest is LLM-driven and slow (one extraction call per memory
+  event on local models) — budget wall-clock accordingly; per-seed spread is
+  part of the result.
+- Vendor configs are read from `configs/arena/*.yaml`; edit deviations there,
+  never inline.
+
+---
+
 ## Prerequisites
 
 | Requirement | Version | Check |

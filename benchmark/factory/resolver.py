@@ -41,13 +41,20 @@ class ConfigResolver:
         config: BenchmarkConfig,
         retrieval_strategy: object | None = None,
         allow_strategy_fallback: bool = False,
+        strategy_factory: object | None = None,
     ) -> dict[str, any]:
         """Resolve all enabled memory modules from config.
 
         Args:
             config: The benchmark configuration.
             retrieval_strategy: Optional retrieval strategy to pass to modules.
+                Used as-is for the FIRST module only when a factory is given.
             allow_strategy_fallback: Whether to allow fallback to default scoring.
+            strategy_factory: Zero-arg callable returning a fresh strategy
+                instance. Required for multi-module configs: stores index
+                their own memories into their strategy, so sharing one
+                instance lets the last store to index (often an empty one)
+                wipe the index for all the others.
 
         Returns:
             Dictionary mapping module_name → instantiated module.
@@ -63,12 +70,18 @@ class ConfigResolver:
 
         logger.info(f"[TRACE] Resolving memory modules: allow_strategy_fallback={allow_strategy_fallback}")
 
+        first_module = True
         for module_name in all_enabled:
             policy_config = config.policies.module_policies.get(module_name)
             constructor_kwargs = self._build_constructor_kwargs(policy_config)
-            # Add retrieval strategy if provided
+            # Add retrieval strategy if provided — reuse the pre-resolved
+            # instance for the first module, build fresh ones for the rest.
             if retrieval_strategy is not None:
-                constructor_kwargs["retrieval_strategy"] = retrieval_strategy
+                if first_module or strategy_factory is None:
+                    constructor_kwargs["retrieval_strategy"] = retrieval_strategy
+                else:
+                    constructor_kwargs["retrieval_strategy"] = strategy_factory()
+                first_module = False
             # Add strategy fallback flag
             constructor_kwargs["allow_strategy_fallback"] = allow_strategy_fallback
             logger.info(f"[TRACE] Creating {module_name} with allow_strategy_fallback={constructor_kwargs.get('allow_strategy_fallback')}")
