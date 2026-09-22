@@ -38,6 +38,7 @@ Isolation: all vendor-side state lives under per-cell namespaced user IDs;
 
 from __future__ import annotations
 
+import contextlib
 import time
 from datetime import UTC, datetime
 from typing import Any
@@ -129,12 +130,10 @@ class ZepStore(MemoryWriter, MemoryReader):
     def _ensure_user(self, vendor_user: str) -> None:
         if vendor_user in self._vendor_user_ids:
             return
-        try:
+        # Already-exists errors are fine — graph.add will fail loudly if the
+        # user genuinely can't be created.
+        with contextlib.suppress(Exception):
             self._client.user.add(user_id=vendor_user)
-        except Exception:
-            # Already exists (or the fake doesn't care) — graph.add will fail
-            # loudly if the user genuinely can't be created.
-            pass
         self._vendor_user_ids.add(vendor_user)
 
     # ------------------------------------------------------------------

@@ -55,11 +55,19 @@ python scripts\prepare_datasets.py --convert --force
 # 2. Preflight — must warn on same-day datasets and pass locomo/longmemeval/synthetic
 memtuner doctor
 
-# 3. The run. Judge model comes pinned from configs/study_defaults.yaml;
-#    only the endpoint is passed here.
+# 3. Stage A — the tuning study, JUDGE OFF (omit --ollama-url: the pinned
+#    judge model without an endpoint is skipped with a warning). Judging every
+#    tuning cell is infeasible (~3 s/query × 470 queries × 141 cells × seeds);
+#    the judge runs in Stage B on the winner only.
 python scripts\study_runner.py --mode full `
   --gold-dataset data\input\locomo10.json data\input\longmemeval_oracle_gold.json data\input\synthetic_gold.json `
-  --seeds 42 123 456 777 1010 2024 3141 4242 5555 8888 `
+  --seeds 42 123 456 777 1010 2024 3141 4242 5555 8888
+
+# 4. Stage B — freeze the Stage-A winner into configs/arena/baseline_rag.yaml
+#    (see ARENA_PLAN task 1.6), then judge it on the answerable datasets:
+python scripts\arena_runner.py --systems native `
+  --gold-dataset data\input\locomo10.json data\input\longmemeval_oracle_gold.json `
+  --seeds 42 123 456 `
   --ollama-url http://localhost:11434/v1
 ```
 
@@ -78,10 +86,10 @@ Rules baked into this command:
   a deployable winner.
 - **Seeds:** 10 seeds × ≥3 memory types ⇒ N ≥ 30 per strategy, the minimum for
   publishable bootstrap CIs.
-- **Judge:** pinned in `configs/study_defaults.yaml` (`judge.model`). If the
-  startup banner does not print `LLM judge enabled: …`, stop and fix the
-  endpoint — a reported run without judge scores cannot be compared to
-  anything external.
+- **Judge:** pinned in `configs/study_defaults.yaml` (`judge.model`), applied
+  in Stage B and arena runs only. In Stage B the startup banner must print
+  `LLM judge enabled: …` — without judge scores the winner cannot be compared
+  to anything external. Stage A deliberately runs judge-off.
 
 After the run, copy `data/output/master_results.csv` (and the `study_*` dirs
 if feasible) back to the analysis machine and rebuild reports with

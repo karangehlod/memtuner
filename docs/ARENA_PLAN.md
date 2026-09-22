@@ -89,7 +89,12 @@ quarantined, core datasets re-measured properly, postmortem published.
 - [ ] A deliberate repro (squad + holdout, pre-fix commit) fails cells with the zero-query error; same run on main scores 2,288 queries.
 - [ ] New `master_results.csv` contains **zero** rows with `total_queries == 0` and `success == True`.
 - [ ] LoCoMo & LongMemEval CI tables show N ≥ 30 per strategy; no "N<10" footnotes on any headline number.
-- [ ] Every LoCoMo/LongMemEval cell has a judge score alongside retrieval metrics.
+- [ ] Judge scores exist for the **winner config and arena cells** on LoCoMo +
+      LongMemEval (judging every tuning cell is infeasible: ~141 cells × 470
+      queries × ~3 s/judge ≈ 55 h *per seed* on LongMemEval alone — corrected
+      2026-09-22; the tuning study runs judge-off, the winner and arena run
+      judge-on). Synthetic has no gold answers yet, so it is retrieval-only
+      until its generator emits them.
 - [ ] Reranker lift is either positive/neutral after a fix, or documented as a verified finding with the diagnosis.
 - [ ] Postmortem is live and links to the fixing commits.
 

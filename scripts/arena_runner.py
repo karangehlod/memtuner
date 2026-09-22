@@ -37,7 +37,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))
 
-from benchmark.workload.study_matrix import DecaySpec, StudyCell  # noqa: E402
+from benchmark.workload.study_matrix import DecaySpec, StudyCell
 
 KNOWN_EXTERNAL_BACKENDS = {"mem0", "graphiti", "zep"}  # letta: ARENA_PLAN task 1.5
 # zep = Zep CLOUD (paid, dormant per ground rule 9); graphiti is the free slot.
