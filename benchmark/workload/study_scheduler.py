@@ -178,7 +178,18 @@ def _run_study_cell_worker(
         result.total_cost = (
             bench_result.cost_summary.total_cost if bench_result.cost_summary else 0.0
         )
-        result.success = True
+        if result.total_queries == 0:
+            # A cell that scored no queries is a broken run, not a recall of 0.0
+            # (seen when a padded evaluation horizon pushed the holdout query
+            # window past every query in the dataset).
+            result.success = False
+            result.error_message = (
+                "0 queries scored — the holdout/query window excluded every query. "
+                "Check --evaluation-horizon against the dataset's day span and the "
+                "--test-holdout-fraction split."
+            )
+        else:
+            result.success = True
 
     except Exception as e:
         result.success = False

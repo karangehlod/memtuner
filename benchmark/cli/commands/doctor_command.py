@@ -47,6 +47,59 @@ def _check_import(module: str) -> bool:
         return False
 
 
+def _holdout_scorability(path: Path, test_frac: float = 0.20) -> str | None:
+    """Check whether a gold dataset can be scored under the day-based holdout.
+
+    Returns a warning string when the default holdout would score zero queries,
+    or when every holdout query's gold memories sit on held-out days (so recall
+    is structurally 0.0 — typical of converted QA datasets that place queries on
+    the same day as their source passages). Returns None when the dataset is
+    fine or isn't in the gold schema.
+    """
+    import json
+
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+    events = data.get("events")
+    queries = data.get("queries")
+    if not isinstance(events, list) or not isinstance(queries, list) or not queries:
+        return None
+
+    try:
+        mem_day = {
+            mem["id"]: day_events["day"]
+            for day_events in events
+            for mem in day_events.get("memory_events", [])
+        }
+        all_days = {e["day"] for e in events} | {q["day"] for q in queries}
+        span = max(all_days) + 1
+        split_day = int(span * (1 - test_frac))
+        scored = [q for q in queries if q["day"] >= split_day]
+        if not scored:
+            return (
+                f"no queries in the last {int(test_frac * 100)}% of its {span}-day "
+                "span — the default holdout scores nothing"
+            )
+        unreachable = sum(
+            1
+            for q in scored
+            if q.get("expected", {}).get("memory_ids")
+            and all(mem_day.get(m, 0) >= split_day for m in q["expected"]["memory_ids"])
+        )
+        if unreachable == len(scored):
+            return (
+                f"all {len(scored)} holdout queries reference gold memories on "
+                "held-out days that are never indexed — recall will be 0.0; "
+                "run with test-holdout-fraction 0 or use a query-level holdout"
+            )
+    except (KeyError, TypeError, ValueError):
+        return None
+    return None
+
+
 def _write_env(config: dict[str, str], env_path: Path) -> None:
     """Write or update benchmark keys in .env without touching user-set values.
 
@@ -229,7 +282,11 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
                       f"Delete it and re-run: python scripts/prepare_datasets.py --convert --force")
                 continue
             _n_present += 1
-            _ok(f"{_name}  ({_size // (1024 * 1024)} MB)")
+            _holdout_note = _holdout_scorability(_p)
+            if _holdout_note:
+                _warn(f"{_name}  ({_size // (1024 * 1024)} MB) — {_holdout_note}")
+            else:
+                _ok(f"{_name}  ({_size // (1024 * 1024)} MB)")
         else:
             _info(f"{_name} — not downloaded (auto-fetched when requested)")
     if _n_present < len(_core):

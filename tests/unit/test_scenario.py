@@ -91,3 +91,85 @@ class TestGoldDatasetScenario:
         assert scenario.get_queries_for_day(0) == []
         assert scenario.get_queries_for_day(3)
         assert scenario.get_queries_for_day(scenario.total_days() - 1) == []
+
+    def test_padded_horizon_keeps_holdout_window_on_data(
+        self, delayed_recall_dataset: GoldDataset
+    ) -> None:
+        # Regression: an evaluation horizon larger than the dataset's day span
+        # (e.g. --evaluation-horizon 50 on a 30-day dataset) must not push the
+        # holdout query window past every query — that scored 0 queries and
+        # recorded recall=0.0 as a successful cell.
+        scenario = GoldDatasetScenario(
+            delayed_recall_dataset, evaluation_horizon=30, test_frac=0.2
+        )
+        assert scenario.total_days() == 30  # replay horizon still honoured
+        scored = [
+            q for day in range(scenario.total_days()) for q in scenario.get_queries_for_day(day)
+        ]
+        assert scored, "padded horizon must not empty the holdout query window"
+
+    def test_padded_horizon_matches_natural_span_split(
+        self, delayed_recall_dataset: GoldDataset
+    ) -> None:
+        padded = GoldDatasetScenario(
+            delayed_recall_dataset, evaluation_horizon=30, test_frac=0.2
+        )
+        natural = GoldDatasetScenario(delayed_recall_dataset, test_frac=0.2)
+        for day in range(padded.total_days()):
+            assert [q.query for q in padded.get_queries_for_day(day)] == [
+                q.query for q in natural.get_queries_for_day(day)
+            ]
+            assert (padded.get_events_for_day(day) is None) == (
+                natural.get_events_for_day(day) is None
+            )
+        assert padded.test_frac_applied == natural.test_frac_applied > 0.0
+
+    def test_empty_query_window_logs_warning(
+        self, delayed_recall_dataset: GoldDataset, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        with caplog.at_level("WARNING", logger="benchmark.scenario.loader"):
+            GoldDatasetScenario(
+                delayed_recall_dataset,
+                query_start_fraction=0.01,
+                query_end_fraction=0.02,
+            )
+        assert any("contains none" in r.message for r in caplog.records)
+
+    def test_same_day_gold_holdout_logs_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # A dataset whose holdout queries only reference same-day memories can
+        # never be scored by the day-based holdout — the loader must say so.
+        from benchmark.gold.schema import (
+            GoldDayEvents,
+            GoldEvaluationCriteria,
+            GoldExpectedResult,
+            GoldMemoryEvent,
+            GoldQuery,
+        )
+
+        def _mem(mid: str) -> GoldMemoryEvent:
+            return GoldMemoryEvent(
+                id=mid, type="episodic", content=f"fact {mid}", importance=0.5, task_id="t"
+            )
+
+        dataset = GoldDataset(
+            scenario="same_day",
+            description="queries land on the same day as their gold memories",
+            events=[
+                GoldDayEvents(day=d, memory_events=[_mem(f"M-{d}")]) for d in range(10)
+            ],
+            queries=[
+                GoldQuery(
+                    day=d,
+                    query=f"what is fact M-{d}?",
+                    task_id="t",
+                    expected=GoldExpectedResult(memory_ids=[f"M-{d}"]),
+                )
+                for d in range(10)
+            ],
+            evaluation_criteria=GoldEvaluationCriteria(recall_k=5),
+        )
+        with caplog.at_level("WARNING", logger="benchmark.scenario.loader"):
+            GoldDatasetScenario(dataset, test_frac=0.2)
+        assert any("structurally" in r.message for r in caplog.records)

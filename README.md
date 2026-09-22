@@ -321,7 +321,10 @@ memtuner study --gold-dataset data/input/locomo10.json --mode custom --phases 1 
 # Use --seeds with at least 10 seeds for CIs worth reporting.
 memtuner study --gold-dataset data/input/locomo10.json --mode full --seeds 42 123 456
 
-# With LLM judge for answer-quality scoring (any OpenAI-compatible endpoint)
+# With LLM judge for answer-quality scoring (any OpenAI-compatible endpoint).
+# Recommended for any run whose numbers you plan to report or compare:
+# retrieval metrics alone measure "was the right memory in the top K",
+# the judge measures "did we produce the right answer".
 memtuner study --gold-dataset data/input/locomo10.json --mode full \
   --ollama-url http://localhost:11434/v1 --judge-model nemotron-3-nano:4b
 ```
@@ -719,6 +722,8 @@ recall_gate = 0  if Recall@K < 0.01
 
 Weights: Recall (40%) is the primary objective. Precision (25%) penalises noisy results. MRR (20%) rewards correct top-1. Temporal accuracy (15%) rewards correct time-window retrieval (zero-weighted when not applicable).
 
+> **Scope:** the composite is MemTuner's *internal tuning objective* — it ranks configurations against each other and drives Phase 4 early stopping. It is not comparable to numbers published by other memory systems (Mem0, Zep, MemGPT/Letta report LLM-judged answer accuracy, a different pipeline stage). For answer-quality numbers you can put next to theirs, run with the [LLM judge](#llm-judge-configuration) enabled.
+
 ### Hybrid strategy — Reciprocal Rank Fusion
 
 ```
@@ -823,7 +828,8 @@ Decay trades recall breadth for ranking quality. Tiered policy improves MRR sign
 | **NDCG@K** | `DCG / IDCG` (log₂) | Position-discounted ranking quality |
 | **Precision@1** | Precision at rank 1 | Critical for single-result systems |
 | **Contamination** | FP / total retrieved | Noise ratio |
-| **Composite** | `0.40R + 0.25P + 0.20MRR + 0.15T` | Single ranking score |
+| **Composite** | `0.40R + 0.25P + 0.20MRR + 0.15T` | Single ranking score for tuning (MemTuner-internal, not cross-system comparable) |
+| **Judge score** | LLM-judged answer correctness (`--judge-model`) | Answer quality — the metric to use when comparing against other memory systems |
 | **Latency P50/P90/P99** | ms | Typical and tail query latency |
 
 Evaluation K defaults to 10. Override: `BENCHMARK_RECALL_K=5 python scripts/study_runner.py ...`
@@ -851,7 +857,8 @@ Output:
 
 ## LLM Judge Configuration
 
-The LLM judge scores answer quality (not just retrieval ID matching) after retrieval.
+The LLM judge runs the full pipeline — retrieve → generate an answer from the retrieved memories → judge it against the gold answer — instead of stopping at retrieval ID matching. **Enable it whenever you want to make claims about answer quality.** Recall@K only says the right memory appeared somewhere in the top K; it is the *ceiling* for a downstream answer stage, not an accuracy. Published memory-system results (Mem0 and Zep on LoCoMo / LongMemEval, MemGPT/Letta on DMR) are LLM-judged answer accuracy, so judge scores are the only MemTuner numbers you can meaningfully put next to theirs — and even then, match their dataset profile and protocol before comparing.
+
 It works with **any OpenAI-compatible endpoint** — Ollama, OpenAI API, Anthropic (via proxy), or local vLLM.
 
 ```bash
