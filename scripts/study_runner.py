@@ -434,14 +434,25 @@ Examples:
         args.skip_models = [m.strip() for m in _env_skip.split() if m.strip()]
         print(f"  [env] BENCHMARK_SKIP_MODELS={_env_skip}")
 
-    # Propagate judge CLI flags into env vars so the study cell worker (which
+    # Propagate judge settings into env vars so the study cell worker (which
     # runs in-process) picks them up via benchmark.judge.llm_client.get_judge_config().
+    # Model resolution: --judge-model CLI flag > judge.model in the study config
+    # (pinned in configs/study_defaults.yaml so reported runs use one judge).
+    # Endpoint resolution: --ollama-url > BENCHMARK_JUDGE_BASE_URL from .env.
     _judge_model = getattr(args, "judge_model", "")
-    if _judge_model and args.ollama_url:
+    if not _judge_model:
+        _judge_model = str(_study_cfg.get("judge", {}).get("model", "") or "")
+        if _judge_model:
+            args.judge_model = _judge_model
+    _judge_endpoint = args.ollama_url or os.environ.get("BENCHMARK_JUDGE_BASE_URL", "")
+    if _judge_model and _judge_endpoint:
         os.environ["BENCHMARK_JUDGE_MODEL"] = _judge_model
-        os.environ.setdefault("BENCHMARK_JUDGE_BASE_URL", args.ollama_url)
-        os.environ.setdefault("BENCHMARK_LLM_BASE_URL", args.ollama_url)
-        print(f"  LLM judge enabled: {_judge_model} @ {args.ollama_url}")
+        os.environ.setdefault("BENCHMARK_JUDGE_BASE_URL", _judge_endpoint)
+        os.environ.setdefault("BENCHMARK_LLM_BASE_URL", _judge_endpoint)
+        print(f"  LLM judge enabled: {_judge_model} @ {_judge_endpoint}")
+    elif _judge_model:
+        print(f"  [warn] judge model '{_judge_model}' configured but no endpoint — "
+              "set --ollama-url or BENCHMARK_JUDGE_BASE_URL in .env; judge skipped.")
 
     # ── Resolve dataset list ─────────────────────────────────────────────────
     data_dir = Path(project_root) / "data"

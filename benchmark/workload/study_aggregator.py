@@ -350,8 +350,13 @@ class StudyAggregator(MatrixAggregator):
           recall_lift_vs_none = avg_recall(reranker) - baseline_recall_none
           mrr_lift_vs_none    = avg_mrr(reranker)    - baseline_mrr_none
 
-        where baseline_recall_none / baseline_mrr_none are the macro-averaged
-        recall@k / MRR across all cells whose reranker_model == "none".
+        Comparison scope: only phase5_reranker_comparison cells, where the
+        "none" control shares the reranker cells' BM25 stage-1 and the reranker
+        is the sole variable. Pooling all study phases into the baseline (the
+        pre-2026-09-22 behaviour) mixed recency/decay/sweep cells into "none"
+        and produced meaningless — typically negative — lift values. Legacy
+        grids without phase-5 rows fall back to all cells, flagged via
+        "baseline_scope" in each row.
         A positive lift means the reranker improved over the no-reranker baseline.
         Note: no division guard is applied to baseline values — applying one to a
         subtraction operand would silently corrupt lift when the baseline is 0.0.
@@ -374,7 +379,14 @@ class StudyAggregator(MatrixAggregator):
         by_rr_prec: dict[str, list] = defaultdict(list)
         by_rr_lat: dict[str, list] = defaultdict(list)
 
-        for r in self._study_results:
+        phase5_cells = [
+            r for r in self._study_results
+            if getattr(r, "study_phase", "") == "phase5_reranker_comparison"
+        ]
+        baseline_scope = "phase5" if phase5_cells else "all_cells_legacy"
+        comparison_pool = phase5_cells or self._study_results
+
+        for r in comparison_pool:
             rr = getattr(r, "reranker_model", "none")
             by_rr[rr].append(r.recall_at_k)
             by_rr_mrr[rr].append(r.mrr)
@@ -400,6 +412,7 @@ class StudyAggregator(MatrixAggregator):
                 "recall_lift_vs_none": round(avg_r - baseline_recall, 4),
                 "mrr_lift_vs_none": round(avg_mrr - baseline_mrr, 4),
                 "runs": len(recalls),
+                "baseline_scope": baseline_scope,
             })
 
         return sorted(rows, key=lambda x: x["avg_recall"], reverse=True)

@@ -743,3 +743,68 @@ class TestBugFixRegressions:
             "--early-stop-patience is still a dead flag: "
             "_run_phase4_two_stage has no 'patience' parameter"
         )
+
+
+@pytest.mark.unit
+class TestRerankerLiftComparability:
+    """Reranker lift must compare like-for-like (2026-09-22 fix).
+
+    Pre-fix, rank_by_reranker() pooled every study phase into the "none"
+    baseline (recency, decay sweeps, weight sweeps), which produced
+    meaningless — typically negative — lift values, and the phase-5 control
+    cell used a different stage-1 (semantic) than the llm_rerank treatment
+    cells (BM25).
+    """
+
+    @staticmethod
+    def _result(cell_id, phase, strategy, reranker, recall):
+        from benchmark.workload.study_scheduler import StudyRunResult
+        return StudyRunResult(
+            cell_id=cell_id, run_id="r1",
+            memory_type="episodic", retrieval_strategy=strategy,
+            decay_policy="none", lambda_value=0.0, pruning_threshold=0.0,
+            workload_profile="medium_qpd", seed=42,
+            study_phase=phase,
+            embedding_model="", embedding_backend="",
+            bm25_weight=1.0, reranker_model=reranker,
+            recall_at_k=recall, precision_at_k=0.1, mrr=0.4, ndcg=0.3,
+            success=True,
+        )
+
+    def test_lift_baseline_uses_only_phase5_cells(self) -> None:
+        from benchmark.workload.study_aggregator import StudyAggregator
+        results = [
+            # High-recall phase-1 cell must NOT contaminate the baseline.
+            self._result("p1", "phase1_baselines", "bm25l", "none", 0.9),
+            self._result("p5base", "phase5_reranker_comparison", "bm25", "none", 0.5),
+            self._result(
+                "p5ce", "phase5_reranker_comparison", "llm_rerank",
+                "cross-encoder/ms-marco-MiniLM-L6-v2", 0.6,
+            ),
+        ]
+        rows = StudyAggregator(results).rank_by_reranker()
+        ce_row = next(r for r in rows if r["reranker_model"] != "none")
+        # Pre-fix: baseline = mean(0.9, 0.5) = 0.7 → lift = −0.1 (wrong sign).
+        assert ce_row["recall_lift_vs_none"] == pytest.approx(0.1)
+        assert ce_row["baseline_scope"] == "phase5"
+        none_row = next(r for r in rows if r["reranker_model"] == "none")
+        assert none_row["avg_recall"] == pytest.approx(0.5)
+
+    def test_lift_falls_back_to_all_cells_for_legacy_grids(self) -> None:
+        from benchmark.workload.study_aggregator import StudyAggregator
+        results = [
+            self._result("a", "general", "bm25", "none", 0.4),
+            self._result("b", "general", "llm_rerank", "BAAI/bge-reranker-base", 0.5),
+        ]
+        rows = StudyAggregator(results).rank_by_reranker()
+        assert all(r["baseline_scope"] == "all_cells_legacy" for r in rows)
+
+    def test_phase5_control_shares_stage1_with_treatment(self) -> None:
+        """The reranker=none control must be bm25 — the treatment's stage-1."""
+        from benchmark.workload.study_matrix import StudyExpander
+        cells = StudyExpander(memory_types=["episodic"]).phase_reranker_comparison(
+            reranker_models=["none", "cross-encoder/ms-marco-MiniLM-L6-v2"],
+        )
+        by_rr = {c.reranker_model: c for c in cells}
+        assert by_rr["none"].retrieval_strategy == "bm25"
+        assert by_rr["cross-encoder/ms-marco-MiniLM-L6-v2"].retrieval_strategy == "llm_rerank"

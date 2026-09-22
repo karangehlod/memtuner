@@ -47,11 +47,19 @@ rerankers:
   - BAAI/bge-reranker-base                 # 1200 MB, stronger reranker
 
 judge:
-  # LLM judge for answer-quality scoring (optional — leave blank to disable)
-  # Set model to an OpenAI-compatible model name.
-  # The endpoint is read from BENCHMARK_OPENAI_BASE_URL in .env.
-  model: ""
-  # To use a local Ollama model: set BENCHMARK_OPENAI_BASE_URL=http://localhost:11434/v1 in .env
+  # LLM judge for answer-quality scoring (retrieve → generate → judge).
+  # This is the PINNED judge for reported runs (docs/ARENA_PLAN.md ground
+  # rule 6): judged accuracy is the only cross-system metric, so every run
+  # whose numbers may be published must use the same judge model.
+  # Pinned 2026-09-22: nemotron-3-nano:4b via local Ollama — deterministic
+  # local inference, ~2.7 GB Q4, fits alongside embedding models in VRAM.
+  #
+  # The judge activates only when an endpoint is configured:
+  #   --ollama-url http://localhost:11434/v1     (CLI), or
+  #   BENCHMARK_JUDGE_BASE_URL=...               (.env)
+  # Without an endpoint the judge is skipped with a warning.
+  # CLI --judge-model overrides this value. Set to "" to disable.
+  model: "nemotron-3-nano:4b"
 
 benchmark:
   seed: 42

@@ -623,16 +623,21 @@ class StudyExpander:
     ) -> list[StudyCell]:
         """Compare rerankers as a second-stage component on top of retrieval.
 
-        Flow: retrieval (semantic or hybrid) → top-N candidates → reranker → top-K.
+        Flow: BM25 candidate fetch → top-N candidates → reranker → top-K.
 
-        reranker="none"   → strategy="semantic"   (pure retrieval baseline)
+        reranker="none"   → strategy="bm25" — the identical stage-1 with the
+                            second stage removed, so the reranker is the ONLY
+                            variable between control and treatment cells.
+                            (Previously the control was "semantic", which
+                            differs in the candidate stage too and made the
+                            measured lift meaningless.)
         reranker=<model>  → strategy internal="llm_rerank"
-                            (BM25 fetches full corpus, cross-encoder re-scores)
+                            (BM25 fetches candidates, cross-encoder re-scores)
 
         The reranker block is only consumed by the llm_rerank resolver path —
-        using "semantic" with a non-none reranker would silently ignore it.
+        any other strategy with a non-none reranker would silently ignore it.
 
-        Held constant: decay=exponential(λ=0.01), best embedding model.
+        Held constant: decay=exponential(λ=0.01), stage-1 BM25.
         Variable: reranker_model.
         """
         rerankers = reranker_models or []
@@ -640,17 +645,18 @@ class StudyExpander:
         cells = []
 
         for reranker, mem_type in itertools.product(rerankers, self._mem_types):
-            # "none" → pure semantic baseline; any real model → llm_rerank path
-            strat = "semantic" if reranker == "none" else "llm_rerank"
-            # llm_rerank always uses sentence-transformers internally
-            backend = best_embedding_backend if reranker == "none" else "sentence-transformers"
+            # "none" → same BM25 stage-1 without reranking; model → llm_rerank
+            strat = "bm25" if reranker == "none" else "llm_rerank"
             cells.append(self._cell(
                 memory_type=mem_type,
                 retrieval_strategy=strat,
                 decay=decay,
+                # bm25 ignores embeddings; llm_rerank's label is cosmetic (its
+                # stage 1 is BM25). Kept identical so cells differ only in the
+                # strategy/reranker dimensions.
                 embedding_model=best_embedding_model,
-                embedding_backend=backend,
-                bm25_weight=0.0,
+                embedding_backend="sentence-transformers",
+                bm25_weight=1.0 if reranker == "none" else 0.0,
                 reranker_model=reranker,
                 study_phase="phase5_reranker_comparison",
             ))
