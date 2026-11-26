@@ -1307,7 +1307,7 @@ The math test suite (`tests/unit/test_math_correctness.py`) covers:
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide — it covers dev setup, test commands, how to add a new dataset adapter or retrieval strategy, and the PR checklist.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide — it covers dev setup, test commands, how to add a new dataset adapter or retrieval strategy, and the PR checklist. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues privately as described in [SECURITY.md](SECURITY.md).
 
 Quick start:
 ```bash

@@ -39,6 +39,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   definitions remain.
 
 ### Added
+- Community health files: `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CITATION.cff`, `.github/CODEOWNERS`, and Dependabot config for pip and GitHub Actions.
+- Trove classifiers in `pyproject.toml`.
 - **Memory-System Arena** (`scripts/arena_runner.py`) — runs external memory
   systems and the native stack through one identical ingest→query→judge
   protocol; zero-cost/local-only by ground rule (`docs/ARENA_PLAN.md`).
