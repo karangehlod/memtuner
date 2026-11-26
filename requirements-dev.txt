@@ -11,7 +11,7 @@ hypothesis>=6.75
 
 # Type checking
 mypy>=1.5
-pydantic-extra-types>=2.0
+pydantic-extra-types>=2.11.1
 
 # Linting / formatting (ruff does both — black not needed)
 ruff>=0.6
