@@ -294,4 +294,4 @@ License: MIT (ICLR 2025)
 def _generate_memory_id(question_id: str, session_idx: int, turn_idx: int) -> str:
     """Generate deterministic memory ID from question, session, and turn."""
     raw = f"{question_id}:s{session_idx}:t{turn_idx}"
-    return f"lme-{hashlib.md5(raw.encode()).hexdigest()[:12]}"
+    return f"lme-{hashlib.sha256(raw.encode()).hexdigest()[:12]}"

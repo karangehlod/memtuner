@@ -316,4 +316,4 @@ def _extract_sessions(conv_data: dict) -> list[tuple[str, list[dict], str]]:
 def _generate_memory_id(sample_id: str, session_key: str, turn_idx: int) -> str:
     """Generate deterministic memory ID."""
     raw = f"{sample_id}:{session_key}:t{turn_idx}"
-    return f"loco-{hashlib.md5(raw.encode()).hexdigest()[:12]}"
+    return f"loco-{hashlib.sha256(raw.encode()).hexdigest()[:12]}"

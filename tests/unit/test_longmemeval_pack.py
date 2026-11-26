@@ -131,6 +131,7 @@ class TestLongMemEvalPack:
         assert dataset.scenario == "longmemeval-oracle"
         assert len(dataset.queries) > 0
         assert len(dataset.events) > 0
+        assert dataset.events[0].memory_events[0].id == "lme-8d68a4575101"
 
     def test_abstention_questions_excluded(self, longmemeval_data_dir: Path) -> None:
         """Questions ending in _abs are excluded from queries."""
@@ -253,3 +254,7 @@ class TestGenerateMemoryId:
         """Generated IDs have the lme- prefix."""
         mid = _generate_memory_id("q001", 0, 0)
         assert mid.startswith("lme-")
+
+    def test_uses_sha256_digest(self) -> None:
+        """Generated IDs use the stronger deterministic digest."""
+        assert _generate_memory_id("q001", 0, 0) == "lme-8d68a4575101"
