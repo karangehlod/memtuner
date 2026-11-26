@@ -19,10 +19,10 @@ jobs:
       id-token: write   # OIDC trusted publishing to PyPI (no API token needed)
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -52,14 +52,11 @@ jobs:
           fi
 
       - name: Create or update GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true
-          # update_release = true: if a release for this tag already exists
-          # (e.g. v0.1.0 was re-tagged after a hotfix), overwrite its assets.
-          # For a brand-new tag this flag has no effect.
-          update_release: true
+          # Existing releases for this tag have their assets updated automatically.
 
       - name: Publish to PyPI (OIDC trusted publishing)
         # Skips gracefully when the version is already on PyPI (re-release of same tag).
