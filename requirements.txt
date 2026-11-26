@@ -27,7 +27,7 @@ sentence-transformers>=2.2.0,<3.0.0
 httpx[socks]==0.28.1
 
 # LLM Integration
-openai>=1.0,<2.0
+openai>=1.0,<4.0
 
 # Numerics, Plotting & Dataset Handling
 numpy>=1.24
