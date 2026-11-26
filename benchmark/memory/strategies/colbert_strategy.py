@@ -94,7 +94,7 @@ class ColBERTStrategy(RetrievalStrategy):
         if not _ST_AVAILABLE:
             raise ImportError(
                 "sentence-transformers not installed. "
-                "Install: pip install sentence-transformers"
+                "Install: pip install \"sentence-transformers>=5.6.0\""
             )
         # Priority: explicit model_name arg (from StudyCell config) > env var > hardcoded default
         _model_name = model_name or os.environ.get("BENCHMARK_COLBERT_MODEL", _DEFAULT_MODEL)

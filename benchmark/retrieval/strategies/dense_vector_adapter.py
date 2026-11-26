@@ -82,7 +82,7 @@ class DenseVectorAdapter(RetrievalStrategy):
                     _lg.getLogger(__name__).warning(
                         "sentence-transformers model failed to load (%s). "
                         "Falling back to MD5-hash embeddings — results will be "
-                        "semantically meaningless. Fix: pip install sentence-transformers", _e
+                        "semantically meaningless. Fix: pip install \"sentence-transformers>=5.6.0\"", _e
                     )
                     self.use_transformers = False
             else:

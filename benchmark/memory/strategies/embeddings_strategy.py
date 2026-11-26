@@ -156,7 +156,7 @@ class EmbeddingsStrategy(RetrievalStrategy):
         """
         if SentenceTransformer is None:
             raise ImportError(
-                "sentence-transformers not installed. Install: pip install sentence-transformers"
+                "sentence-transformers not installed. Install: pip install \"sentence-transformers>=5.6.0\""
             )
 
         resolved_model = model_name or self.DEFAULT_MODEL
@@ -191,7 +191,7 @@ class EmbeddingsStrategy(RetrievalStrategy):
                     if SentenceTransformer is None:
                         raise ImportError(
                             "sentence-transformers not installed. "
-                            "Install: pip install sentence-transformers"
+                            "Install: pip install \"sentence-transformers>=5.6.0\""
                         )
                     init_kwargs: dict = {"device": _EMBEDDING_DEVICE}
                     if cache_dir:
@@ -216,7 +216,7 @@ class EmbeddingsStrategy(RetrievalStrategy):
                     if SentenceTransformer is None:
                         raise ImportError(
                             "sentence-transformers not installed. "
-                            "Install: pip install sentence-transformers"
+                            "Install: pip install \"sentence-transformers>=5.6.0\""
                         ) from e
                     init_kwargs = {"device": _EMBEDDING_DEVICE}
                     if cache_dir:
@@ -233,7 +233,7 @@ class EmbeddingsStrategy(RetrievalStrategy):
             else:
                 raise RuntimeError(
                     f"Failed to load embedding model {resolved_model}. "
-                    f"Install: pip install sentence-transformers\n{e}"
+                    f"Install: pip install \"sentence-transformers>=5.6.0\"\n{e}"
                 ) from e
 
         self._backend = _backend_tag

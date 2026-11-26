@@ -279,7 +279,7 @@ Typical failure if the dependency is missing:
 
 ```text
 Cannot resolve retrieval strategy 'embeddings': Failed to load embedding model all-MiniLM-L6-v2.
-Install: pip install sentence-transformers
+Install: pip install "sentence-transformers>=5.6.0"
 ```
 
 Notes:

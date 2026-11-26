@@ -47,7 +47,7 @@ class PgVectorStrategy(RetrievalStrategy):
     def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
         if SentenceTransformer is None:
             raise ImportError(
-                "sentence-transformers not installed. Install: pip install sentence-transformers"
+                "sentence-transformers not installed. Install: pip install \"sentence-transformers>=5.6.0\""
             )
         self._model = SentenceTransformer(model_name)
         self._memories: dict[str, MemoryEvent] = {}

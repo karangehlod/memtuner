@@ -221,7 +221,7 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
     if has_st and has_torch:
         _ok("sentence-transformers + torch", "Phases 2–4 (embedding/reranker) available")
     elif has_torch and not has_st:
-        _warn("sentence-transformers missing", "pip install sentence-transformers")
+        _warn("sentence-transformers missing", "pip install \"sentence-transformers>=5.6.0\"")
     elif not has_torch:
         _warn("torch missing", "see GPU section above for install command")
 
@@ -429,7 +429,7 @@ def run_doctor(verbose: bool = False, apply: bool = False) -> None:
         print("  ⚠  Install required packages first, then re-run doctor:")
         print("     pip install rank-bm25")
         if not has_st:
-            print("     pip install sentence-transformers")
+            print("     pip install \"sentence-transformers>=5.6.0\"")
         return
 
     if apply:

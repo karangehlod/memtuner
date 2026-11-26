@@ -556,7 +556,7 @@ Examples:
     # Warn before spending time on cells that will immediately fail
     if 2 in phases and not _st_ok:
         print("  [warn] Phase 2-4 (embedding/reranker) skipped — sentence-transformers not installed.")
-        print("         Install: pip install sentence-transformers")
+        print("         Install: pip install \"sentence-transformers>=5.6.0\"")
         phases = [p for p in phases if p == 1 or p == 5]
     print()
 
