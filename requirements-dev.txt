@@ -17,7 +17,7 @@ pydantic-extra-types>=2.0
 ruff>=0.6
 
 # Git hooks
-pre-commit>=3.0
+pre-commit>=4.7.0
 
 # Optional: database adapters for integration tests
 # psycopg[binary]>=3.1
