@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use MemTuner in your research, please cite it as below."
+type: software
+title: "MemTuner: Adaptive Benchmarking and Configuration Tuning for AI Agent Memory Retrieval Systems"
+abstract: "Adaptive benchmarking and configuration tuning for AI agent memory retrieval systems."
+authors:
+  - family-names: Gehlod
+    given-names: Karan
+repository-code: "https://github.com/karangehlod/memtuner"
+url: "https://github.com/karangehlod/memtuner"
+license: Apache-2.0
+version: 0.0.1
+keywords:
+  - ai-agents
+  - agent-memory
+  - memory-retrieval
+  - benchmark
+  - retrieval
+  - embeddings
